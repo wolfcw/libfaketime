@@ -1,0 +1,329 @@
+      ===================================================
+      FakeTime Preload Library, version 0.8 (August 2008)
+      ===================================================
+
+
+Content of this file:
+---------------------
+
+1. Introduction
+2. Compatibility issues
+3. Installation
+4. Usage
+   a) Basics
+   b) Using absolute dates
+   c) Using 'start at' dates
+   d) Using offsets for relative dates
+   e) Advanced features and caveats
+   f) Faking the date and time system-wide
+   g) Using the "faketime" wrapper script
+5. License
+6. Contact
+
+
+
+1. Introduction
+---------------
+
+FTPL intercepts various system calls which programs use to retrieve the 
+current date and time. It can then report faked dates and times (as 
+specified by you, the user) to these programs. This means you can modify
+the system time a program sees without having to change the time system-
+wide.
+
+FTPL allows you to specify both absolute dates (e.g., 01/01/2004) and 
+relative dates (e.g., 10 days ago).
+
+FTPL might be used for various purposes, for example
+
+- running legacy software with y2k bugs
+- testing software for year-2038 compliance
+- debugging time-related issues, such as expired SSL certificates
+- running software which ceases to run outside a certain timeframe
+- using different system-wide date and time settings, e.g. on OpenVZ-
+  based virtual machines running on the same host
+
+
+
+2. Compatibility issues
+-----------------------
+
+* FTPL has been designed on and for Linux 2.x, but is supposed and has been 
+  reported to work on other *NIXes as well. 
+
+* FTPL uses the library preload mechanism and thus cannot work with statically
+  linked binaries or binaries that have the setuid-flag set (e.g., suidroot
+  programs like "ping" or "passwd"). 
+
+* As of version 0.7, support has been added for use in a pthreads environment. A
+  separate library is built (libfaketimeMT.so.1) which contains the pthread
+  synchronization calls. This library also single-threads calls through the
+  time() intercept, because several variables are statically cached by the
+  library and could cause issues when accessed without synchronization. However,
+  the performance penalty for this might be an issue for some applications. If
+  this is the case, you can try using an unsynchronized time() intercept by
+  removing the -DPTHREAD_SINGLETHREADED_TIME from the Makefile and rebuilding
+  libfaketimeMT.so.1 . Thanks to David North, TDI!
+
+* If and only if you want to run Java programs with faked times in the future
+  (not in the past) on Linux, you also should set the environment variable
+  LD_ASSUME_KERNEL=2.4.19 before running the appropriate "java" command. This
+  fixes an occasional bug where Java locks up at exiting. Again, this is only
+  required for Java with faked times in the future. Thanks to Jamie Cameron for
+  reporting this issue and finding a workaround!
+
+
+3. Installation
+---------------
+
+Running "make" should compile both library versions and a test program, which
+it then also executes. 
+
+If the test works fine, you should copy the FTPL libraries (libfaketime.so.1,
+and libfaketimeMT.so.1) to the place you want them in. Running "make install" 
+will attempt to place them in /usr/lib/faketime and will install the wrapper 
+shell script "faketime" in /usr/bin, both of which most likely will require
+root privileges; however, from a technical point of view, there is no 
+necessity for a system-wide installation, so you can use FTPL also on machines
+where you do not have root privileges.
+
+Since version 0.6, system calls to file timestamps are also intercepted now,
+thanks to a contribution by Philipp Hachtmann. This is especially useful in
+combination with relative time offsets as explained in section 4d) below, if a
+program writes and reads files whose timestamps also shall be faked. If you do
+not need this feature or if it confuses the application you want to use FTPL
+with, define the environment variable NO_FAKE_STAT, and the intercepted stat
+calls will be passed through unaltered.
+
+
+4. Usage
+--------
+
+4a) Usage basics
+----------------
+
+Using FTPL on a program of your choice consists of two steps:
+
+1. Making sure FTPL gets loaded.
+2. Specify the faked time.
+
+
+As an example, we want the "date" command to report our faked time. To do so,
+we could use the following command line:
+
+user@host> date
+Tue Nov 23 12:01:05 CEST 2007
+
+user@host> LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d" date
+Mon Nov  8 12:01:12 CEST 2007
+
+
+The basic way of running any command/program with FTPL enabled is to make sure
+the environment variable LD_PRELOAD contains the full path and filename of the
+FTPL library. This can either be done by setting it once beforehand:
+
+export LD_PRELOAD=/path/to/libfaketime.so.1
+(now run any command you want)
+
+
+Or it can be done by specifying it on the command line itself:
+
+LD_PRELOAD=/path/to/libfaketime.so.1 your_command_here
+
+(These examples are for the bash shell; how environment variables are set may 
+vary on your system.)
+
+
+However, also the faked time should be specified; otherwise, FTPL will be 
+loaded, but just report the real system time. There are three ways to specify
+the faked time:
+
+a) By setting the environment variable FAKETIME.
+b) By using the file .faketimerc in your home directory.
+c) By using the file /etc/faketimerc for a system-wide default.
+
+If you want to use b) or c), $HOME/.faketimerc or /etc/faketimerc consist of 
+only one line of text with exactly the same content as the FAKETIME environment 
+variable, which is described below. Note that /etc/faketimerc will only be used
+if there is no $HOME/.faketimerc, and the FAKETIME environment variable always
+has priority over the files.
+
+   
+4b) Using absolute dates
+------------------------
+
+The format which _must_ be used for _absolute_ dates is "YYYY-MM-DD hh:mm:ss". 
+For example, the 24th of December, 2002, 8:30 PM would have to be specified as
+FAKETIME="2002-12-24 20:30:00". 
+
+
+4c) Using 'start at' dates
+--------------------------
+
+(Thanks to a major contribution by David North, TDI in version 0.7)
+
+The format which _must_ be used for _start_at_ dates is "@YYYY-MM-DD hh:mm:ss". 
+For example, the 24th of December, 2002, 8:30 PM would have to be specified as
+FAKETIME="@2002-12-24 20:30:00". 
+
+The absolute dates described in 4b simulate a STOPPED system clock at the
+specified absolute time. The 'start at' format allows a 'relative' clock
+operation as described below in section 4d, but using a 'start at' time
+instead of an offset time.
+
+
+4d) Using offsets for relative dates
+------------------------------------
+
+Relative date offsets can be positive or negative, thus what you put into
+FAKETIME _must_ either start with a + or a -, followed by a number, and
+optionally followed by a multiplier:
+
+- by default, the offset you specify is in seconds. Example: 
+  
+  export FAKETIME="-120" will set the faked time 2 minutes (120 seconds) behind
+  the real time.
+  
+- the multipliers "m", "h", "d" and "y" can be used to specify the offset in 
+  minutes, hours, days and years (365 days each), respectively. Examples:
+  
+  export FAKETIME="-10m" sets the faked time 10 minutes behind the real time.
+  export FAKETIME="+14d" sets the faked time to 14 days in the future.
+
+
+You now should understand the complete example we've used before:
+
+LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d" date
+
+This command line makes sure FTPL gets loaded and sets the faked time to
+15 days in the past.
+
+Moreno Baricevic has contributed support for the FAKETIME_FMT environment
+variable, which allows to optionally set the strptime() format:
+
+Some simple examples:
+LD_PRELOAD=./libfaketime.so.1 FAKETIME_FMT=%s FAKETIME="`date +%s -d'1 year ago'`" date 
+LD_PRELOAD=./libfaketime.so.1 FAKETIME_FMT=%s FAKETIME="`stat -c %Y somefile`" date
+LD_PRELOAD=./libfaketime.so.1 FAKETIME_FMT=%c FAKETIME="`date`" date
+
+
+4e) Advanced features and caveats
+---------------------------------
+
+Advanced time specification options:
+------------------------------------
+
+Since version 0.8, thanks to a contribution by Karl Chen, fractions can be used
+in the specification of time offsets. For example,
+
+FAKETIME="+1,5h"
+
+is equivalent to FAKETIME="+90m". Please be aware that the fraction delimiter
+depends on your locale settings, so actually you might need to use
+
+FAKETIME="+1.5h"
+
+You should figure out the proper delimiter, e.g. by using FTPL on a command
+like /bin/date where you immediately can verify whether it worked as expected.
+
+Also contributed by Karl Chen in v0.8 is the option to speed up or slow down
+the wall clock time for the program which is executed using FTPL. For example,
+
+FAKETIME="+1y x2"
+
+will set the faked time one year into the future and will make the clock run
+twice as fast. Similarly,
+
+FAKETIME="+1y x0,5"
+
+will make the clock run only half as fast. As stated above, the fraction
+delimiter depends on your locale. 
+
+For testing, your should run a command like
+
+LD_PRELOAD=./libfaketime.so.1 FAKETIME="+1,5y x10,0" \
+/bin/bash -c 'while true; do echo $SECONDS ; sleep 1 ; done'
+
+For each second that the endless loop sleeps, the executed bash shell will 
+think that 10 seconds have passed ($SECONDS is a bash-internal variable 
+measuring the time since the shell was started).
+
+(Please note that replacing "echo $SECONDS" e.g. with a call to "/bin/date"
+will not give the expected result, since /bin/date will always be started
+as a new process for which also FTPL will be re-initialized. It will show
+the correct offset (1.5 years in the future), but no speed-ups or 
+slow-downs.)
+
+
+Caveats:
+--------
+
+Whenever possible, you should use relative offsets or 'start at' dates, and not
+use absolute dates.
+
+Why? Because the absolute date/time you set is fixed, i.e. if a program
+retrieves the current time, and retrieves the current time again 5 minutes
+later, it will still get the same result twice. This is likely to break
+programs which measure the time passing by (e.g. a mail program which checks
+for new mail every X minutes).
+
+Using relative offsets or 'start at' dates solves this problem. FTPL then will
+always report the faked time based on the real current time and the offset
+you've specified. 
+
+Please also note that your specification of the fake time is cached for 10
+seconds in order to enhance the library's performance. Thus, if you change the
+content of $HOME/.faketimerc or /etc/faketimerc while a program is running, it
+may take up to 10 seconds before the new fake time is applied. If this is a
+problem in your scenario, you can disable caching at compile time by adding the
+command line option -DNO_CACHING to this library's Makefile.
+
+
+4f) Faking the date and time system-wide
+----------------------------------------
+
+David Burley of SourceForge, Inc. reported an interesting use case of applying 
+FTPL system-wide: Currently, all virtual machines running inside an OpenVZ host 
+have the same system date and time. In order to use multiple sandboxes with 
+different system dates, the FTPL library can be put into /etc/ld.so.preload; 
+it will then be applied to all commands and programs automatically. This is
+of course best used with a system-wide /etc/faketimerc file. Kudos to 
+SourceForge, Inc. for providing the patch!
+
+
+4g) Using the "faketime" wrapper script
+---------------------------------------
+
+As of version 0.8, FTPL provides a shell script named "faketime" which is
+placed into /usr/bin by "make install". It spares the hassle of setting
+the LD_PRELOAD and FAKETIME environment variables manually, but only exposes
+a subset of FTPL's functionality. On the other hand, it uses the date
+interpretation function by /bin/date in order to provide higher flexibility
+regarding the specification of the faked date and time. For example, you
+can use
+
+faketime 'last Friday 5 pm' /your/command/here
+
+Of course, also absolute dates can be used, such as in
+
+faketime '2008-12-24 08:15:42' /bin/date
+
+Thanks to Daniel Kahn Gillmor for providing these suggestions!
+
+
+5. License
+----------
+
+FTPL has been released under the GNU Public License, GPL. Please see the
+included COPYING file.
+
+
+
+6. Contact
+-----------
+
+Bug reports, feature suggestions, success reports and patches are highly
+appreciated.
+
+Please send an email to: wolf /at/ code-wizards.com
+
