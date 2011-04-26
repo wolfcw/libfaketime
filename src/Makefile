@@ -44,27 +44,36 @@ CC = gcc
 
 PREFIX = /usr/local
 
-all: lib libMT
+CFLAGS = -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC
+LDFLAGS = -shared -ldl -lm -lpthread
 
-libs: lib libMT
+SRC = faketime.c
+OBJ = faketime.o faketimeMT.o
 
-lib: faketime.c
-	${CC} -DFAKE_STAT -DFAKE_INTERNAL_CALLS -shared -fPIC -Wl,-soname,libfaketime.so.1 -o libfaketime.so.1 faketime.c -ldl -lm -lpthread
+SONAME = 1
+LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
-libMT: faketime.c
-	${CC} -DFAKE_STAT -DFAKE_INTERNAL_CALLS -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME -shared -fPIC -Wl,-soname,libfaketimeMT.so.1 -o libfaketimeMT.so.1 faketime.c -ldl -lm -lpthread
+all: ${LIBS}
+
+faketimeMT.o: EXTRA_FLAGS := -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME
+
+${OBJ}: faketime.c
+	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
+
+lib%.so.${SONAME}: %.o
+	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} $<
 
 clean: 
-	@rm -f libfaketime.so.1 libfaketimeMT.so.1
+	@rm -f ${OBJ} ${LIBS}
 
 distclean: clean
 	@echo 
 
-install: libs
+install: ${LIBS}
 	@echo 
 	@echo "Copying the libraries to /usr/lib/faketime and the wrapper script to /usr/bin ..."
 	-mkdir -p "${DESTDIR}${PREFIX}/lib/faketime"
-	cp libfaketime.so.1 libfaketimeMT.so.1 "${DESTDIR}${PREFIX}/lib/faketime"
+	cp ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime"
 	cp faketime "${DESTDIR}${PREFIX}/bin"
 	cp faketime.1 "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
 	gzip "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
@@ -73,8 +82,7 @@ install: libs
 	cp Changelog "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 
 uninstall:
-	rm -f "${DESTDIR}${PREFIX}/lib/faketime/libfaketime.so.1"
-	rm -f "${DESTDIR}${PREFIX}/lib/faketime/libfaketimeMT.so.1"
+	for f in ${LIBS}; do rm -f "${DESTDIR}${PREFIX}/lib/faketime/$$f"; done
 	rmdir "${DESTDIR}${PREFIX}/lib/faketime"
 	rm -f "${DESTDIR}${PREFIX}/bin/faketime"
 	rm -f "${DESTDIR}${PREFIX}/share/man/man1/faketime.1.gz"
@@ -82,4 +90,4 @@ uninstall:
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
 
-.PHONY: all libs lib libMT clean distclean install uninstall
+.PHONY: all clean distclean install uninstall
