@@ -82,3 +82,12 @@ install: libs
 	cp README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
 	cp Changelog "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 
+uninstall:
+	rm -f "${DESTDIR}${PREFIX}/lib/faketime/libfaketime.so.1"
+	rm -f "${DESTDIR}${PREFIX}/lib/faketime/libfaketimeMT.so.1"
+	rmdir "${DESTDIR}${PREFIX}/lib/faketime"
+	rm -f "${DESTDIR}${PREFIX}/bin/faketime"
+	rm -f "${DESTDIR}${PREFIX}/share/man/man1/faketime.1.gz"
+	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
+	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
