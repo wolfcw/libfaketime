@@ -91,3 +91,5 @@ uninstall:
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/README"
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
+
+.PHONY: all libs lib libMT testprog test notest clean distclean install uninstall
