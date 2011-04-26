@@ -42,6 +42,8 @@
 
 CC = gcc
 
+PREFIX = /usr/local
+
 all: lib libMT testprog test
 
 libs: lib libMT
@@ -71,12 +73,12 @@ distclean: clean
 install: libs
 	@echo 
 	@echo "Copying the libraries to /usr/lib/faketime and the wrapper script to /usr/bin ..."
-	-mkdir -p /usr/lib/faketime 
-	cp libfaketime.so.1 libfaketimeMT.so.1 /usr/lib/faketime
-	cp faketime /usr/bin 
-	cp faketime.1 /usr/share/man/man1/faketime.1
-	gzip /usr/share/man/man1/faketime.1
-	-mkdir -p /usr/share/doc/faketime
-	cp README /usr/share/doc/faketime/README
-	cp Changelog /usr/share/doc/faketime/Changelog
+	-mkdir -p "${DESTDIR}${PREFIX}/lib/faketime"
+	cp libfaketime.so.1 libfaketimeMT.so.1 "${DESTDIR}${PREFIX}/lib/faketime"
+	cp faketime "${DESTDIR}${PREFIX}/bin"
+	cp faketime.1 "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
+	gzip "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
+	-mkdir -p "${DESTDIR}${PREFIX}/share/doc/faketime"
+	cp README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	cp Changelog "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 
