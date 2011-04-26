@@ -44,7 +44,7 @@ CC = gcc
 
 PREFIX = /usr/local
 
-all: lib libMT testprog test
+all: lib libMT
 
 libs: lib libMT
 
@@ -54,18 +54,8 @@ lib: faketime.c
 libMT: faketime.c
 	${CC} -DFAKE_STAT -DFAKE_INTERNAL_CALLS -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME -shared -fPIC -Wl,-soname,libfaketimeMT.so.1 -o libfaketimeMT.so.1 faketime.c -ldl -lm -lpthread
 
-testprog: timetest.c
-	${CC} -DFAKE_STAT -o timetest timetest.c -lrt
-
-test: lib testprog
-	@echo
-	@./test.sh
-
-notest: lib libMT testprog
-	@echo
-
 clean: 
-	@rm -f libfaketime.so.1 libfaketimeMT.so.1 timetest
+	@rm -f libfaketime.so.1 libfaketimeMT.so.1
 
 distclean: clean
 	@echo 
@@ -92,4 +82,4 @@ uninstall:
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
 
-.PHONY: all libs lib libMT testprog test notest clean distclean install uninstall
+.PHONY: all libs lib libMT clean distclean install uninstall
