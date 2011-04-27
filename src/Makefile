@@ -44,7 +44,7 @@ CC = gcc
 
 PREFIX = /usr/local
 
-CFLAGS = -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC
+CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC
 LDFLAGS = -shared -ldl -lm -lpthread
 
 SRC = faketime.c
