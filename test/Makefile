@@ -1,18 +1,27 @@
 CC = gcc
 
-all: testprog test
+CFLAGS = -DFAKE_STAT
+LDFLAGS = -lrt
 
-testprog: timetest.c
-	${CC} -DFAKE_STAT -o timetest timetest.c -lrt
+SRC = timetest.c
+OBJ = ${SRC:.c=.o}
 
-test: testprog
+all: timetest test
+
+.c.o:
+	${CC} -c ${CFLAGS} $<
+
+timetest: ${OBJ}
+	${CC} -o $@ ${OBJ} ${LDFLAGS}
+
+test: timetest
 	@echo
 	@./test.sh
 
 clean: 
-	@rm -f timetest
+	@rm -f ${OBJ} timetest
 
 distclean: clean
 	@echo 
 
-.PHONY: all testprog test clean distclean
+.PHONY: all test clean distclean
