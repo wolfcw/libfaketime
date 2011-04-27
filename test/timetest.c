@@ -43,7 +43,7 @@ int main (int argc, char **argv) {
 
     time(&now);
     printf("time()         : Current date and time: %s", ctime(&now));
-    printf("time(NULL)     : Seconds since Epoch  : %u\n", time(NULL));
+    printf("time(NULL)     : Seconds since Epoch  : %u\n", (unsigned int)time(NULL));
 
     ftime(&tb);
     printf("ftime()        : Current date and time: %s", ctime(&tb.time));
