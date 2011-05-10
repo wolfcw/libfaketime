@@ -1,9 +1,11 @@
+INSTALL = install
+
 PREFIX = /usr/local
 
 all:
 
 install:
-	cp faketime.1 "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
+	$(INSTALL) -Dm0644 faketime.1 "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
 	gzip "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
 
 uninstall:

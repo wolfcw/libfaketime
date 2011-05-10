@@ -41,6 +41,7 @@
 #
 
 CC = gcc
+INSTALL = install
 
 PREFIX = /usr/local
 
@@ -72,9 +73,9 @@ distclean: clean
 install: ${LIBS}
 	@echo 
 	@echo "Copying the libraries to /usr/lib/faketime and the wrapper script to /usr/bin ..."
-	-mkdir -p "${DESTDIR}${PREFIX}/lib/faketime"
-	cp ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime"
-	cp faketime "${DESTDIR}${PREFIX}/bin"
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"
+	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime/"
+	$(INSTALL) -Dm0755 faketime "${DESTDIR}${PREFIX}/bin/faketime"
 
 uninstall:
 	for f in ${LIBS}; do rm -f "${DESTDIR}${PREFIX}/lib/faketime/$$f"; done

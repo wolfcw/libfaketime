@@ -1,11 +1,13 @@
+INSTALL = install
+
 PREFIX = /usr/local
 
 all:
 
 install:
-	-mkdir -p "${DESTDIR}${PREFIX}/share/doc/faketime"
-	cp ../README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
-	cp Changelog "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/share/doc/faketime/"
+	$(INSTALL) -m0644 ../README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	$(INSTALL) -m0644 Changelog "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 
 uninstall:
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/README"
