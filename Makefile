@@ -8,10 +8,12 @@ test:
 install:
 	$(MAKE) -C src install
 	$(MAKE) -C man install
+	$(MAKE) -C meta install
 
 uninstall:
 	$(MAKE) -C src uninstall
 	$(MAKE) -C man uninstall
+	$(MAKE) -C meta uninstall
 
 clean:
 	$(MAKE) -C src clean
