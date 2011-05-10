@@ -75,8 +75,6 @@ install: ${LIBS}
 	-mkdir -p "${DESTDIR}${PREFIX}/lib/faketime"
 	cp ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime"
 	cp faketime "${DESTDIR}${PREFIX}/bin"
-	cp faketime.1 "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
-	gzip "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
 	-mkdir -p "${DESTDIR}${PREFIX}/share/doc/faketime"
 	cp README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
 	cp Changelog "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
@@ -85,7 +83,6 @@ uninstall:
 	for f in ${LIBS}; do rm -f "${DESTDIR}${PREFIX}/lib/faketime/$$f"; done
 	rmdir "${DESTDIR}${PREFIX}/lib/faketime"
 	rm -f "${DESTDIR}${PREFIX}/bin/faketime"
-	rm -f "${DESTDIR}${PREFIX}/share/man/man1/faketime.1.gz"
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/README"
 	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/Changelog"
 	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
