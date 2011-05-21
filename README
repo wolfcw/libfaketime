@@ -1,6 +1,6 @@
-      ===================================================
-      FakeTime Preload Library, version 0.8 (August 2008)
-      ===================================================
+      ==================================================
+      FakeTime Preload Library, version 0.8.1 (May 2011)
+      ==================================================
 
 
 Content of this file:
@@ -81,11 +81,12 @@ it then also executes.
 
 If the test works fine, you should copy the FTPL libraries (libfaketime.so.1,
 and libfaketimeMT.so.1) to the place you want them in. Running "make install" 
-will attempt to place them in /usr/lib/faketime and will install the wrapper 
-shell script "faketime" in /usr/bin, both of which most likely will require
+will attempt to place them in /usr/local/lib/faketime and will install the wrapper 
+shell script "faketime" in /usr/local/bin, both of which most likely will require
 root privileges; however, from a technical point of view, there is no 
 necessity for a system-wide installation, so you can use FTPL also on machines
-where you do not have root privileges.
+where you do not have root privileges. You may want to adjust the PREFIX 
+variable in the Makefiles accordingly.
 
 Since version 0.6, system calls to file timestamps are also intercepted now,
 thanks to a contribution by Philipp Hachtmann. This is especially useful in
@@ -326,4 +327,6 @@ Bug reports, feature suggestions, success reports and patches are highly
 appreciated.
 
 Please send an email to: wolf /at/ code-wizards.com
+
+git pull requests are welcome, see https://github.com/wolfcw/libfaketime
 
