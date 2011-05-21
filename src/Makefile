@@ -72,7 +72,7 @@ distclean: clean
 
 install: ${LIBS}
 	@echo 
-	@echo "Copying the libraries to /usr/lib/faketime and the wrapper script to /usr/bin ..."
+	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}/lib/faketime and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
 	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"
 	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime/"
 	$(INSTALL) -Dm0755 faketime "${DESTDIR}${PREFIX}/bin/faketime"
