@@ -630,6 +630,9 @@ time_t fake_time(time_t *time_tptr) {
     static time_t last_data_fetch = 0;	/* not fetched previously at first call */
     static int cache_expired = 1; 	/* considered expired at first call */
     static int cache_duration = 10;	/* cache fake time input for 10 seconds */
+#ifdef __APPLE__
+    static int malloc_arena = 0;
+#endif
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
 static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
@@ -698,6 +701,13 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
         	user_faked_time_fmt = "%Y-%m-%d %T";
 
     } /* cache had expired */
+
+#ifdef __APPLE__
+    SINGLE_IF(malloc_arena==0)
+	malloc_arena = 1;
+        return *time_tptr;
+    END_SINGLE_IF
+#endif
 
     /* check whether the user gave us an absolute time to fake */
     switch (user_faked_time[0]) {
