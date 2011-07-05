@@ -96,6 +96,12 @@ not need this feature or if it confuses the application you want to use FTPL
 with, define the environment variable NO_FAKE_STAT, and the intercepted stat
 calls will be passed through unaltered.
 
+On MacOS, it is necessary to compile differently, due to the different
+behavior dyld has. Use the Makefile.MacOS provided to compile
+libfaketime.dylib.1. Additionally, instead of using LD_PRELOAD,
+the variable DYLD_INSERT_LIBRARIES should be set to the path to
+libfaketime.dylib.1, and the variable DYLD_FORCE_FLAT_NAMESPACE should be
+set (to anything).
 
 4. Usage
 --------
