@@ -45,7 +45,13 @@ INSTALL = install
 
 PREFIX = /usr/local
 
-CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS
+# If you get an error about an unsupported architecture, remove it. Some
+# versions of XCode support different subsets of architectures, depending on
+# age.
+# 10.5
+#CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch ppc
+# 10.6
+CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64
 
 SRC = faketime.c
 
