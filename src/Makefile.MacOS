@@ -45,24 +45,23 @@ INSTALL = install
 
 PREFIX = /usr/local
 
-CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME
-LDFLAGS = -shared -ldl -lm -lpthread
+# If you get an error about an unsupported architecture, remove it. Some
+# versions of XCode support different subsets of architectures, depending on
+# age.
+# 10.5
+#CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch ppc
+# 10.6
+CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64
 
 SRC = faketime.c
-OBJ = faketime.o faketimeMT.o
 
 SONAME = 1
-LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
+LIBS = libfaketime.dylib.${SONAME}
 
 all: ${LIBS}
 
-faketimeMT.o: EXTRA_FLAGS := -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME
-
-${OBJ}: faketime.c
-	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
-
-lib%.so.${SONAME}: %.o
-	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} $<
+libfaketime.dylib.${SONAME}: ${SRC}
+	${CC} -o $@ ${CFLAGS} $<
 
 clean: 
 	@rm -f ${OBJ} ${LIBS}
