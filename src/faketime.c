@@ -60,7 +60,9 @@ static pthread_mutex_t once_mutex=PTHREAD_MUTEX_INITIALIZER;
 time_t fake_time(time_t *time_tptr);
 int    fake_ftime(struct timeb *tp);
 int    fake_gettimeofday(struct timeval *tv, void *tz);
+#ifdef POSIX_REALTIME
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
+#endif
 
 /* 
  * Intercepted system calls:
@@ -376,32 +378,70 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 #endif
 
 /*
+ * On MacOS, time() internally uses gettimeofday. If we don't
+ * break the cycle by just calling it directly, we double-apply
+ * relative changes.
+ */
+
+#ifdef __APPLE__
+static int (*real_gettimeofday)(struct timeval *, void *);
+static int has_real_gettimeofday = 0;
+#endif
+/*
  *  Our version of time() allows us to return fake values, so the calling
  *  program thinks it's retrieving the current date and time, while it is
  *  not
  *  Note that this routine is split into two parts so that the initialization
  *  piece can call the 'real' time function to establish a base time.
  */
-
 static time_t _ftpl_time(time_t *time_tptr) {
+#ifdef __APPLE__
+    struct timeval tvm, *tv = &tvm;
+#else
     static time_t (*real_time)(time_t *);
     static int has_real_time = 0;
+#endif
     
     time_t result;
 
     time_t null_dummy;
- 
+
     /* Handle null pointers correctly, fix as suggested by Andres Ojamaa */
     if (time_tptr == NULL) {
 	    time_tptr = &null_dummy;    
         /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
     }
- 
+
+#ifdef __APPLE__
+    /* Check whether we've got a pointer to the real ftime() function yet */
+    SINGLE_IF(has_real_gettimeofday==0)
+        real_gettimeofday = NULL;
+        real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
+        
+        /* check whether dlsym() worked */
+        if (dlerror() == NULL) {
+            has_real_gettimeofday = 1;
+        }
+    END_SINGLE_IF
+    if (!has_real_gettimeofday) {  /* dlsym() failed */
+#ifdef DEBUG 
+            (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
+#endif 
+            return -1; /* propagate error to caller */
+    }
+    
+    /* initialize our result with the real current time */
+    result = (*real_gettimeofday)(tv, NULL);
+    if (result == -1) return result; /* original function failed */
+    if (time_tptr != NULL)
+	*time_tptr = tv->tv_sec;
+    result = tv->tv_sec;
+#else
     /* Check whether we've got a pointer to the real time function yet */
     SINGLE_IF(has_real_time==0)
         real_time = NULL;
         real_time = dlsym(RTLD_NEXT, "time");
-        
+
         /* check whether dlsym() worked */
         if (dlerror() == NULL) {
             has_real_time = 1;
@@ -415,9 +455,10 @@ static time_t _ftpl_time(time_t *time_tptr) {
                 *time_tptr = -1;
             return -1; /* propagate error to caller */
     }
-    
+
     /* initialize our result with the real current time */
     result = (*real_time)(time_tptr);
+#endif
     return result;
 }
 
@@ -477,10 +518,12 @@ int ftime(struct timeb *tp) {
 }
 
 int gettimeofday(struct timeval *tv, void *tz) {
+#ifndef __APPLE__
     static int (*real_gettimeofday)(struct timeval *, void *);
     static int has_real_gettimeofday = 0;
+#endif
     int result;
-    
+
     /* sanity check */
     if (tv == NULL) {
 	    return -1;
@@ -509,11 +552,12 @@ int gettimeofday(struct timeval *tv, void *tz) {
 
     /* pass the real current time to our faking version, overwriting it */
     result = fake_gettimeofday(tv, tz);
-    
+
     /* return the result to the caller */
     return result; 
 }
 
+#ifdef POSIX_REALTIME
 int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
     static int has_real_clock_gettime = 0;
@@ -551,6 +595,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     /* return the result to the caller */
     return result; 
 }
+#endif
 
 /*
  *  Static time_t to store our startup time, followed by a load-time library
@@ -585,6 +630,9 @@ time_t fake_time(time_t *time_tptr) {
     static time_t last_data_fetch = 0;	/* not fetched previously at first call */
     static int cache_expired = 1; 	/* considered expired at first call */
     static int cache_duration = 10;	/* cache fake time input for 10 seconds */
+#ifdef __APPLE__
+    static int malloc_arena = 0;
+#endif
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
 static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
@@ -653,6 +701,13 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
         	user_faked_time_fmt = "%Y-%m-%d %T";
 
     } /* cache had expired */
+
+#ifdef __APPLE__
+    SINGLE_IF(malloc_arena==0)
+	malloc_arena = 1;
+        return *time_tptr;
+    END_SINGLE_IF
+#endif
 
     /* check whether the user gave us an absolute time to fake */
     switch (user_faked_time[0]) {
@@ -724,31 +779,33 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 }
 
 int fake_ftime(struct timeb *tp) {
-    time_t temp_tt;
+    time_t temp_tt = tp->time;
 
-    tp->time = time(&temp_tt);
+    tp->time = fake_time(&temp_tt);
     
     return 0; /* always returns 0, see manpage */
 }
 
 int fake_gettimeofday(struct timeval *tv, void *tz) {
-    time_t temp_tt;
-    
-    tv->tv_sec = time(&temp_tt);
+    time_t temp_tt = tv->tv_sec;
+
+    tv->tv_sec = fake_time(&temp_tt);
 
     return 0;
 }
 
+#ifdef POSIX_REALTIME
 int fake_clock_gettime(clockid_t clk_id, struct timespec *tp) {
-    time_t temp_tt;
+    time_t temp_tt = tp->tv_sec;
 
     /* Fake only if the call is realtime clock related */
     if (clk_id == CLOCK_REALTIME) {
-        tp->tv_sec = time(&temp_tt);
+        tp->tv_sec = fake_time(&temp_tt);
     }
 
     return 0;
 }
+#endif
 
 /* Added in v0.7 as suggested by Jamie Cameron, Google */
 #ifdef FAKE_INTERNAL_CALLS
@@ -756,9 +813,11 @@ int __gettimeofday(struct timeval *tv, void *tz) {
     return gettimeofday(tv, tz);
 }
 
+#ifdef POSIX_REALTIME
 int __clock_gettime(clockid_t clk_id, struct timespec *tp) {
 	return clock_gettime(clk_id, tp);
 }
+#endif
 
 int __ftime(struct timeb *tp) {
 	return ftime(tp);
