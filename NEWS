@@ -1,10 +1,10 @@
 Since 0.8:
-    - Changed directory layout and Makefile structure. 
+    - Changed directory layout and Makefile structure.
       Thanks to Lukas Fleischer!
 
 Since 0.7:
     - Added support for fstatat() and fstatat64() which were introduced in
-      Linux kernel 2.6.16 and used in recent coreutils. 
+      Linux kernel 2.6.16 and used in recent coreutils.
       Thanks to Daniel Kahn Gillmor for the report!
       This can be disabled by passing -DNO_ATFILE in the Makefile.
     - Added a simple wrapper shell script and a man page for it. Makes it
@@ -13,7 +13,7 @@ Since 0.7:
       please adjust this path if necessary. The "install" target in the
       Makefile has been adapted accordingly.
     - Added support for fractional time offsets, such as FAKETIME="+1,5h".
-      Please note that either , or . has to be used as a delimiter 
+      Please note that either , or . has to be used as a delimiter
       depending on your locale. Thanks to Karl Chen!
     - Added support for speeding the clock up or slowing it down. For
       example, FAKETIME="+5d x2,0" will set the faked time 5 days into
@@ -22,7 +22,7 @@ Since 0.7:
       Again, the delimiter to use for the fraction depends on your locale.
       Thanks to Karl Chen!
 
-Since 0.6: 
+Since 0.6:
     Main version 0.7 contributions by David North, TDI:
     - Added ability to 'start clock at' a specific time.
     - Added pthread synchronization support
@@ -35,22 +35,22 @@ Since 0.6:
     - Repaired a bug w.r.t. strptime/mktime wherein 'isdst' was uninitialized
       which led to pseudorandom +/- 1 hour results being returned in 'start at'
       or absolute time modes
-    
-    Other enhancements: 
+
+    Other enhancements:
     - Fixed missing interceptions to libc-internal functions and added notes
       about a workaround for running Java programs with faked times in the
       future (they worked properly, but often locked up at exiting). Thanks to
       Jamie Cameron of Google for in-depth analysis and prototype solution!
 
 Since 0.5:
-    - Performance enhancements by means of caching the data read 
+    - Performance enhancements by means of caching the data read
       e.g. from $HOME/.faketimerc for 10 seconds.
     - Several file timestamp related system calls such as fstat() will be
       intercepted now. See the README file on how to turn this off if you
       do not need it. Thanks to Philipp Hachtmann!
     - A system-wide /etc/faketimerc file will now be used if no FAKETIME
       environment variable has been set and no $HOME/.faketimerc is present.
-      Thanks to David Burley, Jacob Moorman, and Wayne Davison of 
+      Thanks to David Burley, Jacob Moorman, and Wayne Davison of
       SourceForge, Inc.!
     - Added trivial Makefile targets clean/distclean/install
     - Changed Makefile target test to run new test.sh script
@@ -68,4 +68,4 @@ Since 0.2:
 Since 0.1:
     - Fixed segfault when calling time(NULL). Thanks to Andres Ojamaa!
     - Added additional sanity checks.
-    
+
