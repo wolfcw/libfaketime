@@ -8,12 +8,16 @@ test:
 install:
 	$(MAKE) -C src install
 	$(MAKE) -C man install
-	$(MAKE) -C meta install
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/share/doc/faketime/"
+	$(INSTALL) -m0644 README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	$(INSTALL) -m0644 NEWS "${DESTDIR}${PREFIX}/share/doc/faketime/NEWS"
 
 uninstall:
 	$(MAKE) -C src uninstall
 	$(MAKE) -C man uninstall
-	$(MAKE) -C meta uninstall
+	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/NEWS"
+	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
 
 clean:
 	$(MAKE) -C src clean
