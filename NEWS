@@ -1,3 +1,7 @@
+Since 0.8.1:
+    - Added a MacOS port.
+      Thanks to Derrick Brashear!
+
 Since 0.8:
     - Changed directory layout and Makefile structure.
       Thanks to Lukas Fleischer!
