@@ -40,9 +40,21 @@ fakedate()
 	fakecmd "$1" date +$fmt
 }
 
+#
+# compute x**n.
+# use only the shell, in case we need to run on machines
+# without bc, dc, perl, etc.
+#
 pow()
 {
-	dc -e "$1 $2 ^ p"
+	typeset x="$1" n="$2"
+	typeset r=1
+	typeset i=0
+	while ((i < n)); do
+		((r = r*x))
+		((i++))
+	done
+	echo $r
 }
 
 # run a fakedate test with a given time t
