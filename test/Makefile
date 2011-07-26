@@ -14,9 +14,13 @@ all: timetest test
 timetest: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
-test: timetest
+test: timetest functest
 	@echo
 	@./test.sh
+
+# run functional tests
+functest:
+	./testframe.sh functests
 
 clean: 
 	@rm -f ${OBJ} timetest
