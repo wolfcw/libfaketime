@@ -36,7 +36,9 @@ int main (int argc, char **argv) {
     time_t now;
     struct timeb tb;
     struct timeval tv;
+#ifndef __APPLE__
     struct timespec ts;
+#endif
 #ifdef FAKE_STAT
     struct stat buf;
 #endif
@@ -55,8 +57,10 @@ int main (int argc, char **argv) {
     gettimeofday(&tv, NULL);
     printf("gettimeofday() : Current date and time: %s", ctime(&tv.tv_sec));
 
+#ifndef __APPLE__
     clock_gettime(CLOCK_REALTIME, &ts);
     printf("clock_gettime(): Current date and time: %s", ctime(&ts.tv_sec));
+#endif
 
 #ifdef FAKE_STAT
     lstat(argv[0], &buf);

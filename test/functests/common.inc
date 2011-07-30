@@ -6,7 +6,7 @@ platform()
 	# may want to expand the pattern for linuxlike
 	typeset out=$(uname)
 	case "$out" in
-	*OSX*) echo "mac" ;;
+	*Darwin*) echo "mac" ;;
 	*Linux*) echo "linuxlike" ;;
 	*) echo 1>&2 unsupported platform, uname=\"$out\" ;;
 	esac
@@ -17,7 +17,7 @@ platform()
 mac_fakecmd()
 {
 	typeset timestring="$1"; shift
-	typeset fakelib=../src/libfaketime.so.1
+	typeset fakelib=../src/libfaketime.dylib.1
 	export DYLD_INSERT_LIBRARIES=$fakelib
 	export DYLD_FORCE_FLAT_NAMESPACE=1
 	FAKETIME="$timestring" \
