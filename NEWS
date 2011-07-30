@@ -1,6 +1,9 @@
 Since 0.8.1:
     - Added a MacOS port.
       Thanks to Derrick Brashear!
+    - Added a functional test framework that aids in automatically
+      determining whether libfaketime works properly on the current
+      machine. Thanks to Don Fong!
 
 Since 0.8:
     - Changed directory layout and Makefile structure.
