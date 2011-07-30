@@ -1,7 +1,6 @@
 Open issues / next steps for libfaketime development
 
-- adapt test/timetest.c to OS X (clock_gettime() and CLOCK_REALTIME not
-  available?)
+- fix libfaketime functionality and crashes on OS X 10.7 (Lion)
 - add more functional tests that check more than the basic functionality
 - use the new testing framework to also implement unit tests
 - improve compatibility with GUI programs on OS X

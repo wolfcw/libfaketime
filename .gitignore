@@ -1,3 +1,5 @@
 *.o
 *.so.1
 timetest
+
+src/libfaketime.dylib.1
