@@ -12,10 +12,15 @@
 # Acknowledgment: Parts of the functionality of this wrapper have been 
 # inspired by Matthias Urlichs' datefudge 1.14.
 
-# Configuration: Path where the libfaketime libraries can be found.
+# Configuration: Path where the libfaketime libraries can be found on Linux/UNIX.
 FTPL_PATH=/usr/lib/faketime
 
+# For Mac OS X users: Full path and name to libfaketime.dylib.1 
+MAC_FTPL_PATH=./libfaketime.dylib.1
+
 offset="$1"
+
+DATE_CMD=date
 
 USEMT=0
 USEDIRECT=0
@@ -60,8 +65,15 @@ fi
 
 shift
 
-# Setting LD_PRELOAD ...
+# Check whether we are on Mac OS X (Darwin)
+UNAME=$(uname)
+if [ "$UNAME" = "Darwin" ] ; then
+    export DYLD_FORCE_FLAT_NAMESPACE=1
+    export DYLD_INSERT_LIBRARIES=$MAC_FTPL_PATH
+    DATE_CMD=gdate
+fi
 
+# Setting LD_PRELOAD ...
 if [ "$USEMT" -eq 0 ] ; then
 	export LD_PRELOAD="${LD_PRELOAD}${LD_PRELOAD:+:}$FTPL_PATH/libfaketime.so.1"
 fi
@@ -74,13 +86,13 @@ fi
 # Setting FAKETIME ...
 
 if [ "$USEDIRECT" -eq 0 ] ; then
-	seconds=$(date -d "$offset" '+%s')
+	seconds=$($DATE_CMD -d "$offset" '+%s')
 	if [ $? -ne 0 ] ; then 
 		echo "Error: Timestamp to fake not recognized, please re-try with a different timestamp."
 		exit 1 
 	fi
 
-	offset=$(expr $seconds - $(date '+%s'))
+	offset=$(expr $seconds - $($DATE_CMD '+%s'))
 	if [ $? -ne 0 ] ; then 
 		echo "Error: Cannot calculate the faketime offset in seconds, please re-try with a different timestamp."
 		exit 1

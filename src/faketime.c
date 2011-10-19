@@ -1,6 +1,4 @@
 /*
- *  Copyright (C) 2003,2004,2005,2006,2007,2008 Wolfgang Hommel
- *
  *  This file is part of the FakeTime Preload Library, version 0.8.
  *
  *  The FakeTime Preload Library is free software; you can redistribute it 
@@ -630,9 +628,12 @@ time_t fake_time(time_t *time_tptr) {
     static time_t last_data_fetch = 0;	/* not fetched previously at first call */
     static int cache_expired = 1; 	/* considered expired at first call */
     static int cache_duration = 10;	/* cache fake time input for 10 seconds */
-#ifdef __APPLE__
-    static int malloc_arena = 0;
-#endif
+/*
+ * This no longer appears to be necessary in Mac OS X 10.7 Lion
+ */
+//#ifdef __APPLE__
+//    static int malloc_arena = 0;
+//#endif
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
 static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
@@ -702,12 +703,15 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
     } /* cache had expired */
 
-#ifdef __APPLE__
-    SINGLE_IF(malloc_arena==0)
-	malloc_arena = 1;
-        return *time_tptr;
-    END_SINGLE_IF
-#endif
+/*
+ * This no longer appears to be necessary in Mac OS X 10.7 Lion
+ */
+//#ifdef __APPLE__
+//    SINGLE_IF(malloc_arena==0)
+//	malloc_arena = 1;
+//        return *time_tptr;
+//    END_SINGLE_IF
+//#endif
 
     /* check whether the user gave us an absolute time to fake */
     switch (user_faked_time[0]) {
@@ -807,6 +811,10 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp) {
 }
 #endif
 
+/*
+ * This causes serious issues in Mac OS X 10.7 Lion and is disabled there
+ */
+#ifndef __APPLE__
 /* Added in v0.7 as suggested by Jamie Cameron, Google */
 #ifdef FAKE_INTERNAL_CALLS
 int __gettimeofday(struct timeval *tv, void *tz) {
@@ -827,4 +835,7 @@ time_t __time(time_t *time_tptr) {
 	return time(time_tptr);
 }
 #endif
+#endif
+
+/* eof */
 

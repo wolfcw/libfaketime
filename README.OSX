@@ -1,0 +1,98 @@
+README file for libfaketime on Mac OS X
+=======================================
+
+Support for Mac OS X is still preliminary. Development and tests are
+done under 10.7 Lion only currently.
+
+Compiling and using libfaketime on OS X is slightly different than
+on Linux. Please make sure to read the README file for general
+setup and usage, and refer to this file only about OS X specifics.
+
+
+1) Compiling libfaketime on OS X
+--------------------------------
+
+Use the OSX-specific Makefiles that are provided, e.g.:
+
+cd src/
+make -f Makefile.MacOS
+
+The resulting library will be named libfaketime.dylib.1
+
+
+2) Using libfaketime from the command line on OS X
+--------------------------------------------------
+
+You will need to set three environment variables. In a Terminal.app 
+or iTerm session, the following commands can be used:
+
+export DYLD_FORCE_FLAT_NAMESPACE=1
+export DYLD_INSERT_LIBRARIES=/path/to/libfaketime.dylib.1
+export FAKETIME="your favorite faketime-spec here"
+
+Please refer to the general README file concerning the format
+of the FAKETIME environment variable value and other environment
+variables that are related to it.
+
+The "faketime" wrapper shell script has been adapted to OS X;
+it offers the same limited libfaketime functionality as on Linux
+in a simple-to-use manner without the need to manually set
+those environment variables.
+
+
+3) Integrating libfaketime with applications
+--------------------------------------------
+
+Given the limited number of system calls libfaketime intercepts,
+it does not work too well with GUI applications on OS X. Crashes
+after a random time are common issues, some applications will
+not or at least not always see the faked time, and so on.
+
+A safe way to try out whether a specific application works fine
+with libfaketime is to start it from the command line. Perform
+the steps outlined above and run the application by issuing the
+following command:
+
+/Applications/ApplicationName.app/Contents/MacOS/ApplicationName
+
+(Make sure to replace "ApplicationName" twice in that command with
+the name of your actual application.)
+
+If it works fine, you can configure the application to permanently
+run with libfaketime by editing its Info.plist file. Add the 
+LSEnvironment key unless it is already there and add a dictionary
+with the three keys like this:
+
+    <key>LSEnvironment</key>
+    <dict>
+        <key>DYLD_FORCE_FLAT_NAMESPACE</key>
+        <string>1</string>
+        <key>DYLD_INSERT_LIBRARIES</key>
+        <string>/path/to/libfaketime.dylib.1</string>
+        <key>FAKETIME</key>
+        <string>value of FAKETIME here</string>
+    </dict>
+
+(If the application is installed in /Applications instead of in
+$HOME/Applications, you eventually will need root privileges. If
+the application's Info.plist is not in XML, but in binary format,
+use appropriate editing or conversion tools.)
+
+Afterwards, you will probably need to run
+
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -v -f /Applications/ApplicationName.app
+
+to make sure the change to Info.plist does not go unnoticed.
+
+Please note that modifications to Info.plist will be lost when the 
+application is updated, so this process needs to be repeated after 
+such updates.
+
+
+4) Notes for developers of OS X applications
+--------------------------------------------
+
+The environment variable FAKETIME can be changed at application run-time
+and always takes precedence over other user-controlled settings. It can
+be re-set to 0 (zero) to work around potential incompatibilities.
+
