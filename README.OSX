@@ -86,7 +86,7 @@ to make sure the change to Info.plist does not go unnoticed.
 
 Please note that modifications to Info.plist will be lost when the 
 application is updated, so this process needs to be repeated after 
-such updates.
+such updates, including own new builds when using Xcode.
 
 
 4) Notes for developers of OS X applications
