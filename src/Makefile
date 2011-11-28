@@ -45,8 +45,8 @@ INSTALL = install
 
 PREFIX = /usr/local
 
-CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME
-LDFLAGS = -shared -ldl -lm -lpthread
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME
+LDFLAGS += -shared -ldl -lm -lpthread
 
 SRC = faketime.c
 OBJ = faketime.o faketimeMT.o
