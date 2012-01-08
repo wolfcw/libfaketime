@@ -457,6 +457,7 @@ static time_t _ftpl_time(time_t *time_tptr) {
     /* initialize our result with the real current time */
     result = (*real_time)(time_tptr);
 #endif
+
     return result;
 }
 
@@ -628,6 +629,17 @@ time_t fake_time(time_t *time_tptr) {
     static time_t last_data_fetch = 0;	/* not fetched previously at first call */
     static int cache_expired = 1; 	/* considered expired at first call */
     static int cache_duration = 10;	/* cache fake time input for 10 seconds */
+
+#ifdef LIMITEDFAKING
+    static long callcounter = 0;
+    static int limited_initialized = 0;
+    char envvarbuf[32];
+    static long FAKETIME_START_AFTER_SECONDS = -1;
+    static long FAKETIME_STOP_AFTER_SECONDS = -1;
+    static long FAKETIME_START_AFTER_NUMCALLS = -1;
+    static long FAKETIME_STOP_AFTER_NUMCALLS = -1;
+#endif
+
 /*
  * This no longer appears to be necessary in Mac OS X 10.7 Lion
  */
@@ -644,13 +656,49 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 	/* Sanity check by Karl Chan since v0.8 */
 	if (time_tptr == NULL) return -1;
 
+#ifdef LIMITEDFAKING
+    /* Check whether we actually should be faking the returned timestamp. */
+
+    if (ftpl_starttime > 0) {
+        if (limited_initialized == 0) {
+            if (getenv("FAKETIME_START_AFTER_SECONDS") != NULL) {
+                (void) strncpy(envvarbuf, getenv("FAKETIME_START_AFTER_SECONDS"), 30);
+                FAKETIME_START_AFTER_SECONDS = atol(envvarbuf);
+            }
+            if (getenv("FAKETIME_STOP_AFTER_SECONDS") != NULL) {
+                (void) strncpy(envvarbuf, getenv("FAKETIME_STOP_AFTER_SECONDS"), 30);
+                FAKETIME_STOP_AFTER_SECONDS = atol(envvarbuf);
+            }
+            if (getenv("FAKETIME_START_AFTER_NUMCALLS") != NULL) {
+                (void) strncpy(envvarbuf, getenv("FAKETIME_START_AFTER_NUMCALLS"), 30);
+                FAKETIME_START_AFTER_NUMCALLS = atol(envvarbuf);
+            }
+            if (getenv("FAKETIME_STOP_AFTER_NUMCALLS") != NULL) {
+                (void) strncpy(envvarbuf, getenv("FAKETIME_STOP_AFTER_NUMCALLS"), 30);
+                FAKETIME_STOP_AFTER_NUMCALLS = atol(envvarbuf);
+            }
+            limited_initialized = 1;
+        }
+        if ((callcounter + 1) >= callcounter) callcounter++;
+
+        /* For debugging, output #seconds and #calls */
+        /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
+        if ((FAKETIME_START_AFTER_SECONDS != -1) && ((*time_tptr - ftpl_starttime) < FAKETIME_START_AFTER_SECONDS)) return *time_tptr;
+        if ((FAKETIME_STOP_AFTER_SECONDS != -1) && ((*time_tptr - ftpl_starttime) >= FAKETIME_STOP_AFTER_SECONDS)) return *time_tptr;
+        if ((FAKETIME_START_AFTER_NUMCALLS != -1) && (callcounter < FAKETIME_START_AFTER_NUMCALLS)) return *time_tptr;
+        if ((FAKETIME_STOP_AFTER_NUMCALLS != -1) && (callcounter >= FAKETIME_STOP_AFTER_NUMCALLS)) return *time_tptr;
+        /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
+
+    }
+#endif
+
     if (last_data_fetch > 0) {
-	if ((*time_tptr - last_data_fetch) > cache_duration) {
-		cache_expired = 1;
-	}
+    	if ((*time_tptr - last_data_fetch) > cache_duration) {
+	    	cache_expired = 1;
+	    }
         else {
-		cache_expired = 0;
-	}
+		    cache_expired = 0;
+	    }
     }
 
 #ifdef NO_CACHING

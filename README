@@ -1,6 +1,6 @@
-      ==================================================
-      FakeTime Preload Library, version 0.8.1 (May 2011)
-      ==================================================
+      =====================================================
+      FakeTime Preload Library, version 0.9 (Fabruary 2011)
+      =====================================================
 
 
 Content of this file:
@@ -17,6 +17,7 @@ Content of this file:
    e) Advanced features and caveats
    f) Faking the date and time system-wide
    g) Using the "faketime" wrapper script
+   h) "Limiting" libfaketime
 5. License
 6. Contact
 
@@ -316,6 +317,72 @@ Of course, also absolute dates can be used, such as in
 faketime '2008-12-24 08:15:42' /bin/date
 
 Thanks to Daniel Kahn Gillmor for providing these suggestions!
+
+
+4h) "Limiting" libfaketime
+--------------------------
+
+Starting with version 0.9, libfaketime can be configured to not be continuously
+active, but only during a certain time interval. 
+
+For example, you might want to start a program with the real current time, but
+after 5 minutes of usage, you might want it to see a faked time, e.g., a year
+in the future.
+
+Dynamic changes to the faked time are alternatively possible by
+
+- changing the FAKETIME environment variable at run-time; this is the preferred
+  way if you use libfaketime for debugging and testing as a programmer, as it
+  gives you the most direct control of libfaketime without any performance
+  penalities.
+
+- not using the FAKETIME environment variable, but specifying the fake time in a
+  file (such as ~/.faketimerc). You can change the content of this file at
+  run-time. This works best with caching disabled (see Makefile), but comes at a
+  performance cost because this file has to be read and evaluated each time. 
+
+The feature described here works based on two pairs of environment variables,
+
+  FAKETIME_START_AFTER_SECONDS and FAKETIME_STOP_AFTER_SECONDS, and
+  FAKETIME_START_AFTER_NUMCALLS and FAKETIME_STOP_AFTER_NUMCALLS
+
+The default value for each of these environment variables is -1, which means
+"ignore this value". 
+
+If you want libfaketime to be only active during the run-time minutes 2 to 5
+of your application, you would set
+
+  FAKETIME_START_AFTER_SECONDS=60
+  FAKETIME_STOP_AFTER_SECONDS=300
+
+This means that your application will work with the real time from start (second
+0) up to second 60. It will then see a faked time from run-time seconds 60 to
+300 (minutes 2, 3, 4, and 5). After run-time second 600, it will again see the
+real (not-faked) time. 
+
+This approach is not as flexible as changing the FAKETIME environment variable
+during runtime, but may be easier to use, works on a per-program (and not a
+per-user or system-wide) scope, and has only a minor performance overhead.
+
+Using the other pair of environment variables, you can limit the activity time
+of libfaketime not based on wall-clock seconds, but on the number of
+time-related function calls the started program performs. This alternative is
+probably only suitable for programmers who either know the code of the program 
+in order to determine useful start/stop values or want to perform fuzzing 
+tests. 
+
+Both pairs of environment variables can be combined to further restrict
+libfaketime activity, although this is only useful in very few scenarios.
+
+Limiting libfaketime activity in this way is not recommended in general. Many
+programs will break when they are subject to sudden changes in time, especially
+if they are started using the current (real) time and are then sent back into
+the past after, e.g., 5 minutes. For example, they may appear to be frozen or
+stuck because they are waiting until a certain point in time that, however, is 
+never reached due to the delayed libfaketime activity. Avoid using this 
+functionality unless you are sure you really need it and know what you are 
+doing.
+
 
 
 5. License

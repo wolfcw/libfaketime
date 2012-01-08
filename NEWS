@@ -1,3 +1,12 @@
+Since 0.8.2:
+    - Added support for "limited faking".
+      You can optionally specify when libfaketime starts to fake the
+      returned timestamps and when it shall stop doing so. For example,
+      a program can be started regularly, and after 5 minutes run-time
+      it will be sent two years into the future. Those limiting
+      start and stop times can be specified in seconds or as the
+      number of any time-related function calls within the program. 
+
 Since 0.8.1:
     - Added a MacOS port.
       Thanks to Derrick Brashear!

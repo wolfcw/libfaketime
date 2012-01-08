@@ -30,6 +30,9 @@
 #           frequently. Disabling the cache may negatively influence the
 #           performance. 
 #
+#     LIMITEDFAKING
+#		  - Support environment variables that limit time faking to certain
+#		    time intervals or number of function calls.
 #
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
@@ -45,7 +48,7 @@ INSTALL = install
 
 PREFIX = /usr/local
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING
 LDFLAGS += -shared -ldl -lm -lpthread
 
 SRC = faketime.c

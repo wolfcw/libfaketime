@@ -30,6 +30,10 @@
 #           frequently. Disabling the cache may negatively influence the
 #           performance. 
 #
+#     LIMITEDFAKING
+#         - Support environment variables that limit time faking to certain
+#           time intervals or number of function calls.
+#
 #
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
@@ -51,7 +55,7 @@ PREFIX = /usr/local
 # 10.5
 #CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch ppc
 # 10.6
-CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64
+CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64 -DLIMITEDFAKING
 
 SRC = faketime.c
 
