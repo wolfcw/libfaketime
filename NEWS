@@ -6,6 +6,10 @@ Since 0.8.2:
       it will be sent two years into the future. Those limiting
       start and stop times can be specified in seconds or as the
       number of any time-related function calls within the program. 
+    - Added a feature to spawn an external process after x seconds
+      or y time-related system calls. This can, for example, be used
+      to execute an arbitrary shell script x seconds after a program
+      has been started. 
 
 Since 0.8.1:
     - Added a MacOS port.

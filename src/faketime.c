@@ -640,6 +640,16 @@ time_t fake_time(time_t *time_tptr) {
     static long FAKETIME_STOP_AFTER_NUMCALLS = -1;
 #endif
 
+#ifdef SPAWNSUPPORT
+    static int spawned = 0;
+    static long spawn_callcounter = 0;
+    static int spawn_initialized = 0;
+    char spawn_envvarbuf[32];
+    static char FAKETIME_SPAWN_TARGET[1024];
+    static long FAKETIME_SPAWN_SECONDS = -1;
+    static long FAKETIME_SPAWN_NUMCALLS = -1;
+#endif
+
 /*
  * This no longer appears to be necessary in Mac OS X 10.7 Lion
  */
@@ -691,6 +701,41 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
     }
 #endif
+
+#ifdef SPAWNSUPPORT
+    /* check whether we should spawn an external command */
+
+    if (ftpl_starttime > 0) {
+
+        if(spawn_initialized == 0) {
+            if (getenv("FAKETIME_SPAWN_TARGET") != NULL) {
+                (void) strncpy(FAKETIME_SPAWN_TARGET, getenv("FAKETIME_SPAWN_TARGET"), 1024);
+
+                if (getenv("FAKETIME_SPAWN_SECONDS") != NULL) {
+                    (void) strncpy(spawn_envvarbuf, getenv("FAKETIME_SPAWN_SECONDS"), 30);
+                    FAKETIME_SPAWN_SECONDS = atol(spawn_envvarbuf);
+                }
+
+                if (getenv("FAKETIME_SPAWN_NUMCALLS") != NULL) {
+                    (void) strncpy(spawn_envvarbuf, getenv("FAKETIME_SPAWN_NUMCALLS"), 30);
+                    FAKETIME_SPAWN_NUMCALLS = atol(spawn_envvarbuf);
+                }
+            }
+            spawn_initialized = 1;
+        }
+
+        if (spawned == 0) { /* exec external command once only */
+            if ((spawn_callcounter + 1) >= spawn_callcounter) spawn_callcounter++;
+            if ((((*time_tptr - ftpl_starttime) == FAKETIME_SPAWN_SECONDS) || (spawn_callcounter == FAKETIME_SPAWN_NUMCALLS)) && (spawned == 0)) {
+                spawned = 1;
+                system(FAKETIME_SPAWN_TARGET);
+            }
+
+        }
+
+    } 
+#endif
+
 
     if (last_data_fetch > 0) {
     	if ((*time_tptr - last_data_fetch) > cache_duration) {

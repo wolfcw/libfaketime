@@ -18,6 +18,7 @@ Content of this file:
    f) Faking the date and time system-wide
    g) Using the "faketime" wrapper script
    h) "Limiting" libfaketime
+   i) Spawning an external process
 5. License
 6. Contact
 
@@ -383,6 +384,38 @@ never reached due to the delayed libfaketime activity. Avoid using this
 functionality unless you are sure you really need it and know what you are 
 doing.
 
+
+4i) Spawning an external process
+--------------------------------
+
+From version 0.9 on, libfaketime can execute a shell command once after an
+arbitrary number of seconds or number of time-related system calls of the
+program started. This has two limitations one needs to be aware of:
+
+* Spawning the external process happens during a time-related system call
+  of the original program. If you want the external process to be started
+  5 seconds after program start, but this program does not make any time-
+  related system calls before run-time second 8, the start of your external
+  process will be delayed until run-time second 8.
+
+* The original program is blocked until the external process is finished,
+  because the intercepting time-related system call will not return earlier. If
+  you need to start a long-running external process, make sure it forks into the
+  background. 
+
+Spawning the external process is controlled using three environment variables:
+FAKETIME_SPAWN_TARGET, FAKETIME_SPAWN_SECONDS, FAKETIME_SPAWN_NUMCALLS.
+
+Example (using bash on Linux):
+
+(... usual libfaketime setup here, setting LD_PRELOAD and FAKETIME ...)
+export FAKETIME_SPAWN_TARGET="/bin/echo 'Hello world'"
+export FAKETIME_SPAWN_SECONDS=5
+/opt/local/bin/myprogram
+
+This will run the "echo" command with the given parameter during the first
+time-related system function call that "myprogram" performs after running for 5
+seconds. 
 
 
 5. License
