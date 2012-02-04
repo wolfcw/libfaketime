@@ -69,7 +69,7 @@ ${OBJ}: faketime.c
 	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
 
 lib%.so.${SONAME}: %.o
-	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} $<
+	${CC} -o $@ -Wl,-soname,$@ $< ${LDFLAGS}
 
 clean: 
 	@rm -f ${OBJ} ${LIBS}
