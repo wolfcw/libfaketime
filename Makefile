@@ -1,3 +1,5 @@
+INSTALL = install
+
 all:
 	$(MAKE) -C src all
 	$(MAKE) -C test all
