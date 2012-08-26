@@ -24,7 +24,7 @@
 # testsuite script can make use of any functions defined
 # in these inc files.  the environment variable
 # TESTSUITE_NAME is set to the filename of the testsuite
-# script, for possible use in warning or info messages.  
+# script, for possible use in warning or info messages.
 #
 # see functests/test_true.sh for a simple example of
 # a test suite script.

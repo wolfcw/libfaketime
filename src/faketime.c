@@ -1,12 +1,12 @@
 /*
  *  This file is part of the FakeTime Preload Library, version 0.8.
  *
- *  The FakeTime Preload Library is free software; you can redistribute it 
- *  and/or modify it under the terms of the GNU General Public License v2 as 
+ *  The FakeTime Preload Library is free software; you can redistribute it
+ *  and/or modify it under the terms of the GNU General Public License v2 as
  *  published by the Free Software Foundation.
  *
- *  The FakeTime Preload Library is distributed in the hope that it will 
- *  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
+ *  The FakeTime Preload Library is distributed in the hope that it will
+ *  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
  *  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
@@ -62,7 +62,7 @@ int    fake_gettimeofday(struct timeval *tv, void *tz);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif
 
-/* 
+/*
  * Intercepted system calls:
  *  - time()
  *  - ftime()
@@ -71,7 +71,7 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
  *
  *  Since version 0.7, if FAKE_INTERNAL_CALLS is defined, also calls to
  *  __time(), __ftime(), __gettimeofday(), and __clock_gettime() will be
- *  intercepted. 
+ *  intercepted.
  *
  *  Thanks to a contribution by Philipp Hachtmann, the following
  *  system calls will also be time-adjusted depending on the compile
@@ -110,9 +110,9 @@ int __xstat (int ver, const char *path, struct stat *buf) {
     }
   END_SINGLE_IF
   if (!has_real_stat) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -125,7 +125,7 @@ int __xstat (int ver, const char *path, struct stat *buf) {
      if (!fake_stat_disabled) {
        buf->st_ctime = fake_time(&(buf->st_ctime));
        buf->st_atime = fake_time(&(buf->st_atime));
-       buf->st_mtime = fake_time(&(buf->st_mtime)); 
+       buf->st_mtime = fake_time(&(buf->st_mtime));
      }
    }
 
@@ -145,9 +145,9 @@ int __fxstat (int ver, int fildes, struct stat *buf) {
     }
   END_SINGLE_IF
   if (!has_real_fstat) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -180,9 +180,9 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
     }
   END_SINGLE_IF
   if (!has_real_fstatat) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -215,9 +215,9 @@ int __lxstat (int ver, const char *path, struct stat *buf) {
     }
   END_SINGLE_IF
   if (!has_real_lstat) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -228,7 +228,7 @@ int __lxstat (int ver, const char *path, struct stat *buf) {
 
   if (buf != NULL) {
     if (!fake_stat_disabled) {
-      buf->st_ctime = fake_time(&(buf->st_ctime)); 
+      buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
     }
@@ -249,9 +249,9 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf) {
     }
   END_SINGLE_IF
   if (!has_real_stat) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -283,9 +283,9 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf) {
     }
   END_SINGLE_IF
   if (!has_real_fstat) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -294,11 +294,11 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf) {
     return -1;
   }
 
-  if (buf != NULL){ 
+  if (buf != NULL){
     if (!fake_stat_disabled) {
-      buf->st_ctime = fake_time(&(buf->st_ctime)); 
-      buf->st_atime = fake_time(&(buf->st_atime)); 
-      buf->st_mtime = fake_time(&(buf->st_mtime)); 
+      buf->st_ctime = fake_time(&(buf->st_ctime));
+      buf->st_atime = fake_time(&(buf->st_atime));
+      buf->st_mtime = fake_time(&(buf->st_mtime));
     }
   }
   return result;
@@ -318,9 +318,9 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
     }
   END_SINGLE_IF
   if (!has_real_fstatat64) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat64() not found.\n");
-#endif 
+#endif
     return -1; /* propagate error to caller */
   }
 
@@ -329,11 +329,11 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
     return -1;
   }
 
-  if (buf != NULL){ 
+  if (buf != NULL){
     if (!fake_stat_disabled) {
-      buf->st_ctime = fake_time(&(buf->st_ctime)); 
-      buf->st_atime = fake_time(&(buf->st_atime)); 
-      buf->st_mtime = fake_time(&(buf->st_mtime)); 
+      buf->st_ctime = fake_time(&(buf->st_ctime));
+      buf->st_atime = fake_time(&(buf->st_atime));
+      buf->st_mtime = fake_time(&(buf->st_mtime));
     }
   }
   return result;
@@ -364,7 +364,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
     return -1;
   }
 
-  if (buf != NULL){ 
+  if (buf != NULL){
     if (!fake_stat_disabled) {
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
@@ -399,14 +399,14 @@ static time_t _ftpl_time(time_t *time_tptr) {
     static time_t (*real_time)(time_t *);
     static int has_real_time = 0;
 #endif
-    
+
     time_t result;
 
     time_t null_dummy;
 
     /* Handle null pointers correctly, fix as suggested by Andres Ojamaa */
     if (time_tptr == NULL) {
-	    time_tptr = &null_dummy;    
+        time_tptr = &null_dummy;
         /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
     }
 
@@ -415,24 +415,24 @@ static time_t _ftpl_time(time_t *time_tptr) {
     SINGLE_IF(has_real_gettimeofday==0)
         real_gettimeofday = NULL;
         real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
-        
+
         /* check whether dlsym() worked */
         if (dlerror() == NULL) {
             has_real_gettimeofday = 1;
         }
     END_SINGLE_IF
     if (!has_real_gettimeofday) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
-#endif 
+#endif
             return -1; /* propagate error to caller */
     }
-    
+
     /* initialize our result with the real current time */
     result = (*real_gettimeofday)(tv, NULL);
     if (result == -1) return result; /* original function failed */
     if (time_tptr != NULL)
-	*time_tptr = tv->tv_sec;
+        *time_tptr = tv->tv_sec;
     result = tv->tv_sec;
 #else
     /* Check whether we've got a pointer to the real time function yet */
@@ -446,10 +446,10 @@ static time_t _ftpl_time(time_t *time_tptr) {
         }
     END_SINGLE_IF
     if (!has_real_time) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original time() not found.\n");
-#endif 
-	    if (time_tptr != NULL)
+#endif
+            if (time_tptr != NULL)
                 *time_tptr = -1;
             return -1; /* propagate error to caller */
     }
@@ -465,7 +465,7 @@ time_t time(time_t *time_tptr) {
     time_t result;
     time_t null_dummy;
     if (time_tptr == NULL) {
-	    time_tptr = &null_dummy;    
+        time_tptr = &null_dummy;
         /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
     }
     result = _ftpl_time(time_tptr);
@@ -473,7 +473,7 @@ time_t time(time_t *time_tptr) {
 
     /* pass the real current time to our faking version, overwriting it */
     result = fake_time(time_tptr);
-    
+
     /* return the result to the caller */
     return result;
 }
@@ -486,32 +486,32 @@ int ftime(struct timeb *tp) {
 
     /* sanity check */
     if (tp == NULL)
-	return 0; 		/* ftime() always returns 0, see manpage */
-    
+        return 0;               /* ftime() always returns 0, see manpage */
+
     /* Check whether we've got a pointer to the real ftime() function yet */
     SINGLE_IF(has_real_ftime==0)
         real_ftime = NULL;
         real_ftime = dlsym(RTLD_NEXT, "ftime");
-        
+
         /* check whether dlsym() worked */
         if (dlerror() == NULL) {
             has_real_ftime = 1;
         }
     END_SINGLE_IF
     if (!has_real_ftime) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
-#endif 
+#endif
             tp = NULL;
             return 0; /* propagate error to caller */
     }
-    
+
     /* initialize our result with the real current time */
     result = (*real_ftime)(tp);
 
     /* pass the real current ftime to our faking version, overwriting it */
     result = fake_ftime(tp);
-    
+
     /* return the result to the caller */
     return result; /* will always be 0 (see manpage) */
 }
@@ -525,26 +525,26 @@ int gettimeofday(struct timeval *tv, void *tz) {
 
     /* sanity check */
     if (tv == NULL) {
-	    return -1;
+        return -1;
     }
 
     /* Check whether we've got a pointer to the real ftime() function yet */
     SINGLE_IF(has_real_gettimeofday==0)
         real_gettimeofday = NULL;
         real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
-        
+
         /* check whether dlsym() worked */
         if (dlerror() == NULL) {
             has_real_gettimeofday = 1;
         }
     END_SINGLE_IF
     if (!has_real_gettimeofday) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
-#endif 
+#endif
             return -1; /* propagate error to caller */
     }
-    
+
     /* initialize our result with the real current time */
     result = (*real_gettimeofday)(tv, tz);
     if (result == -1) return result; /* original function failed */
@@ -553,7 +553,7 @@ int gettimeofday(struct timeval *tv, void *tz) {
     result = fake_gettimeofday(tv, tz);
 
     /* return the result to the caller */
-    return result; 
+    return result;
 }
 
 #ifdef POSIX_REALTIME
@@ -561,38 +561,38 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
     static int has_real_clock_gettime = 0;
     int result;
-    
+
     /* sanity check */
     if (tp == NULL) {
-	    return -1;
+        return -1;
     }
 
     /* Check whether we've got a pointer to the real clock_gettime() function yet */
     SINGLE_IF(has_real_clock_gettime==0)
         real_clock_gettime = NULL;
         real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
-        
+
         /* check whether dlsym() worked */
         if (dlerror() == NULL) {
             has_real_clock_gettime = 1;
         }
     END_SINGLE_IF
     if (!has_real_clock_gettime) {  /* dlsym() failed */
-#ifdef DEBUG 
+#ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original clock_gettime() not found.\n");
-#endif 
+#endif
             return -1; /* propagate error to caller */
     }
-    
+
     /* initialize our result with the real current time */
     result = (*real_clock_gettime)(clk_id, tp);
     if (result == -1) return result; /* original function failed */
 
     /* pass the real current time to our faking version, overwriting it */
     result = fake_clock_gettime(clk_id, tp);
-    
+
     /* return the result to the caller */
-    return result; 
+    return result;
 }
 #endif
 
@@ -620,15 +620,15 @@ time_t fake_time(time_t *time_tptr) {
     struct tm user_faked_time_tm;
     time_t user_faked_time_time_t;
     long user_offset;
-	double frac_user_offset;
+    double frac_user_offset;
     char filename[BUFSIZ], line[BUFFERLEN];
     FILE *faketimerc;
     static const char *user_faked_time_fmt = NULL;
 
     /* variables used for caching, introduced in version 0.6 */
-    static time_t last_data_fetch = 0;	/* not fetched previously at first call */
-    static int cache_expired = 1; 	/* considered expired at first call */
-    static int cache_duration = 10;	/* cache fake time input for 10 seconds */
+    static time_t last_data_fetch = 0;  /* not fetched previously at first call */
+    static int cache_expired = 1;       /* considered expired at first call */
+    static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
 #ifdef LIMITEDFAKING
     static long callcounter = 0;
@@ -663,8 +663,8 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
     pthread_cleanup_push((void (*)(void *))pthread_mutex_unlock, (void *)&time_mutex);
 #endif
 
-	/* Sanity check by Karl Chan since v0.8 */
-	if (time_tptr == NULL) return -1;
+    /* Sanity check by Karl Chan since v0.8 */
+    if (time_tptr == NULL) return -1;
 
 #ifdef LIMITEDFAKING
     /* Check whether we actually should be faking the returned timestamp. */
@@ -733,17 +733,17 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
         }
 
-    } 
+    }
 #endif
 
 
     if (last_data_fetch > 0) {
-    	if ((*time_tptr - last_data_fetch) > cache_duration) {
-	    	cache_expired = 1;
-	    }
+        if ((*time_tptr - last_data_fetch) > cache_duration) {
+            cache_expired = 1;
+        }
         else {
-		    cache_expired = 0;
-	    }
+            cache_expired = 0;
+        }
     }
 
 #ifdef NO_CACHING
@@ -752,47 +752,47 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
     if (cache_expired == 1) {
 
-	last_data_fetch = *time_tptr;
+        last_data_fetch = *time_tptr;
 
-	/* Can be enabled for testing ...
-	fprintf(stderr, "***************++ Cache expired ++**************\n");
-	*/
+        /* Can be enabled for testing ...
+        fprintf(stderr, "***************++ Cache expired ++**************\n");
+        */
 
-	/* initialize with default */
-	snprintf(user_faked_time, BUFFERLEN, "+0"); 
-	
-	/* fake time supplied as environment variable? */
-	if (getenv("FAKETIME") != NULL) {
-		(void) strncpy(user_faked_time, getenv("FAKETIME"), BUFFERLEN-2);
-		user_faked_time[BUFFERLEN-1] = 0;	
-	}
-	else {	
-		/* check whether there's a .faketimerc in the user's home directory, or
-		* a system-wide /etc/faketimerc present.
-		* The /etc/faketimerc handling has been contributed by David Burley, 
-		* Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
-		(void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
-		if ((faketimerc = fopen(filename, "rt")) != NULL || 
-		(faketimerc = fopen("/etc/faketimerc", "rt")) != NULL) {
-		while(fgets(line, BUFFERLEN, faketimerc) != NULL) {
-			if ((strlen(line) > 1) && (line[0] != ' ') &&
-			(line[0] != '#') && (line[0] != ';')) {
-			while((line[strlen(line)-1] == 13) ||  
-				(line[strlen(line)-1] == 10))
-				line[strlen(line)-1] = 0;
-			strncpy(user_faked_time, line, BUFFERLEN-1);
-			user_faked_time[BUFFERLEN-1] = 0;
-			break;
-			}
-		}
-		fclose(faketimerc);
-		}		
-	} /* read fake time from file */
+        /* initialize with default */
+        snprintf(user_faked_time, BUFFERLEN, "+0");
+
+        /* fake time supplied as environment variable? */
+        if (getenv("FAKETIME") != NULL) {
+                (void) strncpy(user_faked_time, getenv("FAKETIME"), BUFFERLEN-2);
+                user_faked_time[BUFFERLEN-1] = 0;
+        }
+        else {
+                /* check whether there's a .faketimerc in the user's home directory, or
+                * a system-wide /etc/faketimerc present.
+                * The /etc/faketimerc handling has been contributed by David Burley,
+                * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
+                (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
+                if ((faketimerc = fopen(filename, "rt")) != NULL ||
+                (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL) {
+                while(fgets(line, BUFFERLEN, faketimerc) != NULL) {
+                        if ((strlen(line) > 1) && (line[0] != ' ') &&
+                        (line[0] != '#') && (line[0] != ';')) {
+                        while((line[strlen(line)-1] == 13) ||
+                                (line[strlen(line)-1] == 10))
+                                line[strlen(line)-1] = 0;
+                        strncpy(user_faked_time, line, BUFFERLEN-1);
+                        user_faked_time[BUFFERLEN-1] = 0;
+                        break;
+                        }
+                }
+                fclose(faketimerc);
+                }
+        } /* read fake time from file */
 
 
-    	user_faked_time_fmt = getenv("FAKETIME_FMT");
-    	if (user_faked_time_fmt == NULL)
-        	user_faked_time_fmt = "%Y-%m-%d %T";
+        user_faked_time_fmt = getenv("FAKETIME_FMT");
+        if (user_faked_time_fmt == NULL)
+            user_faked_time_fmt = "%Y-%m-%d %T";
 
     } /* cache had expired */
 
@@ -801,7 +801,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
  */
 //#ifdef __APPLE__
 //    SINGLE_IF(malloc_arena==0)
-//	malloc_arena = 1;
+//      malloc_arena = 1;
 //        return *time_tptr;
 //    END_SINGLE_IF
 //#endif
@@ -822,8 +822,8 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
       case '+':
       case '-': /* User-specified offset */
-		/* fractional time offsets contributed by Karl Chen in v0.8 */
-		frac_user_offset = atof(user_faked_time);
+        /* fractional time offsets contributed by Karl Chen in v0.8 */
+        frac_user_offset = atof(user_faked_time);
 
         /* offset is in seconds by default, but the string may contain
          * multipliers...
@@ -833,8 +833,8 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
         else if (strchr(user_faked_time, 'd') != NULL) frac_user_offset *= 60 * 60 * 24;
         else if (strchr(user_faked_time, 'y') != NULL) frac_user_offset *= 60 * 60 * 24 * 365;
 
-		/* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-		if (strchr(user_faked_time, 'x') != NULL) {
+        /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+        if (strchr(user_faked_time, 'x') != NULL) {
             const double rate = atof(strchr(user_faked_time, 'x')+1);
             const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
             const double timeadj = tdiff * (rate - 1.0);
@@ -852,15 +852,15 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
         user_faked_time_time_t = mktime(&user_faked_time_tm);
         if (user_faked_time_time_t != -1) {
-			user_offset = - ( (long long int)ftpl_starttime - (long long int)user_faked_time_time_t );
-			
-			/* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-			if (strchr(user_faked_time, 'x') != NULL) {
-				const double rate = atof(strchr(user_faked_time, 'x')+1);
-				const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
-			    const double timeadj = tdiff * (rate - 1.0);
-		        *time_tptr += (long) timeadj;
-	        }
+            user_offset = - ( (long long int)ftpl_starttime - (long long int)user_faked_time_time_t );
+
+            /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+            if (strchr(user_faked_time, 'x') != NULL) {
+                const double rate = atof(strchr(user_faked_time, 'x')+1);
+                const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
+                const double timeadj = tdiff * (rate - 1.0);
+                *time_tptr += (long) timeadj;
+            }
 
             *time_tptr += user_offset;
         }
@@ -879,7 +879,7 @@ int fake_ftime(struct timeb *tp) {
     time_t temp_tt = tp->time;
 
     tp->time = fake_time(&temp_tt);
-    
+
     return 0; /* always returns 0, see manpage */
 }
 
@@ -916,19 +916,18 @@ int __gettimeofday(struct timeval *tv, void *tz) {
 
 #ifdef POSIX_REALTIME
 int __clock_gettime(clockid_t clk_id, struct timespec *tp) {
-	return clock_gettime(clk_id, tp);
+    return clock_gettime(clk_id, tp);
 }
 #endif
 
 int __ftime(struct timeb *tp) {
-	return ftime(tp);
+    return ftime(tp);
 }
 
 time_t __time(time_t *time_tptr) {
-	return time(time_tptr);
+    return time(time_tptr);
 }
 #endif
 #endif
 
 /* eof */
-

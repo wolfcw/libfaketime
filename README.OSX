@@ -23,7 +23,7 @@ The resulting library will be named libfaketime.dylib.1
 2) Using libfaketime from the command line on OS X
 --------------------------------------------------
 
-You will need to set three environment variables. In a Terminal.app 
+You will need to set three environment variables. In a Terminal.app
 or iTerm session, the following commands can be used:
 
 export DYLD_FORCE_FLAT_NAMESPACE=1
@@ -59,7 +59,7 @@ following command:
 the name of your actual application.)
 
 If it works fine, you can configure the application to permanently
-run with libfaketime by editing its Info.plist file. Add the 
+run with libfaketime by editing its Info.plist file. Add the
 LSEnvironment key unless it is already there and add a dictionary
 with the three keys like this:
 
@@ -84,8 +84,8 @@ Afterwards, you will probably need to run
 
 to make sure the change to Info.plist does not go unnoticed.
 
-Please note that modifications to Info.plist will be lost when the 
-application is updated, so this process needs to be repeated after 
+Please note that modifications to Info.plist will be lost when the
+application is updated, so this process needs to be repeated after
 such updates, including own new builds when using Xcode.
 
 
@@ -95,4 +95,3 @@ such updates, including own new builds when using Xcode.
 The environment variable FAKETIME can be changed at application run-time
 and always takes precedence over other user-controlled settings. It can
 be re-set to 0 (zero) to work around potential incompatibilities.
-

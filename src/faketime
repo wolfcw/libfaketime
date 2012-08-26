@@ -1,21 +1,21 @@
 #!/bin/sh
 
 # Simple wrapper shell script for FTPL (faketime preload library)
-# Thanks to Daniel Kahn Gillmor for improvement suggestions. 
+# Thanks to Daniel Kahn Gillmor for improvement suggestions.
 
 # It allows you to modify the date and time a program sees when using
-# system library calls such as time() and fstat(). 
+# system library calls such as time() and fstat().
 
 # This wrapper exposes only a small subset of the FTPL functionality.
 # Please see FTPL's README file for more details
 
-# Acknowledgment: Parts of the functionality of this wrapper have been 
+# Acknowledgment: Parts of the functionality of this wrapper have been
 # inspired by Matthias Urlichs' datefudge 1.14.
 
 # Configuration: Path where the libfaketime libraries can be found on Linux/UNIX.
 FTPL_PATH=/usr/lib/faketime
 
-# For Mac OS X users: Full path and name to libfaketime.dylib.1 
+# For Mac OS X users: Full path and name to libfaketime.dylib.1
 MAC_FTPL_PATH=./libfaketime.dylib.1
 
 offset="$1"
@@ -87,13 +87,13 @@ fi
 
 if [ "$USEDIRECT" -eq 0 ] ; then
 	seconds=$($DATE_CMD -d "$offset" '+%s')
-	if [ $? -ne 0 ] ; then 
+	if [ $? -ne 0 ] ; then
 		echo "Error: Timestamp to fake not recognized, please re-try with a different timestamp."
-		exit 1 
+		exit 1
 	fi
 
 	offset=$(expr $seconds - $($DATE_CMD '+%s'))
-	if [ $? -ne 0 ] ; then 
+	if [ $? -ne 0 ] ; then
 		echo "Error: Cannot calculate the faketime offset in seconds, please re-try with a different timestamp."
 		exit 1
 	fi
