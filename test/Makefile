@@ -22,10 +22,10 @@ test: timetest functest
 functest:
 	./testframe.sh functests
 
-clean: 
+clean:
 	@rm -f ${OBJ} timetest
 
 distclean: clean
-	@echo 
+	@echo
 
 .PHONY: all test clean distclean

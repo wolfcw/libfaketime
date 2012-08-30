@@ -5,11 +5,11 @@ Since 0.8.2:
       a program can be started regularly, and after 5 minutes run-time
       it will be sent two years into the future. Those limiting
       start and stop times can be specified in seconds or as the
-      number of any time-related function calls within the program. 
+      number of any time-related function calls within the program.
     - Added a feature to spawn an external process after x seconds
       or y time-related system calls. This can, for example, be used
       to execute an arbitrary shell script x seconds after a program
-      has been started. 
+      has been started.
 
 Since 0.8.1:
     - Added a MacOS port.
@@ -88,4 +88,3 @@ Since 0.2:
 Since 0.1:
     - Fixed segfault when calling time(NULL). Thanks to Andres Ojamaa!
     - Added additional sanity checks.
-
