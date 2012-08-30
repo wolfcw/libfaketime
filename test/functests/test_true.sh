@@ -5,4 +5,3 @@ run()
 	run_testcase true
 	return 0
 }
-

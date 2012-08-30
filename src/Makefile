@@ -4,11 +4,11 @@
 #   * Compilation Defines:
 #
 #     FAKE_STAT
-#         - Enables time faking also for files' timestamps. 
+#         - Enables time faking also for files' timestamps.
 #
 #     NO_ATFILE
 #         - Disables support for the fstatat() group of functions
-#     
+#
 #     PTHREAD
 #         - Define this to enable multithreading support.
 #
@@ -19,16 +19,16 @@
 #           try it unsynchronized.
 #
 #     FAKE_INTERNAL_CALLS
-#         - Also intercept libc internal __functions, e.g. not just time(), 
+#         - Also intercept libc internal __functions, e.g. not just time(),
 #           but also __time(). Enhances compatibility with applications
 #           that make use of low-level system calls, such as Java Virtual
-#           Machines.       
+#           Machines.
 #
 #     NO_CACHING
 #         - Disables the caching of the fake time offset. Only disable caching
-#           if you change the fake time offset during program runtime very 
+#           if you change the fake time offset during program runtime very
 #           frequently. Disabling the cache may negatively influence the
-#           performance. 
+#           performance.
 #
 #     LIMITEDFAKING
 #		  - Support environment variables that limit time faking to certain
@@ -71,14 +71,14 @@ ${OBJ}: faketime.c
 lib%.so.${SONAME}: %.o
 	${CC} -o $@ -Wl,-soname,$@ $< ${LDFLAGS}
 
-clean: 
+clean:
 	@rm -f ${OBJ} ${LIBS}
 
 distclean: clean
-	@echo 
+	@echo
 
 install: ${LIBS}
-	@echo 
+	@echo
 	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}/lib/faketime and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
 	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"
 	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime/"
