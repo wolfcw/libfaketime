@@ -615,6 +615,21 @@ void __attribute__ ((constructor)) ftpl_init(void)
     ftpl_starttime = _ftpl_time(&temp_tt);
 }
 
+static void remove_trailing_eols(char *line)
+{
+	char *endp = line + strlen(line);
+	/*
+	 * erase the last char if it's a newline
+	 * or carriage return, and back up.
+	 * keep doing this, but don't back up
+	 * past the beginning of the string.
+	 */
+# define is_eolchar(c) ((c) == '\n' || (c) == '\r')
+	while (endp > line && is_eolchar(endp[-1]))
+		*--endp = '\0';
+}
+
+
 time_t fake_time(time_t *time_tptr) {
     static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
     struct tm user_faked_time_tm;
@@ -777,9 +792,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
                 while(fgets(line, BUFFERLEN, faketimerc) != NULL) {
                         if ((strlen(line) > 1) && (line[0] != ' ') &&
                         (line[0] != '#') && (line[0] != ';')) {
-                        while((line[strlen(line)-1] == 13) ||
-                                (line[strlen(line)-1] == 10))
-                                line[strlen(line)-1] = 0;
+                        remove_trailing_eols(line);
                         strncpy(user_faked_time, line, BUFFERLEN-1);
                         user_faked_time[BUFFERLEN-1] = 0;
                         break;
