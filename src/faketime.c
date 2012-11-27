@@ -792,7 +792,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
                 while(fgets(line, BUFFERLEN, faketimerc) != NULL) {
                         if ((strlen(line) > 1) && (line[0] != ' ') &&
                         (line[0] != '#') && (line[0] != ';')) {
-			remove_trailing_eols(line);
+                        remove_trailing_eols(line);
                         strncpy(user_faked_time, line, BUFFERLEN-1);
                         user_faked_time[BUFFERLEN-1] = 0;
                         break;
