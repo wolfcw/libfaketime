@@ -13,7 +13,7 @@
 # inspired by Matthias Urlichs' datefudge 1.14.
 
 # Configuration: Path where the libfaketime libraries can be found on Linux/UNIX.
-FTPL_PATH=/usr/lib/faketime
+FTPL_PATH=${0%/bin/faketime}/lib/faketime
 
 # For Mac OS X users: Full path and name to libfaketime.dylib.1
 MAC_FTPL_PATH=./libfaketime.dylib.1
