@@ -776,6 +776,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef DYNAMIC_FAKETIMERC
     if ((xattr_size = getxattr("/etc/faketimerc", "user.last_touched", xattr_buf, BUFFERLEN)) != -1) {
+    if ((xattr_size = getxattr("/etc/faketimerc", "user.t", xattr_buf, BUFFERLEN)) != -1) {
         xattr_buf[xattr_size] = 0;
         if (strcmp(rcfile_touched_xattr, xattr_buf) != 0) {
             cache_expired = 1;

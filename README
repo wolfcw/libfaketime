@@ -271,7 +271,7 @@ on the partition which contains /etc/faketimerc, and also have the libattr1 or
 equivalent libraries installed.
 
 Then, any applications which modify the /etc/faketimerc file should set the
-"user.last_touched" extended attribute on /etc/faketimerc with a value unique to
+"user.t" extended attribute on /etc/faketimerc with a value unique to
 the time of the change. The exact value does not matter as libfaketime simply looks
 for differences.
 
