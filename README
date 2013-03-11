@@ -248,7 +248,7 @@ FAKETIME="+1y x0,5"
 will make the clock run only half as fast. As stated above, the fraction
 delimiter depends on your locale.
 
-For testing, your should run a command like
+For testing, you should run a command like
 
 LD_PRELOAD=./libfaketime.so.1 FAKETIME="+1,5y x10,0" \
 /bin/bash -c 'while true; do echo $SECONDS ; sleep 1 ; done'
@@ -262,6 +262,18 @@ will not give the expected result, since /bin/date will always be started
 as a new process for which also FTPL will be re-initialized. It will show
 the correct offset (1.5 years in the future), but no speed-ups or
 slow-downs.)
+
+Since version X, libfaketime has a DYNAMIC_FAKETIMERC compile flag, which when
+added to the CFLAGS portion of src/Makefile, will detect and use any changes
+within /etc/faketimerc immediately. It does this in a performant way by relying
+on extended file attributes. Thus, you will need the "user_xattr" feature enabled
+on the partition which contains /etc/faketimerc, and also have the libattr1 or
+equivalent libraries installed.
+
+Then, any applications which modify the /etc/faketimerc file should set the
+"user.last_touched" extended attribute on /etc/faketimerc with a value unique to
+the time of the change. The exact value does not matter as libfaketime simply looks
+for differences.
 
 
 Caveats:
