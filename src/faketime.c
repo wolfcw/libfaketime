@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#ifdef DYNAMIC_FAKETIMERC
+// #ifdef DYNAMIC_FAKETIMERC
 #include <attr/xattr.h>
-#endif
+// #endif
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
@@ -648,11 +648,11 @@ time_t fake_time(time_t *time_tptr) {
     static int cache_expired = 1;       /* considered expired at first call */
     static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
-#ifdef DYNAMIC_FAKETIMERC
+// #ifdef DYNAMIC_FAKETIMERC
     static char rcfile_touched_xattr[BUFFERLEN]; 
     char xattr_buf[BUFFERLEN];
     int xattr_size;
-#endif
+// #endif
 
 #ifdef LIMITEDFAKING
     static long callcounter = 0;
@@ -774,8 +774,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
     cache_expired = 1;
 #endif
 
-#ifdef DYNAMIC_FAKETIMERC
-    if ((xattr_size = getxattr("/etc/faketimerc", "user.last_touched", xattr_buf, BUFFERLEN)) != -1) {
+// #ifdef DYNAMIC_FAKETIMERC
     if ((xattr_size = getxattr("/etc/faketimerc", "user.t", xattr_buf, BUFFERLEN)) != -1) {
         xattr_buf[xattr_size] = 0;
         if (strcmp(rcfile_touched_xattr, xattr_buf) != 0) {
@@ -783,7 +782,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
             strcpy(rcfile_touched_xattr, xattr_buf);
         }
     }
-#endif
+// #endif
 
     if (cache_expired == 1) {
 
