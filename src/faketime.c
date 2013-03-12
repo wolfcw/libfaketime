@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <sys/mman.h>
 
 #ifdef DYNAMIC_FAKETIMERC
+#include <sys/mman.h>
 #include <fcntl.h> /* Definition of AT_* constants */
 #include <sys/stat.h>
 #endif
