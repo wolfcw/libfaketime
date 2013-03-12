@@ -25,6 +25,11 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#ifdef DYNAMIC_FAKETIMERC
+#include <fcntl.h> /* Definition of AT_* constants */
+#include <sys/stat.h>
+#endif
+
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
 #include <pthread.h>
@@ -63,8 +68,10 @@ int    fake_gettimeofday(struct timeval *tv, void *tz);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif
 
-static int map_fd;
+#ifdef DYNAMIC_FAKETIMERC
 static char *faketimerc_map;
+static char prev_faketimerc[BUFFERLEN];
+#endif
 
 /*
  * Intercepted system calls:
@@ -94,10 +101,14 @@ static char *faketimerc_map;
 #ifndef _ATFILE_SOURCE
 #define _ATFILE_SOURCE
 #endif
+#ifndef DYNAMIC_FAKETIMERC
 #include <fcntl.h> /* Definition of AT_* constants */
 #endif
+#endif
 
+#ifdef DYNAMIC_FAKETIMERC
 #include <sys/stat.h>
+#endif
 
 static int fake_stat_disabled = 0;
 
@@ -609,6 +620,7 @@ static time_t ftpl_starttime = 0;
 void __attribute__ ((constructor)) ftpl_init(void)
 {
     time_t temp_tt;
+    int map_fd;
 
 #ifdef FAKE_STAT
     if (getenv("NO_FAKE_STAT")!=NULL) {
@@ -618,15 +630,17 @@ void __attribute__ ((constructor)) ftpl_init(void)
 
     ftpl_starttime = _ftpl_time(&temp_tt);
 
+#ifdef DYNAMIC_FAKETIMERC
     if ((map_fd = open("/etc/faketimerc", O_RDWR)) != -1) {
         if ((faketimerc_map = mmap(0, BUFFERLEN, PROT_READ|PROT_WRITE, MAP_SHARED, map_fd, 0)) == (caddr_t)-1){
-            printf("Couldn't mmap!");
+            *faketimerc_map = NULL;
+        }
+        else {
+            strcpy(prev_faketimerc, faketimerc_map);
         }
         close(map_fd);
     }
-    else {
-        printf("Couldn't open '/etc/faketimerc'!");
-    }
+#endif
 }
 
 static void remove_trailing_eols(char *line)
@@ -779,6 +793,15 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
     cache_expired = 1;
 #endif
 
+#ifdef DYNAMIC_FAKETIMERC
+    if (faketimerc_map) {
+        if (strcmp(prev_faketimerc, faketimerc_map) != 0) {
+            cache_expired = 1;
+            strcpy(prev_faketimerc, faketimerc_map);
+        }
+    }
+#endif
+
     if (cache_expired == 1) {
 
         last_data_fetch = *time_tptr;
@@ -800,23 +823,20 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
                 * a system-wide /etc/faketimerc present.
                 * The /etc/faketimerc handling has been contributed by David Burley,
                 * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
-                // (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
-                // if ((faketimerc = fopen(filename, "rt")) != NULL ||
-                // (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL) {
-                // while(fgets(line, BUFFERLEN, faketimerc) != NULL) {
-                        // if ((strlen(line) > 1) && (line[0] != ' ') &&
-                        // (line[0] != '#') && (line[0] != ';')) {
-                        // remove_trailing_eols(line);
-                        // strncpy(user_faked_time, line, BUFFERLEN-1);
-                        // user_faked_time[BUFFERLEN-1] = 0;
-                        // break;
-                        // }
-                // }
-                // fclose(faketimerc);
-                // }
-
-                strncpy(user_faked_time, faketimerc_map, BUFFERLEN-1);
-                user_faked_time[BUFFERLEN-1] = 0;
+                (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
+                if ((faketimerc = fopen(filename, "rt")) != NULL ||
+                (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL) {
+                while(fgets(line, BUFFERLEN, faketimerc) != NULL) {
+                        if ((strlen(line) > 1) && (line[0] != ' ') &&
+                        (line[0] != '#') && (line[0] != ';')) {
+                        remove_trailing_eols(line);
+                        strncpy(user_faked_time, line, BUFFERLEN-1);
+                        user_faked_time[BUFFERLEN-1] = 0;
+                        break;
+                        }
+                }
+                fclose(faketimerc);
+                }
         } /* read fake time from file */
 
 
