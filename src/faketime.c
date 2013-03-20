@@ -24,6 +24,12 @@
 #include <time.h>
 #include <string.h>
 
+#ifdef DYNAMIC_FAKETIMERC
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#endif
+
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
 #include <pthread.h>
@@ -62,6 +68,11 @@ int    fake_gettimeofday(struct timeval *tv, void *tz);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif
 
+#ifdef DYNAMIC_FAKETIMERC
+static char *etc_rcfile_map, *home_rcfile_map;
+static char prev_etc_rcfile[BUFFERLEN], prev_home_rcfile[BUFFERLEN];
+#endif
+
 /*
  * Intercepted system calls:
  *  - time()
@@ -90,10 +101,14 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 #ifndef _ATFILE_SOURCE
 #define _ATFILE_SOURCE
 #endif
+#ifndef DYNAMIC_FAKETIMERC
 #include <fcntl.h> /* Definition of AT_* constants */
 #endif
+#endif
 
+#ifdef DYNAMIC_FAKETIMERC
 #include <sys/stat.h>
+#endif
 
 static int fake_stat_disabled = 0;
 
@@ -605,6 +620,8 @@ static time_t ftpl_starttime = 0;
 void __attribute__ ((constructor)) ftpl_init(void)
 {
     time_t temp_tt;
+    int map_fd;
+    char filename[BUFSIZ];
 
 #ifdef FAKE_STAT
     if (getenv("NO_FAKE_STAT")!=NULL) {
@@ -613,6 +630,28 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 
     ftpl_starttime = _ftpl_time(&temp_tt);
+
+#ifdef DYNAMIC_FAKETIMERC
+    if ((map_fd = open("/etc/faketimerc", O_RDWR)) != -1) {
+        if ((etc_rcfile_map = mmap(0, BUFFERLEN, PROT_READ|PROT_WRITE, MAP_SHARED, map_fd, 0)) == (caddr_t)-1){
+            *etc_rcfile_map = NULL;
+        }
+        else {
+            strcpy(prev_etc_rcfile, etc_rcfile_map);
+        }
+        close(map_fd);
+    }
+    (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
+    if ((map_fd = open(filename, O_RDWR)) != -1) {
+        if ((home_rcfile_map = mmap(0, BUFFERLEN, PROT_READ|PROT_WRITE, MAP_SHARED, map_fd, 0)) == (caddr_t)-1){
+            *home_rcfile_map = NULL;
+        }
+        else {
+            strcpy(prev_home_rcfile, home_rcfile_map);
+        }
+        close(map_fd);
+    }
+#endif
 }
 
 static void remove_trailing_eols(char *line)
@@ -763,6 +802,21 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef NO_CACHING
     cache_expired = 1;
+#endif
+
+#ifdef DYNAMIC_FAKETIMERC
+    if (home_rcfile_map) {
+        if (strcmp(prev_home_rcfile, home_rcfile_map) != 0) {
+            cache_expired = 1;
+            strcpy(prev_home_rcfile, home_rcfile_map);
+        }
+    }
+    if (cache_expired != 1 && etc_rcfile_map) {
+        if (strcmp(prev_etc_rcfile, etc_rcfile_map) != 0) {
+            cache_expired = 1;
+            strcpy(prev_etc_rcfile, etc_rcfile_map);
+        }
+    }
 #endif
 
     if (cache_expired == 1) {
