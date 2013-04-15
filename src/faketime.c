@@ -805,16 +805,16 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #ifdef DYNAMIC_FAKETIMERC
-    if (etc_rcfile_map) {
-        if (strcmp(prev_etc_rcfile, etc_rcfile_map) != 0) {
-            cache_expired = 1;
-            strcpy(prev_etc_rcfile, etc_rcfile_map);
-        }
-    }
     if (home_rcfile_map) {
         if (strcmp(prev_home_rcfile, home_rcfile_map) != 0) {
             cache_expired = 1;
             strcpy(prev_home_rcfile, home_rcfile_map);
+        }
+    }
+    if (cache_expired != 1 && etc_rcfile_map) {
+        if (strcmp(prev_etc_rcfile, etc_rcfile_map) != 0) {
+            cache_expired = 1;
+            strcpy(prev_etc_rcfile, etc_rcfile_map);
         }
     }
 #endif
