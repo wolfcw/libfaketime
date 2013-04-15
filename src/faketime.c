@@ -26,7 +26,7 @@
 
 #ifdef DYNAMIC_FAKETIMERC
 #include <sys/mman.h>
-#include <fcntl.h> /* Definition of AT_* constants */
+#include <fcntl.h>
 #include <sys/stat.h>
 #endif
 
@@ -69,8 +69,8 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif
 
 #ifdef DYNAMIC_FAKETIMERC
-static char *faketimerc_map;
-static char prev_faketimerc[BUFFERLEN];
+static char *etc_rcfile_map, *home_rcfile_map;
+static char prev_etc_rcfile[BUFFERLEN], prev_home_rcfile[BUFFERLEN];
 #endif
 
 /*
@@ -621,6 +621,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
 {
     time_t temp_tt;
     int map_fd;
+    char filename[BUFSIZ];
 
 #ifdef FAKE_STAT
     if (getenv("NO_FAKE_STAT")!=NULL) {
@@ -632,11 +633,21 @@ void __attribute__ ((constructor)) ftpl_init(void)
 
 #ifdef DYNAMIC_FAKETIMERC
     if ((map_fd = open("/etc/faketimerc", O_RDWR)) != -1) {
-        if ((faketimerc_map = mmap(0, BUFFERLEN, PROT_READ|PROT_WRITE, MAP_SHARED, map_fd, 0)) == (caddr_t)-1){
-            *faketimerc_map = NULL;
+        if ((etc_rcfile_map = mmap(0, BUFFERLEN, PROT_READ|PROT_WRITE, MAP_SHARED, map_fd, 0)) == (caddr_t)-1){
+            *etc_rcfile_map = NULL;
         }
         else {
-            strcpy(prev_faketimerc, faketimerc_map);
+            strcpy(prev_etc_rcfile, etc_rcfile_map);
+        }
+        close(map_fd);
+    }
+    (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
+    if ((map_fd = open(filename, O_RDWR)) != -1) {
+        if ((home_rcfile_map = mmap(0, BUFFERLEN, PROT_READ|PROT_WRITE, MAP_SHARED, map_fd, 0)) == (caddr_t)-1){
+            *home_rcfile_map = NULL;
+        }
+        else {
+            strcpy(prev_home_rcfile, home_rcfile_map);
         }
         close(map_fd);
     }
@@ -794,10 +805,16 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #ifdef DYNAMIC_FAKETIMERC
-    if (faketimerc_map) {
-        if (strcmp(prev_faketimerc, faketimerc_map) != 0) {
+    if (etc_rcfile_map) {
+        if (strcmp(prev_etc_rcfile, etc_rcfile_map) != 0) {
             cache_expired = 1;
-            strcpy(prev_faketimerc, faketimerc_map);
+            strcpy(prev_etc_rcfile, etc_rcfile_map);
+        }
+    }
+    if (home_rcfile_map) {
+        if (strcmp(prev_home_rcfile, home_rcfile_map) != 0) {
+            cache_expired = 1;
+            strcpy(prev_home_rcfile, home_rcfile_map);
         }
     }
 #endif
