@@ -25,15 +25,147 @@
 
 #set -x
 
-TIMEDIR=~/.timeprivacy
+SCRIPTNAME="$(basename $0)"
 
-SECONDS_FILE="$TIMEDIR/seconds_file_"$1""
-MINUTES_FILE="$TIMEDIR/minutes_file_"$1""
-HOURS_FILE="$TIMEDIR/hours_file_"$1""
+usage() {
+   echo "$SCRIPTNAME
 
-#DAYS_FILE="$TIMEDIR/days_file_"$1""
-#MONTHS_FILE="$TIMEDIR/months_file_"$1""
-#YEARS_FILE="$TIMEDIR/years_file_"$1""
+Usage: $SCRIPTNAME [-h help] [-d day] [-m month] [-y year] [-i increment in seconds (0-60)] [-r random increment in seconds (0-60)] [-f history folder]
+Example: $SCRIPTNAME -d 30 -m 12 -y 2013 -i 10 -f /tmp/$SCRIPTNAMEtest
+         sudo $SCRIPTNAME -d 30 -m 12 -y 2013 -r -f /tmp/$SCRIPTNAMEtest"
+}
+
+_randomincrement="none"
+_increment="none"
+
+while [ -n "$1" ]; do
+  case "$1" in
+      -h)
+          usage
+          exit 0
+          ;;
+      -d)
+          _day="$2"
+          shift
+          ;;
+      -m)
+          _month="$2"
+          shift
+          ;;
+      -y)
+          _year="$2"
+          shift
+          ;;
+      -i)
+          _increment="$2"
+          shift
+          ;;
+      -r)
+          _randomincrement="$2"
+          shift
+          ;;
+      -f)
+          TIMEDIR="$2"
+          shift
+          ;;
+      *)
+          command="$(which $1)"
+          ## From now on the complete to-be wrapped command + its args
+          ## are stored in $@, which will expand like we want it for
+          ## handling quoted arguments with whitespaces in it, etc.
+          break
+  esac
+  shift
+done
+
+if [ -z "$_day" ]; then
+   _day="$(date +"%d")"
+fi
+
+if [ -z "$_month" ]; then
+   _month="$(date +"%m")"
+fi
+
+if [ -z "$_year" ]; then
+   _year="$(date +"%Y")"
+fi
+
+if [ "$_randomincrement" = "none" ] && [ "$_increment" = "none" ]; then
+   _increment="1"
+fi
+
+if [ "$_randomincrement" = "none" ]; then
+   if [ -z "$_increment" ]; then
+      _increment="1"
+   fi
+elif [ "$_increment" = "none" ]; then
+   if [ "$_randomincrement" = "" ]; then
+      echo "randomincrement must be a positive number."
+      exit 1
+   else
+      ## random number between 1 and $_randomincrement
+      random_number="$(( 0+($(od -An -N2 -i /dev/random) )%($_randomincrement-0+1) ))"
+      _increment="$random_number"
+   fi
+else
+   echo "You can not combine -r and -i."
+   exit 1
+fi
+
+if [ -z "$TIMEDIR" ]; then
+   TIMEDIR=~/.timeprivacy
+fi
+
+nodigits="$(echo $_increment | sed 's/[[:digit:]]//g')"
+if [ ! -z "$nodigits" ]; then
+   echo "increment is not a digit."
+   exit 1
+fi
+
+nodigits="$(echo $_year | sed 's/[[:digit:]]//g')"
+if [ ! -z "$nodigits" ]; then
+   echo "_day is not a digit."
+   exit 1
+fi
+
+nodigits="$(echo $_year | sed 's/[[:digit:]]//g')"
+if [ ! -z "$nodigits" ]; then
+   echo "year is not a digit."
+   exit 1
+fi
+
+nodigits="$(echo $_month | sed 's/[[:digit:]]//g')"
+if [ ! -z "$nodigits" ]; then
+   echo "month is not a digit."
+   exit 1
+fi
+
+nodigits="$(echo $_day | sed 's/[[:digit:]]//g')"
+if [ ! -z "$nodigits" ]; then
+   echo "day is not a digit."
+   exit 1
+fi
+
+nodigits="$(echo $_increment | sed 's/[[:digit:]]//g')"
+if [ ! -z "$nodigits" ]; then
+   echo "increment is not a digit."
+   exit 1
+fi
+
+SECONDS_FILE="$TIMEDIR/seconds_file"
+MINUTES_FILE="$TIMEDIR/minutes_file"
+HOURS_FILE="$TIMEDIR/hours_file"
+
+#DAYS_FILE="$TIMEDIR/days_file"
+#MONTHS_FILE="$TIMEDIR/months_file"
+#YEARS_FILE="$TIMEDIR/years_file"
+
+#true "TIMEDIR: $TIMEDIR"
+#true "year: $_year"
+#true "month: $_month"
+#true "day: $_day"
+#true "_randomincrement: $_randomincrement"
+#true "_increment: $_increment"
 
 read_date_file() {
    if [ ! -d "$TIMEDIR" ]; then
@@ -95,7 +227,7 @@ read_date_file() {
       HOURS="0"
    fi
 
-   SECONDS="$(expr "$SECONDS" + "1")" || true
+   SECONDS="$(expr "$SECONDS" + "$_increment")" || true
    if [ "$SECONDS" -ge "60" ]; then
       SECONDS="0"
 
@@ -124,14 +256,6 @@ need_new_date() {
    #while [ 1 ]; do
    #   read_date_file
    #done
-
-   _day="$(date +"%d")"
-   _month="$(date +"%m")"
-   _year="$(date +"%Y")"
-
-   #_hour="$(date +"%H")"
-   #_minute="$(date +"%M")"
-   #_second="$(date +"%S")"
 
    read_date_file
 
