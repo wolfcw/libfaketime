@@ -1,6 +1,6 @@
-INSTALL = install
+INSTALL ?= install
 
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 
 all:
 
