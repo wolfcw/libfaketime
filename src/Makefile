@@ -47,10 +47,10 @@
 #     the dynamic disabling of the FAKE_STAT calls.
 #
 
-CC = gcc
-INSTALL = install
+CC ?= gcc
+INSTALL ?= install
 
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 
 CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING -DSPAWNSUPPORT
 LDFLAGS += -shared -ldl -lm -lpthread

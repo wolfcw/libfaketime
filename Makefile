@@ -1,4 +1,4 @@
-INSTALL = install
+INSTALL ?= install
 
 all:
 	$(MAKE) -C src all
