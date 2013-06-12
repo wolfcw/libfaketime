@@ -1,8 +1,7 @@
-INSTALL = install
+INSTALL ?= install
 
 all:
 	$(MAKE) -C src all
-	$(MAKE) -C test all
 
 test:
 	$(MAKE) -C test all

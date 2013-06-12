@@ -47,13 +47,14 @@
 #     the dynamic disabling of the FAKE_STAT calls.
 #
 
-CC = gcc
-INSTALL = install
+CC ?= gcc
+INSTALL ?= install
 
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 
 CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING -DSPAWNSUPPORT
-LDFLAGS += -shared -ldl -lm -lpthread
+LDFLAGS += -shared
+LDADD += -ldl -lm -lpthread
 
 SRC = faketime.c
 OBJ = faketime.o faketimeMT.o
@@ -69,7 +70,7 @@ ${OBJ}: faketime.c
 	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
 
 lib%.so.${SONAME}: %.o
-	${CC} -o $@ -Wl,-soname,$@ $< ${LDFLAGS}
+	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} $< ${LDADD}
 
 clean:
 	@rm -f ${OBJ} ${LIBS}
