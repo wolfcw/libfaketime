@@ -8,6 +8,7 @@ platform()
 	case "$out" in
 	*Darwin*) echo "mac" ;;
 	*Linux*) echo "linuxlike" ;;
+    GNU|GNU/kFreeBSD) echo "linuxlike" ;;
 	*) echo 1>&2 unsupported platform, uname=\"$out\" ;;
 	esac
 }
