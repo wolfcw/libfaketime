@@ -97,6 +97,11 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 static int fake_stat_disabled = 0;
 
+/**
+ * When advancing time linearly with each time(), etc. call, the calls are
+ * counted here */
+static long int ticks = 0;
+
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf) {
   static int (*real_stat) (int, const char *, struct stat *);
@@ -639,6 +644,7 @@ time_t fake_time(time_t *time_tptr) {
     char filename[BUFSIZ], line[BUFFERLEN];
     FILE *faketimerc;
     static const char *user_faked_time_fmt = NULL;
+    char * tmp_time_fmt;
 
     /* variables used for caching, introduced in version 0.6 */
     static time_t last_data_fetch = 0;  /* not fetched previously at first call */
@@ -852,6 +858,9 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
             const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
             const double timeadj = tdiff * (rate - 1.0);
             *time_tptr += (long) timeadj;
+        } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
+	    /* increment time with every time() call*/
+            *time_tptr = atof(tmp_time_fmt + 1) * ticks++;
         }
 
         *time_tptr += (long) frac_user_offset;
@@ -873,6 +882,9 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
                 const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
                 const double timeadj = tdiff * (rate - 1.0);
                 *time_tptr += (long) timeadj;
+            } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
+                /* increment time with every time() call*/
+                *time_tptr = atof(tmp_time_fmt + 1) * ticks++;
             }
 
             *time_tptr += user_offset;

@@ -248,6 +248,12 @@ FAKETIME="+1y x0,5"
 will make the clock run only half as fast. As stated above, the fraction
 delimiter depends on your locale.
 
+FAKETIME="+1y i2,0"
+
+will make the clock step two seconds per each time(), etc. call, running
+completely independently from the system clock. It helps running programs
+with some determinism.
+
 For testing, your should run a command like
 
 LD_PRELOAD=./libfaketime.so.1 FAKETIME="+1,5y x10,0" \
