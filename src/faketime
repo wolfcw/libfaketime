@@ -63,6 +63,7 @@ if [ -z "$offset" -o "$offset" = "-h" -o "$offset" = "-?" -o "$offset" = "--help
 	echo "$0 '2008-12-24 08:15:42' /bin/date"
 	echo "$0 -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo \$SECONDS ; sleep 1 ; done'"
 	echo "$0 -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo \$SECONDS ; sleep 1 ; done'"
+	echo "$0 -f '+2,5y i2,0' /bin/bash -c 'date; while true; do echo \$SECONDS ; sleep 1 ; done'"
 	echo "(Please note that it depends on your locale settings whether . or , has to be used for fractions)"
 	echo ""
 	if [ -z "$offset" ] ; then

@@ -32,6 +32,7 @@ faketime 'last Friday 5 pm' /bin/date
 faketime '2008-12-24 08:15:42' /bin/date
 faketime -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 faketime -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
+faketime -f '+2,5y i2,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 (Please note that it depends on your locale settings whether . or , has to be used for fractional offsets)
 .fi
 .SH ADVANCED TIMESTAMP FORMAT
@@ -49,7 +50,8 @@ This is the most often used format and specifies the faked time relatively to th
 Start-at timestamps: \fB"@YYYY-MM-DD hh:mm:ss"\fR
 The wall clock will start counting at the given timestamp for the program. This can be used for specifying absolute timestamps without freezing the clock.
 .SH ADVANCED USAGE
-When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP FORMAT above and option \fB\-f\fR), the clock speed can be adjusted, i.e. time may run faster or slower for the executed program. For example, \fB"+5y x10"\fR will set the faked time 5 years into the future and make the time pass 10 times as fast (one real second equals 10 seconds measured by the program). Similarly, the flow of time can be slowed, e.g. using \fB"-7d x0,2"\fR, which will set the faked time 7 days in the past and set the clock speed to 20 percent, i.e. it takes five real world seconds for one second measured by the program. Again, depending on your locale, either "x2.0" or "x2,0" may be required regarding the delimiter.
+When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP FORMAT above and option \fB\-f\fR), the clock speed can be adjusted, i.e. time may run faster or slower for the executed program. For example, \fB"+5y x10"\fR will set the faked time 5 years into the future and make the time pass 10 times as fast (one real second equals 10 seconds measured by the program). Similarly, the flow of time can be slowed, e.g. using \fB"-7d x0,2"\fR, which will set the faked time 7 days in the past and set the clock speed to 20 percent, i.e. it takes five real world seconds for one second measured by the program. Again, depending on your locale, either "x2.0" or "x2,0" may be required regarding the delimiter. You can also make faketime to advance the reported time by a preset interval upon each time() call independently from the system's time using \fB"-7d i2,0"\fR, where 
+\fB"i"\fR is followed by the increase interval in seconds.
 .PP
 Faking times for multiple programs or even system-wide can be simplified by using ~/.faketimerc files and /etc/faketimerc. Please refer to the README that came with faketime for warnings and details.
 .SH AUTHOR
