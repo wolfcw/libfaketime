@@ -37,14 +37,6 @@ if [ "$offset" = "-m" ] ; then USEMT=1; shift; offset="$1"; fi
 if [ "$offset" = "-f" ] ; then USEDIRECT=1; shift; offset="$1"; fi
 if [ "$offset" = "-m" ] ; then USEMT=1; shift; offset="$1"; fi
 
-# Have USEDIRECT implicitly set when $offset begins with + or -, followed
-# by number and not having 3 consecutive alphabet characters.
-# This matches e.g. '-16hx2' but not '-3 weeks'.
-case $offset in
-	[+-][0-9]*[A-Za-z][A-Za-z][A-Za-z]*) ;;
-	[+-][0-9]*) USEDIRECT=1 ;;
-esac
-
 if [ -z "$offset" -o "$offset" = "-h" -o "$offset" = "-?" -o "$offset" = "--help" ] ; then
 	echo ""
 	echo "Usage: $0 [switches] timestamp program arguments"
