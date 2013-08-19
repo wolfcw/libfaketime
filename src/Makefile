@@ -52,33 +52,35 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING -DSPAWNSUPPORT
-LDFLAGS += -shared
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING -DSPAWNSUPPORT -DPREFIX='"'$(PREFIX)'"'
+LIB_LDFLAGS += -shared
+LDFLAGS += -lrt
 LDADD += -ldl -lm -lpthread
 
-SRC = faketime.c
-OBJ = faketime.o faketimeMT.o
+SRC = libfaketime.c
+LIBS_OBJ = libfaketime.o libfaketimeMT.o
+BINS = faketime
 
 SONAME = 1
 LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
-all: ${LIBS}
+all: ${LIBS} ${BINS}
 
 faketimeMT.o: EXTRA_FLAGS := -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME
 
-${OBJ}: faketime.c
+${LIBS_OBJ}: libfaketime.c
 	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
 
-lib%.so.${SONAME}: %.o
-	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} $< ${LDADD}
+%.so.${SONAME}: %.o
+	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
 
 clean:
-	@rm -f ${OBJ} ${LIBS}
+	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
 
 distclean: clean
 	@echo
 
-install: ${LIBS}
+install: ${LIBS} ${BINS}
 	@echo
 	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}/lib/faketime and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
 	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"

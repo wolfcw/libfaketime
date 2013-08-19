@@ -59,24 +59,25 @@ PREFIX = /usr/local
 # 10.5
 #CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch ppc
 # 10.6
-CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64 -DLIMITEDFAKING -DSPAWNSUPPORT
-SRC = faketime.c
+CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64 -DLIMITEDFAKING -DSPAWNSUPPORT -DPREFIX='"'$(PREFIX)'"'
+LIB_SRC = libfaketime.c
 
 SONAME = 1
 LIBS = libfaketime.dylib.${SONAME}
+BINS = faketime
 
-all: ${LIBS}
+all: ${LIBS} ${BINS}
 
-libfaketime.dylib.${SONAME}: ${SRC}
+libfaketime.dylib.${SONAME}: ${LIB_SRC}
 	${CC} -o $@ ${CFLAGS} $<
 
 clean:
-	@rm -f ${OBJ} ${LIBS}
+	@rm -f ${OBJ} ${LIBS} ${BINS}
 
 distclean: clean
 	@echo
 
-install: ${LIBS}
+install: ${LIBS} ${BINS}
 	@echo
 	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}/lib/faketime and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
 	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"

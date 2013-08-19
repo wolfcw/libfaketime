@@ -32,7 +32,9 @@ faketime 'last Friday 5 pm' /bin/date
 faketime '2008-12-24 08:15:42' /bin/date
 faketime -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 faketime -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
-faketime -f '+2,5y i2,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
+faketime -f '+2,5y i2,0' /bin/bash -c 'while true; do date ; sleep 1 ; done'
+In this single case all spawned processes will use the same global clock without restaring it at the start of each process.
+
 (Please note that it depends on your locale settings whether . or , has to be used for fractional offsets)
 .fi
 .SH ADVANCED TIMESTAMP FORMAT
