@@ -21,8 +21,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <fcntl.h>
 #include <time.h>
 #include <string.h>
+#include <semaphore.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
@@ -99,8 +104,71 @@ static int fake_stat_disabled = 0;
 
 /**
  * When advancing time linearly with each time(), etc. call, the calls are
- * counted here */
-static long int ticks = 0;
+ * counted in shared memory pointed at by ticks and protected by ticks_sem
+ * semaphore */
+static sem_t *ticks_sem = NULL;
+static uint64_t *ticks = NULL;
+
+
+void ft_init (void) __attribute__ ((constructor));
+void ft_cleanup (void) __attribute__ ((destructor));
+
+void ft_init (void)
+{
+  int ticks_shm_fd;
+  char sem_name[256], shm_name[256], *ft_shared = getenv("FAKETIME_SHARED");
+  if (ft_shared != NULL) {
+    if (sscanf(ft_shared, "%255s %255s", sem_name, shm_name) < 2 ) {
+      printf("Error parsing semaphor name and shared memory id from string: %s", ft_shared);
+      exit(1);
+    }
+
+    if (SEM_FAILED == (ticks_sem = sem_open(sem_name, 0))) {
+      perror("sem_open");
+      exit(1);
+    }
+
+    if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR))) {
+      perror("shm_open");
+      exit(1);
+    }
+    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
+				    MAP_SHARED, ticks_shm_fd, 0))) {
+      perror("mmap");
+      exit(1);
+    }
+  }
+}
+
+void ft_cleanup (void)
+{
+  /* detach from shared memory */
+  munmap(ticks, sizeof(uint64_t));
+  sem_close(ticks_sem);
+}
+
+static time_t next_time(double ticklen)
+{
+  time_t ret = 0;
+
+  if (ticks_sem != NULL) {
+    /* lock */
+    if (sem_wait(ticks_sem) == -1) {
+      perror("sem_wait");
+      exit(1);
+    }
+
+    /* calculate and update elapsed time */
+    ret = ticklen * (*ticks)++;
+    /* unlock */
+    if (sem_post(ticks_sem) == -1) {
+      perror("sem_post");
+      exit(1);
+    }
+  }
+  return ret;
+
+}
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf) {
@@ -860,7 +928,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
             *time_tptr += (long) timeadj;
         } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
 	    /* increment time with every time() call*/
-            *time_tptr = atof(tmp_time_fmt + 1) * ticks++;
+	    *time_tptr += next_time(atof(tmp_time_fmt + 1));
         }
 
         *time_tptr += (long) frac_user_offset;
@@ -884,7 +952,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
                 *time_tptr += (long) timeadj;
             } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
                 /* increment time with every time() call*/
-                *time_tptr = atof(tmp_time_fmt + 1) * ticks++;
+                *time_tptr += next_time(atof(tmp_time_fmt + 1));
             }
 
             *time_tptr += user_offset;
