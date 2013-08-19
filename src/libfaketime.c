@@ -110,10 +110,9 @@ static sem_t *ticks_sem = NULL;
 static uint64_t *ticks = NULL;
 
 
-void ft_init (void) __attribute__ ((constructor));
 void ft_cleanup (void) __attribute__ ((destructor));
 
-void ft_init (void)
+static void ft_shm_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared = getenv("FAKETIME_SHARED");
@@ -679,6 +678,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
 {
     time_t temp_tt;
 
+    ft_shm_init();
 #ifdef FAKE_STAT
     if (getenv("NO_FAKE_STAT")!=NULL) {
       fake_stat_disabled = 1;  //Note that this is NOT re-checked
