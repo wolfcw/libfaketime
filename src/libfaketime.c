@@ -366,62 +366,6 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 }
 #endif
 
-/*
- *  Our version of time() allows us to return fake values, so the calling
- *  program thinks it's retrieving the current date and time, while it is
- *  not
- *  Note that this routine is split into two parts so that the initialization
- *  piece can call the 'real' time function to establish a base time.
- */
-static time_t _ftpl_time(time_t *time_tptr) {
-#ifdef __APPLE__
-    struct timeval tvm, *tv = &tvm;
-#else
-#endif
-
-    time_t result;
-
-    time_t null_dummy;
-
-    /* Handle null pointers correctly, fix as suggested by Andres Ojamaa */
-    if (time_tptr == NULL) {
-        time_tptr = &null_dummy;
-        /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
-    }
-
-#ifdef __APPLE__
-    /* Check whether we've got a pointer to the real ftime() function yet */
-    if (NULL == real_gettimeofday) {  /* dlsym() failed */
-#ifdef DEBUG
-            (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
-#endif
-            return -1; /* propagate error to caller */
-    }
-
-    /* initialize our result with the real current time */
-    result = (*real_gettimeofday)(tv, NULL);
-    if (result == -1) return result; /* original function failed */
-    if (time_tptr != NULL)
-        *time_tptr = tv->tv_sec;
-    result = tv->tv_sec;
-#else
-    /* Check whether we've got a pointer to the real time function yet */
-    if (NULL == real_time) {  /* dlsym() failed */
-#ifdef DEBUG
-            (void) fprintf(stderr, "faketime problem: original time() not found.\n");
-#endif
-            if (time_tptr != NULL)
-                *time_tptr = -1;
-            return -1; /* propagate error to caller */
-    }
-
-    /* initialize our result with the real current time */
-    result = (*real_time)(time_tptr);
-#endif
-
-    return result;
-}
-
 time_t time(time_t *time_tptr) {
     time_t result;
     time_t null_dummy;
@@ -429,7 +373,7 @@ time_t time(time_t *time_tptr) {
         time_tptr = &null_dummy;
         /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
     }
-    result = _ftpl_time(time_tptr);
+    result = (*real_time)(time_tptr);
     if (result == ((time_t) -1)) return result;
 
     /* pass the real current time to our faking version, overwriting it */
@@ -529,8 +473,6 @@ static time_t ftpl_starttime = 0;
 
 void __attribute__ ((constructor)) ftpl_init(void)
 {
-    time_t temp_tt;
-
     /* Look up all real_* functions. NULL will mark missing ones. */
     real_stat = dlsym(RTLD_NEXT, "__xstat");
     real_fstat = dlsym(RTLD_NEXT, "__fxstat");
@@ -552,7 +494,18 @@ void __attribute__ ((constructor)) ftpl_init(void)
     }
 #endif
 
-    ftpl_starttime = _ftpl_time(&temp_tt);
+#ifdef __APPLE__
+    /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    /* this is not faked */
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    ftpl_starttime = mts.tv_sec;
+#else
+    ftpl_starttime = real_time(NULL);
+#endif
 }
 
 static void remove_trailing_eols(char *line)
