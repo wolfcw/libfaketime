@@ -33,24 +33,7 @@
 #ifdef PTHREAD
 #include <pthread.h>
 
-static pthread_mutex_t once_mutex=PTHREAD_MUTEX_INITIALIZER;
-
-#define SINGLE_IF_MTX(ifcondition,mtxaddr) \
-  if (ifcondition) { \
-    pthread_mutex_lock(mtxaddr); \
-    pthread_cleanup_push((void (*)(void *))pthread_mutex_unlock, (void *)mtxaddr); \
-    if (ifcondition) {
-#define SINGLE_IF(ifcondition) SINGLE_IF_MTX(ifcondition,&once_mutex)
-#define END_SINGLE_IF \
-    } \
-    pthread_cleanup_pop(1); \
-  }
-
 #else
-
-#define SINGLE_IF_MTX(ifcondition,mtxaddr) if (ifcondition) {
-#define SINGLE_IF(ifcondition) if (ifcondition) {
-#define END_SINGLE_IF }
 
 #endif
 
@@ -58,6 +41,21 @@ static pthread_mutex_t once_mutex=PTHREAD_MUTEX_INITIALIZER;
 #include <dlfcn.h>
 
 #define BUFFERLEN   256
+
+/* real pointer to faked functions */
+static int (*real_stat) (int, const char *, struct stat *);
+static int (*real_fstat) (int, int, struct stat *);
+static int (*real_fstatat) (int, int, const char *, struct stat *, int);
+static int (*real_lstat)(int, const char *, struct stat *);
+static int (*real_stat64) (int, const char *, struct stat64 *);
+static int (*real_fstat64)(int, int , struct stat64 *);
+static int (*real_fstatat64)(int, int , const char *, struct stat64 *, int);
+static int (*real_lstat64) (int, const char *, struct stat64 *);
+static time_t (*real_time)(time_t *);
+static int (*real_ftime)(struct timeb *);
+static int (*real_gettimeofday)(struct timeval *, void *);
+static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
+
 
 /* prototypes */
 time_t fake_time(time_t *time_tptr);
@@ -171,17 +169,7 @@ static time_t next_time(double ticklen)
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf) {
-  static int (*real_stat) (int, const char *, struct stat *);
-  static int has_real_stat=0;
-
-  SINGLE_IF(has_real_stat==0)
-    real_stat = NULL;
-    real_stat = dlsym(RTLD_NEXT, "__xstat");
-    if (dlerror() == NULL) {
-      has_real_stat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_stat) {  /* dlsym() failed */
+  if (NULL == real_stat) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
 #endif
@@ -206,17 +194,7 @@ int __xstat (int ver, const char *path, struct stat *buf) {
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat (int ver, int fildes, struct stat *buf) {
-  static int (*real_fstat) (int, int, struct stat *);
-  static int has_real_fstat=0;
-
-  SINGLE_IF(has_real_fstat==0)
-    real_fstat = NULL;
-    real_fstat = dlsym(RTLD_NEXT, "__fxstat");
-    if (dlerror() == NULL) {
-      has_real_fstat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_fstat) {  /* dlsym() failed */
+  if (NULL == real_fstat) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
 #endif
@@ -241,17 +219,8 @@ int __fxstat (int ver, int fildes, struct stat *buf) {
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int flag) {
-  static int (*real_fstatat) (int, int, const char *, struct stat *, int);
-  static int has_real_fstatat=0;
 
-  SINGLE_IF(has_real_fstatat==0)
-    real_fstatat = NULL;
-    real_fstatat = dlsym(RTLD_NEXT, "__fxstatat");
-    if (dlerror() == NULL) {
-      has_real_fstatat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_fstatat) {  /* dlsym() failed */
+  if (NULL == real_fstatat) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat() not found.\n");
 #endif
@@ -276,17 +245,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat (int ver, const char *path, struct stat *buf) {
-  static int (*real_lstat)(int, const char *, struct stat *);
-  static int has_real_lstat=0;
-
-  SINGLE_IF(has_real_lstat==0)
-    real_lstat = NULL;
-    real_lstat = dlsym(RTLD_NEXT, "__lxstat");
-    if (dlerror() == NULL) {
-      has_real_lstat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_lstat) {  /* dlsym() failed */
+  if (NULL == real_lstat) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
 #endif
@@ -310,24 +269,14 @@ int __lxstat (int ver, const char *path, struct stat *buf) {
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat64 (int ver, const char *path, struct stat64 *buf) {
-  static int (*real_stat) (int, const char *, struct stat64 *);
-  static int has_real_stat = 0;
-
-  SINGLE_IF(has_real_stat==0)
-    real_stat = NULL;
-    real_stat = dlsym(RTLD_NEXT,"__xstat64");
-    if (dlerror() == NULL) {
-      has_real_stat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_stat) {  /* dlsym() failed */
+  if (NULL == real_stat64) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
 #endif
     return -1; /* propagate error to caller */
   }
 
-  int result=real_stat(ver, path, buf);
+  int result=real_stat64(ver, path, buf);
   if (result == -1) {
     return -1;
   }
@@ -344,24 +293,14 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf) {
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat64 (int ver, int fildes, struct stat64 *buf) {
-  static int (*real_fstat)(int, int , struct stat64 *);
-  static int has_real_fstat=0;
-
-  SINGLE_IF(has_real_fstat==0)
-    real_fstat = NULL;
-    real_fstat = dlsym(RTLD_NEXT, "__fxstat64");
-    if (dlerror() == NULL) {
-      has_real_fstat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_fstat) {  /* dlsym() failed */
+  if (NULL == real_fstat64) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
 #endif
     return -1; /* propagate error to caller */
   }
 
-  int result = real_fstat(ver, fildes, buf);
+  int result = real_fstat64(ver, fildes, buf);
   if (result == -1){
     return -1;
   }
@@ -379,17 +318,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf) {
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf, int flag) {
-  static int (*real_fstatat64)(int, int , const char *, struct stat64 *, int);
-  static int has_real_fstatat64=0;
-
-  SINGLE_IF(has_real_fstatat64==0)
-    real_fstatat64 = NULL;
-    real_fstatat64 = dlsym(RTLD_NEXT, "__fxstatat64");
-    if (dlerror() == NULL) {
-      has_real_fstatat64 = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_fstatat64) {  /* dlsym() failed */
+  if (NULL == real_fstatat64) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat64() not found.\n");
 #endif
@@ -414,24 +343,14 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat64 (int ver, const char *path, struct stat64 *buf){
-  static int (*real_lstat) (int, const char *, struct stat64 *);
-  static int has_real_lstat = 0;
-
-  SINGLE_IF(has_real_lstat==0)
-    real_lstat = NULL;
-    real_lstat = dlsym(RTLD_NEXT, "__lxstat64");
-    if (dlerror() == NULL) {
-      has_real_lstat = 1;
-    }
-  END_SINGLE_IF
-  if (!has_real_lstat) {  /* dlsym() failed */
+  if (NULL == real_lstat64) {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
 #endif
     return -1; /* propagate error to caller */
   }
 
-  int result = real_lstat(ver, path, buf);
+  int result = real_lstat64(ver, path, buf);
   if (result == -1){
     return -1;
   }
@@ -448,16 +367,6 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 #endif
 
 /*
- * On MacOS, time() internally uses gettimeofday. If we don't
- * break the cycle by just calling it directly, we double-apply
- * relative changes.
- */
-
-#ifdef __APPLE__
-static int (*real_gettimeofday)(struct timeval *, void *);
-static int has_real_gettimeofday = 0;
-#endif
-/*
  *  Our version of time() allows us to return fake values, so the calling
  *  program thinks it's retrieving the current date and time, while it is
  *  not
@@ -468,8 +377,6 @@ static time_t _ftpl_time(time_t *time_tptr) {
 #ifdef __APPLE__
     struct timeval tvm, *tv = &tvm;
 #else
-    static time_t (*real_time)(time_t *);
-    static int has_real_time = 0;
 #endif
 
     time_t result;
@@ -484,16 +391,7 @@ static time_t _ftpl_time(time_t *time_tptr) {
 
 #ifdef __APPLE__
     /* Check whether we've got a pointer to the real ftime() function yet */
-    SINGLE_IF(has_real_gettimeofday==0)
-        real_gettimeofday = NULL;
-        real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
-
-        /* check whether dlsym() worked */
-        if (dlerror() == NULL) {
-            has_real_gettimeofday = 1;
-        }
-    END_SINGLE_IF
-    if (!has_real_gettimeofday) {  /* dlsym() failed */
+    if (NULL == real_gettimeofday) {  /* dlsym() failed */
 #ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
 #endif
@@ -508,16 +406,7 @@ static time_t _ftpl_time(time_t *time_tptr) {
     result = tv->tv_sec;
 #else
     /* Check whether we've got a pointer to the real time function yet */
-    SINGLE_IF(has_real_time==0)
-        real_time = NULL;
-        real_time = dlsym(RTLD_NEXT, "time");
-
-        /* check whether dlsym() worked */
-        if (dlerror() == NULL) {
-            has_real_time = 1;
-        }
-    END_SINGLE_IF
-    if (!has_real_time) {  /* dlsym() failed */
+    if (NULL == real_time) {  /* dlsym() failed */
 #ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original time() not found.\n");
 #endif
@@ -552,8 +441,6 @@ time_t time(time_t *time_tptr) {
 
 
 int ftime(struct timeb *tp) {
-    static int (*real_ftime)(struct timeb *);
-    static int has_real_ftime = 0;
     int result;
 
     /* sanity check */
@@ -561,16 +448,7 @@ int ftime(struct timeb *tp) {
         return 0;               /* ftime() always returns 0, see manpage */
 
     /* Check whether we've got a pointer to the real ftime() function yet */
-    SINGLE_IF(has_real_ftime==0)
-        real_ftime = NULL;
-        real_ftime = dlsym(RTLD_NEXT, "ftime");
-
-        /* check whether dlsym() worked */
-        if (dlerror() == NULL) {
-            has_real_ftime = 1;
-        }
-    END_SINGLE_IF
-    if (!has_real_ftime) {  /* dlsym() failed */
+    if (NULL == real_ftime) {  /* dlsym() failed */
 #ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
 #endif
@@ -589,10 +467,6 @@ int ftime(struct timeb *tp) {
 }
 
 int gettimeofday(struct timeval *tv, void *tz) {
-#ifndef __APPLE__
-    static int (*real_gettimeofday)(struct timeval *, void *);
-    static int has_real_gettimeofday = 0;
-#endif
     int result;
 
     /* sanity check */
@@ -601,16 +475,7 @@ int gettimeofday(struct timeval *tv, void *tz) {
     }
 
     /* Check whether we've got a pointer to the real ftime() function yet */
-    SINGLE_IF(has_real_gettimeofday==0)
-        real_gettimeofday = NULL;
-        real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
-
-        /* check whether dlsym() worked */
-        if (dlerror() == NULL) {
-            has_real_gettimeofday = 1;
-        }
-    END_SINGLE_IF
-    if (!has_real_gettimeofday) {  /* dlsym() failed */
+    if (NULL == real_gettimeofday) {  /* dlsym() failed */
 #ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
 #endif
@@ -630,8 +495,6 @@ int gettimeofday(struct timeval *tv, void *tz) {
 
 #ifdef POSIX_REALTIME
 int clock_gettime(clockid_t clk_id, struct timespec *tp) {
-    static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
-    static int has_real_clock_gettime = 0;
     int result;
 
     /* sanity check */
@@ -639,17 +502,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
         return -1;
     }
 
-    /* Check whether we've got a pointer to the real clock_gettime() function yet */
-    SINGLE_IF(has_real_clock_gettime==0)
-        real_clock_gettime = NULL;
-        real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
-
-        /* check whether dlsym() worked */
-        if (dlerror() == NULL) {
-            has_real_clock_gettime = 1;
-        }
-    END_SINGLE_IF
-    if (!has_real_clock_gettime) {  /* dlsym() failed */
+    if (NULL == real_clock_gettime) {  /* dlsym() failed */
 #ifdef DEBUG
             (void) fprintf(stderr, "faketime problem: original clock_gettime() not found.\n");
 #endif
@@ -677,6 +530,20 @@ static time_t ftpl_starttime = 0;
 void __attribute__ ((constructor)) ftpl_init(void)
 {
     time_t temp_tt;
+
+    /* Look up all real_* functions. NULL will mark missing ones. */
+    real_stat = dlsym(RTLD_NEXT, "__xstat");
+    real_fstat = dlsym(RTLD_NEXT, "__fxstat");
+    real_fstatat = dlsym(RTLD_NEXT, "__fxstatat");
+    real_lstat = dlsym(RTLD_NEXT, "__lxstat");
+    real_stat64 = dlsym(RTLD_NEXT,"__xstat64");
+    real_fstat64 = dlsym(RTLD_NEXT, "__fxstat64");
+    real_fstatat64 = dlsym(RTLD_NEXT, "__fxstatat64");
+    real_lstat64 = dlsym(RTLD_NEXT, "__lxstat64");
+    real_time = dlsym(RTLD_NEXT, "time");
+    real_ftime = dlsym(RTLD_NEXT, "ftime");
+    real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
+    real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
 
     ft_shm_init();
 #ifdef FAKE_STAT
@@ -739,12 +606,6 @@ time_t fake_time(time_t *time_tptr) {
     static long FAKETIME_SPAWN_NUMCALLS = -1;
 #endif
 
-/*
- * This no longer appears to be necessary in Mac OS X 10.7 Lion
- */
-//#ifdef __APPLE__
-//    static int malloc_arena = 0;
-//#endif
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
 static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
@@ -882,16 +743,6 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
             user_faked_time_fmt = "%Y-%m-%d %T";
 
     } /* cache had expired */
-
-/*
- * This no longer appears to be necessary in Mac OS X 10.7 Lion
- */
-//#ifdef __APPLE__
-//    SINGLE_IF(malloc_arena==0)
-//      malloc_arena = 1;
-//        return *time_tptr;
-//    END_SINGLE_IF
-//#endif
 
     /* check whether the user gave us an absolute time to fake */
     switch (user_faked_time[0]) {
