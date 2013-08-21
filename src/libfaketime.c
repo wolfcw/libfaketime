@@ -645,7 +645,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
         real_clock_gettime = dlsym(RTLD_NEXT, "__clock_gettime");
 
         /* check whether dlsym() worked */
-        if (dlerror() == NULL) {
+        if (dlerror() == NULL && real_clock_gettime ) {
             has_real_clock_gettime = 1;
         }
     END_SINGLE_IF
