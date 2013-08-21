@@ -982,10 +982,13 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
         user_faked_time_time_t = mktime(&user_faked_time_tm);
         if (user_faked_time_time_t != -1) {
-  	    /* the following line is the only difference wrt @. refactoring possible. */
-	    user_offset=0;
-	    if(!in_constructor && ticks) {
-	      user_offset=- ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
+  	    /* the following lines are the only difference wrt "@". Refactoring possible. */
+	    user_offset=0;	/* system calls will ask the time when shm is still being set-up */
+	    if(!in_constructor && ticks_sem) {
+	        user_offset=- ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
+	    } else if (!in_constructor && !ticks_sem) {
+	        fprintf(stderr,"faketime problem: shared relative times require the faketime wrapper\n");
+	        exit(-1);
 	    }
 
             /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
