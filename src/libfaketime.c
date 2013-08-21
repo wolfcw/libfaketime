@@ -97,11 +97,11 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
  * shared_data_t should be synchronized with faketime.c (possibly put
  * in a header file) */
 static sem_t *ticks_sem = NULL;
+
 typedef struct {
   uint64_t counter;
   time_t starttime;
 }  shared_data_t;
-
 static shared_data_t *ticks = NULL;
     
 
@@ -117,12 +117,10 @@ static void ft_shm_init (void)
       printf("Error parsing semaphor name and shared memory id from string: %s", ft_shared);
       exit(1);
     }
-    printf("Hey %s %s\n",sem_name,shm_name);
     if (SEM_FAILED == (ticks_sem = sem_open(sem_name, 0))) {
       perror("sem_open");
       exit(1);
     }
-    printf("Hey %s %s\n",sem_name,shm_name);
 
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR))) {
       perror("shm_open");
@@ -684,6 +682,13 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
  */
 static time_t ftpl_starttime = 0;
 
+/*
+ *  A guard variable to quench the action of fake_time in case it is
+ *  called by the shm system calls (e.g. sem_open calls __fxstat64 in
+ *  fc17 x86).
+ */
+static int in_constructor = 1;
+
 void __attribute__ ((constructor)) ftpl_init(void)
 {
     time_t temp_tt;
@@ -696,6 +701,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 
     ftpl_starttime = _ftpl_time(&temp_tt);
+    in_constructor = 0;
 }
 
 static void remove_trailing_eols(char *line)
@@ -971,17 +977,16 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
       /* Specific time, relative to starttime, but shared among processes. Contributed by Toni G */
       case '^': /* Specific time, but clock along relative to a starttime *shared* between processes */
-	if(!ticks) {
-	  fprintf(stderr,"faketime problem: shared relative times require faketime wrapper\n");
-	  exit(-1);
-	}
         user_faked_time_tm.tm_isdst = -1;
         (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
 
         user_faked_time_time_t = mktime(&user_faked_time_tm);
         if (user_faked_time_time_t != -1) {
-	  /* the following line is the only difference wrt above. refactoring possible. */
-            user_offset = - ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
+  	    /* the following line is the only difference wrt @. refactoring possible. */
+	    user_offset=0;
+	    if(!in_constructor && ticks) {
+	      user_offset=- ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
+	    }
 
             /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
             if (strchr(user_faked_time, 'x') != NULL) {
