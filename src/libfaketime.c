@@ -90,11 +90,11 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
  */
 
 /**
- * When advancing time linearly with each time(), etc. call, the calls
- * are counted in shared memory pointed at by ticks and protected by
- * ticks_sem semaphore. The structure also holds the global start
- * time, which is used by the "global relative" syntax "^". This
- * shared_data_t should be synchronized with faketime.c (possibly put
+ * When advancing time linearly with each time(), etc. call, or using
+ * the "^" syntax, the shared_data_t structure holds the global
+ * inter-process data. It is kept in shared memory and locked by the
+ * ticks_sem semaphore.  The definition of shared_data_t below should
+ * be kept synchronized with the one in faketime.c (possibly to be put
  * in a header file) */
 static sem_t *ticks_sem = NULL;
 
@@ -686,7 +686,7 @@ static time_t ftpl_starttime = 0;
 /*
  *  A guard variable to quench the action of fake_time in case it is
  *  called by the shm system calls (e.g. sem_open calls __fxstat64 in
- *  fc17 x86).
+ *  fc17 x86). (Toni)
  */
 static int in_constructor = 1;
 
