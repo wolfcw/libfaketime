@@ -89,19 +89,6 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
  *
  */
 
-#ifdef FAKE_STAT
-
-#ifndef NO_ATFILE
-#ifndef _ATFILE_SOURCE
-#define _ATFILE_SOURCE
-#endif
-#include <fcntl.h> /* Definition of AT_* constants */
-#endif
-
-#include <sys/stat.h>
-
-static int fake_stat_disabled = 0;
-
 /**
  * When advancing time linearly with each time(), etc. call, the calls are
  * counted in shared memory pointed at by ticks and protected by ticks_sem
@@ -132,7 +119,7 @@ static void ft_shm_init (void)
       exit(1);
     }
     if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
-				    MAP_SHARED, ticks_shm_fd, 0))) {
+            MAP_SHARED, ticks_shm_fd, 0))) {
       perror("mmap");
       exit(1);
     }
@@ -168,6 +155,19 @@ static time_t next_time(double ticklen)
   return ret;
 
 }
+
+#ifdef FAKE_STAT
+
+#ifndef NO_ATFILE
+#ifndef _ATFILE_SOURCE
+#define _ATFILE_SOURCE
+#endif
+#include <fcntl.h> /* Definition of AT_* constants */
+#endif
+
+#include <sys/stat.h>
+
+static int fake_stat_disabled = 0;
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf) {
