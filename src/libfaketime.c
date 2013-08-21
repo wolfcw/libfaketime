@@ -653,6 +653,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
         real_clock_gettime = dlsym(RTLD_NEXT, "__clock_gettime");
 
         /* check whether dlsym() worked */
+	/* Toni: the right-hand clause was necessary in fc17 x86 */
         if (dlerror() == NULL && real_clock_gettime ) {
             has_real_clock_gettime = 1;
         }
@@ -953,42 +954,25 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 
       /* Contributed by David North, TDI in version 0.7 */
       case '@': /* Specific time, but clock along relative to that starttime */
-        user_faked_time_tm.tm_isdst = -1;
-        (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
-
-        user_faked_time_time_t = mktime(&user_faked_time_tm);
-        if (user_faked_time_time_t != -1) {
-            user_offset = - ( (long long int)ftpl_starttime - (long long int)user_faked_time_time_t );
-
-            /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-            if (strchr(user_faked_time, 'x') != NULL) {
-                const double rate = atof(strchr(user_faked_time, 'x')+1);
-                const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
-                const double timeadj = tdiff * (rate - 1.0);
-                *time_tptr += (long) timeadj;
-            } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
-                /* increment time with every time() call*/
-                *time_tptr += next_time(atof(tmp_time_fmt + 1));
-            }
-
-            *time_tptr += user_offset;
-        }
-        break;
-
-      /* Specific time, relative to starttime, but shared among processes. Contributed by Toni G */
       case '^': /* Specific time, but clock along relative to a starttime *shared* between processes */
         user_faked_time_tm.tm_isdst = -1;
         (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
 
         user_faked_time_time_t = mktime(&user_faked_time_tm);
         if (user_faked_time_time_t != -1) {
-  	    /* the following lines are the only difference wrt "@". Refactoring possible. */
-	    user_offset=0;	/* system calls will ask the time when shm is still being set-up */
-	    if(!in_constructor && ticks_sem) {
-	        user_offset=- ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
-	    } else if (!in_constructor && !ticks_sem) {
-	        fprintf(stderr,"faketime problem: shared relative times require the faketime wrapper\n");
+
+	    if (user_faked_time[0] == '@' || in_constructor ) {
+	      user_offset = - ( (long long int)ftpl_starttime - (long long int)user_faked_time_time_t );
+	    } else {
+	      /* Caret: specific time, relative to starttime, but shared among processes. 
+	       * See comment to in_constructor. Contributed by Toni G.
+	       * Here: user_faked_time[0] == '^' && !in_constructor 
+	       */
+	      if (!ticks_sem) {
+	        fprintf(stderr,"faketime problem: process-shared relative times require the faketime wrapper\n");
 	        exit(-1);
+	      } 
+	      user_offset=- ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
 	    }
 
             /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
