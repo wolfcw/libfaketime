@@ -90,11 +90,20 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
  */
 
 /**
- * When advancing time linearly with each time(), etc. call, the calls are
- * counted in shared memory pointed at by ticks and protected by ticks_sem
- * semaphore */
+ * When advancing time linearly with each time(), etc. call, the calls
+ * are counted in shared memory pointed at by ticks and protected by
+ * ticks_sem semaphore. The structure also holds the global start
+ * time, which is used by the "global relative" syntax "^". This
+ * shared_data_t should be synchronized with faketime.c (possibly put
+ * in a header file) */
 static sem_t *ticks_sem = NULL;
-static uint64_t *ticks = NULL;
+typedef struct {
+  uint64_t counter;
+  time_t starttime;
+}  shared_data_t;
+
+static shared_data_t *ticks = NULL;
+    
 
 
 void ft_cleanup (void) __attribute__ ((destructor));
@@ -108,17 +117,18 @@ static void ft_shm_init (void)
       printf("Error parsing semaphor name and shared memory id from string: %s", ft_shared);
       exit(1);
     }
-
+    printf("Hey %s %s\n",sem_name,shm_name);
     if (SEM_FAILED == (ticks_sem = sem_open(sem_name, 0))) {
       perror("sem_open");
       exit(1);
     }
+    printf("Hey %s %s\n",sem_name,shm_name);
 
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR))) {
       perror("shm_open");
       exit(1);
     }
-    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
+    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(shared_data_t), PROT_READ|PROT_WRITE,
             MAP_SHARED, ticks_shm_fd, 0))) {
       perror("mmap");
       exit(1);
@@ -129,7 +139,7 @@ static void ft_shm_init (void)
 void ft_cleanup (void)
 {
   /* detach from shared memory */
-  munmap(ticks, sizeof(uint64_t));
+  munmap(ticks, sizeof(shared_data_t));
   sem_close(ticks_sem);
 }
 
@@ -145,7 +155,7 @@ static time_t next_time(double ticklen)
     }
 
     /* calculate and update elapsed time */
-    ret = ticklen * (*ticks)++;
+    ret = ticklen * (ticks->counter)++;
     /* unlock */
     if (sem_post(ticks_sem) == -1) {
       perror("sem_post");
@@ -958,6 +968,37 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
             *time_tptr += user_offset;
         }
         break;
+
+      /* Specific time, relative to starttime, but shared among processes. Contributed by Toni G */
+      case '^': /* Specific time, but clock along relative to a starttime *shared* between processes */
+	if(!ticks) {
+	  fprintf(stderr,"faketime problem: shared relative times require faketime wrapper\n");
+	  exit(-1);
+	}
+        user_faked_time_tm.tm_isdst = -1;
+        (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
+
+        user_faked_time_time_t = mktime(&user_faked_time_tm);
+        if (user_faked_time_time_t != -1) {
+	  /* the following line is the only difference wrt above. refactoring possible. */
+            user_offset = - ( (long long int)ticks->starttime - (long long int)user_faked_time_time_t );
+
+            /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+            if (strchr(user_faked_time, 'x') != NULL) {
+                const double rate = atof(strchr(user_faked_time, 'x')+1);
+                const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
+                const double timeadj = tdiff * (rate - 1.0);
+                *time_tptr += (long) timeadj;
+            } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
+                /* increment time with every time() call*/
+                *time_tptr += next_time(atof(tmp_time_fmt + 1));
+            }
+
+            *time_tptr += user_offset;
+        }
+        break;
+
+
     }
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
