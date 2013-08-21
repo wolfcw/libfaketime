@@ -54,7 +54,7 @@ PREFIX ?= /usr/local
 
 CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING -DSPAWNSUPPORT -DPREFIX='"'$(PREFIX)'"'
 LIB_LDFLAGS += -shared
-LDFLAGS += -lrt
+LDFLAGS += -lrt -lpthread
 LDADD += -ldl -lm -lpthread
 
 SRC = libfaketime.c
