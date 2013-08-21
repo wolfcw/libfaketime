@@ -171,14 +171,34 @@ FAKETIME="2002-12-24 20:30:00".
 
 (Thanks to a major contribution by David North, TDI in version 0.7)
 
-The format which _must_ be used for _start_at_ dates is "@YYYY-MM-DD hh:mm:ss".
-For example, the 24th of December, 2002, 8:30 PM would have to be specified as
-FAKETIME="@2002-12-24 20:30:00".
-
 The absolute dates described in 4b simulate a STOPPED system clock at the
 specified absolute time. The 'start at' format allows a 'relative' clock
 operation as described below in section 4d, but using a 'start at' time
 instead of an offset time.
+
+There are two subtypes of 'start at' dates, namely "@YYYY-MM-DD
+hh:mm:ss" and "^YYYY-MM-DD hh:mm:ss".  For example, the 24th of
+December, 2002, 8:30 PM would have to be specified as
+FAKETIME="@2002-12-24 20:30:00".
+
+The 'at' and 'caret' specifications differ with respect to the dates
+seen by spawned subprocesses: with @ all subprocesses "see" the faked
+starting time, regardless of the time at which they were spawned; the
+caret, instead, creates a single clock shared in the process
+group. The caret requires the use of the "faketime" wrapper.
+
+For example:
+
+   faketime -f '@2008-12-24 08:15:42' /bin/bash -c 'date; sleep 2; date'
+
+will print the same time twice, because each invocation of the
+"date" command sees its independent faked clock, while
+
+   faketime -f '^2008-12-24 08:15:42' /bin/bash -c 'date; sleep 2; date'
+
+will show dates 2 seconds apart because the two processes share a
+single faked clock.
+
 
 
 4d) Using offsets for relative dates
