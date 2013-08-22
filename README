@@ -191,7 +191,7 @@ For example (24th of December, 2002, 8:30 PM)
    faketime -f '@2002-12-24 20:30:00' /bin/bash -c 'date; sleep 2; date'
 
 will print the same time twice, because each invocation of the
-"date" command sees its independent faked clock, while
+"date" command sees its own independent faked clock, while
 
    faketime -f '^2002-12-24 20:30:00' /bin/bash -c 'date; sleep 2; date'
 
