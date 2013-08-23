@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <time.h>
 #include <string.h>
@@ -106,6 +107,20 @@ static int fake_stat_disabled = 0;
  * semaphore */
 static sem_t *ticks_sem = NULL;
 static uint64_t *ticks = NULL;
+
+static bool limited_faking = false;
+static long callcounter = 0;
+static long ft_start_after_secs = -1;
+static long ft_stop_after_secs = -1;
+static long ft_start_after_ncalls = -1;
+static long ft_stop_after_ncalls = -1;
+
+
+static bool spawnsupport = false;
+static int spawned = 0;
+static char ft_spawn_target[1024];
+static long ft_spawn_secs = -1;
+static long ft_spawn_ncalls = -1;
 
 
 void ft_cleanup (void) __attribute__ ((destructor));
@@ -473,6 +488,8 @@ static time_t ftpl_starttime = 0;
 
 void __attribute__ ((constructor)) ftpl_init(void)
 {
+    char *tmp_env;
+
     /* Look up all real_* functions. NULL will mark missing ones. */
     real_stat = dlsym(RTLD_NEXT, "__xstat");
     real_fstat = dlsym(RTLD_NEXT, "__fxstat");
@@ -493,6 +510,38 @@ void __attribute__ ((constructor)) ftpl_init(void)
       fake_stat_disabled = 1;  //Note that this is NOT re-checked
     }
 #endif
+
+    /* Check whether we actually should be faking the returned timestamp. */
+
+    if ((tmp_env = getenv("FAKETIME_START_AFTER_SECONDS")) != NULL) {
+      ft_start_after_secs = atol(tmp_env);
+      limited_faking = true;
+    }
+    if ((tmp_env = getenv("FAKETIME_STOP_AFTER_SECONDS")) != NULL) {
+      ft_stop_after_secs = atol(tmp_env);
+      limited_faking = true;
+    }
+    if ((tmp_env = getenv("FAKETIME_START_AFTER_NUMCALLS")) != NULL) {
+      ft_start_after_ncalls = atol(tmp_env);
+      limited_faking = true;
+    }
+    if ((tmp_env = getenv("FAKETIME_STOP_AFTER_NUMCALLS")) != NULL) {
+      ft_stop_after_ncalls = atol(tmp_env);
+      limited_faking = true;
+    }
+
+    /* check whether we should spawn an external command */
+    if ((tmp_env = getenv("FAKETIME_SPAWN_TARGET")) != NULL) {
+      spawnsupport = true;
+      (void) strncpy(ft_spawn_target, getenv("FAKETIME_SPAWN_TARGET"), 1024);
+
+      if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL) {
+	ft_spawn_secs = atol(tmp_env);
+      }
+      if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL) {
+	ft_spawn_ncalls = atol(tmp_env);
+      }
+    }
 
 #ifdef __APPLE__
     /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
@@ -539,25 +588,6 @@ time_t fake_time(time_t *time_tptr) {
     static int cache_expired = 1;       /* considered expired at first call */
     static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
-#ifdef LIMITEDFAKING
-    static long callcounter = 0;
-    static int limited_initialized = 0;
-    char envvarbuf[32];
-    static long FAKETIME_START_AFTER_SECONDS = -1;
-    static long FAKETIME_STOP_AFTER_SECONDS = -1;
-    static long FAKETIME_START_AFTER_NUMCALLS = -1;
-    static long FAKETIME_STOP_AFTER_NUMCALLS = -1;
-#endif
-
-#ifdef SPAWNSUPPORT
-    static int spawned = 0;
-    static long spawn_callcounter = 0;
-    static int spawn_initialized = 0;
-    char spawn_envvarbuf[32];
-    static char FAKETIME_SPAWN_TARGET[1024];
-    static long FAKETIME_SPAWN_SECONDS = -1;
-    static long FAKETIME_SPAWN_NUMCALLS = -1;
-#endif
 
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
@@ -569,76 +599,35 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
     /* Sanity check by Karl Chan since v0.8 */
     if (time_tptr == NULL) return -1;
 
-#ifdef LIMITEDFAKING
-    /* Check whether we actually should be faking the returned timestamp. */
+    if ((limited_faking &&
+	 ((ft_start_after_ncalls != -1) || (ft_stop_after_ncalls != -1))) ||
+	(spawnsupport && ft_spawn_ncalls)) {
+      if ((callcounter + 1) >= callcounter) callcounter++;
+    }
 
-    if (ftpl_starttime > 0) {
-        if (limited_initialized == 0) {
-            if (getenv("FAKETIME_START_AFTER_SECONDS") != NULL) {
-                (void) strncpy(envvarbuf, getenv("FAKETIME_START_AFTER_SECONDS"), 30);
-                FAKETIME_START_AFTER_SECONDS = atol(envvarbuf);
-            }
-            if (getenv("FAKETIME_STOP_AFTER_SECONDS") != NULL) {
-                (void) strncpy(envvarbuf, getenv("FAKETIME_STOP_AFTER_SECONDS"), 30);
-                FAKETIME_STOP_AFTER_SECONDS = atol(envvarbuf);
-            }
-            if (getenv("FAKETIME_START_AFTER_NUMCALLS") != NULL) {
-                (void) strncpy(envvarbuf, getenv("FAKETIME_START_AFTER_NUMCALLS"), 30);
-                FAKETIME_START_AFTER_NUMCALLS = atol(envvarbuf);
-            }
-            if (getenv("FAKETIME_STOP_AFTER_NUMCALLS") != NULL) {
-                (void) strncpy(envvarbuf, getenv("FAKETIME_STOP_AFTER_NUMCALLS"), 30);
-                FAKETIME_STOP_AFTER_NUMCALLS = atol(envvarbuf);
-            }
-            limited_initialized = 1;
-        }
-        if ((callcounter + 1) >= callcounter) callcounter++;
+    if (limited_faking) {
+      /* Check whether we actually should be faking the returned timestamp. */
 
-        /* For debugging, output #seconds and #calls */
-        /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
-        if ((FAKETIME_START_AFTER_SECONDS != -1) && ((*time_tptr - ftpl_starttime) < FAKETIME_START_AFTER_SECONDS)) return *time_tptr;
-        if ((FAKETIME_STOP_AFTER_SECONDS != -1) && ((*time_tptr - ftpl_starttime) >= FAKETIME_STOP_AFTER_SECONDS)) return *time_tptr;
-        if ((FAKETIME_START_AFTER_NUMCALLS != -1) && (callcounter < FAKETIME_START_AFTER_NUMCALLS)) return *time_tptr;
-        if ((FAKETIME_STOP_AFTER_NUMCALLS != -1) && (callcounter >= FAKETIME_STOP_AFTER_NUMCALLS)) return *time_tptr;
-        /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
+      /* For debugging, output #seconds and #calls */
+      /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
+      if ((ft_start_after_secs != -1) && ((*time_tptr - ftpl_starttime) < ft_start_after_secs)) return *time_tptr;
+      if ((ft_stop_after_secs != -1) && ((*time_tptr - ftpl_starttime) >= ft_stop_after_secs)) return *time_tptr;
+      if ((ft_start_after_ncalls != -1) && (callcounter < ft_start_after_ncalls)) return *time_tptr;
+      if ((ft_stop_after_ncalls != -1) && (callcounter >= ft_stop_after_ncalls)) return *time_tptr;
+      /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
 
     }
-#endif
 
-#ifdef SPAWNSUPPORT
-    /* check whether we should spawn an external command */
+    if (spawnsupport) {
+      /* check whether we should spawn an external command */
 
-    if (ftpl_starttime > 0) {
-
-        if(spawn_initialized == 0) {
-            if (getenv("FAKETIME_SPAWN_TARGET") != NULL) {
-                (void) strncpy(FAKETIME_SPAWN_TARGET, getenv("FAKETIME_SPAWN_TARGET"), 1024);
-
-                if (getenv("FAKETIME_SPAWN_SECONDS") != NULL) {
-                    (void) strncpy(spawn_envvarbuf, getenv("FAKETIME_SPAWN_SECONDS"), 30);
-                    FAKETIME_SPAWN_SECONDS = atol(spawn_envvarbuf);
-                }
-
-                if (getenv("FAKETIME_SPAWN_NUMCALLS") != NULL) {
-                    (void) strncpy(spawn_envvarbuf, getenv("FAKETIME_SPAWN_NUMCALLS"), 30);
-                    FAKETIME_SPAWN_NUMCALLS = atol(spawn_envvarbuf);
-                }
-            }
-            spawn_initialized = 1;
-        }
-
-        if (spawned == 0) { /* exec external command once only */
-            if ((spawn_callcounter + 1) >= spawn_callcounter) spawn_callcounter++;
-            if ((((*time_tptr - ftpl_starttime) == FAKETIME_SPAWN_SECONDS) || (spawn_callcounter == FAKETIME_SPAWN_NUMCALLS)) && (spawned == 0)) {
-                spawned = 1;
-                system(FAKETIME_SPAWN_TARGET);
-            }
-
-        }
-
+      if (spawned == 0) { /* exec external command once only */
+	if ((((*time_tptr - ftpl_starttime) == ft_spawn_secs) || (callcounter == ft_spawn_ncalls)) && (spawned == 0)) {
+	  spawned = 1;
+	  system(ft_spawn_target);
+	}
+      }
     }
-#endif
-
 
     if (last_data_fetch > 0) {
         if ((*time_tptr - last_data_fetch) > cache_duration) {
