@@ -45,12 +45,6 @@ static const char *date_cmd = "date";
 /* semaphore and shared memory names */
 char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
 
-/* This should match libfaketime.c */
-typedef struct {
-  uint64_t counter;
-  time_t starttime;
-}  shared_data_t;
-
 
 void usage(const char *name) {
   printf("\n");
@@ -71,8 +65,7 @@ void usage(const char *name) {
   printf("%s -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n", name);
   printf("%s -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n", name);
   printf("%s -f '+2,5y i2,0' /bin/bash -c 'date; while true; do date; sleep 1 ; done'\n", name);
-  printf("%s -f '^2008-12-24 08:15:42' /bin/bash -c 'date; while true; do date; sleep 1 ; done'\n", name);
-  printf("In the two latter cases all spawned processes will use the same global clock\n");
+  printf("In this single case all spawned processes will use the same global clock\n");
   printf("without restaring it at the start of each process.\n\n");
   printf("(Please note that it depends on your locale settings whether . or , has to be used for fractions)\n");
   printf("\n");
@@ -168,7 +161,7 @@ int main (int argc, char **argv)
     /* create semaphores and shared memory */
     int shm_fd;
     sem_t *sem;
-    shared_data_t *ticks;
+    uint64_t *ticks;
     char shared_objs[PATH_BUFSIZE];
 
     snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%d", getpid());
@@ -189,14 +182,14 @@ int main (int argc, char **argv)
     }
 
     /* set shm size */
-    if (-1 == ftruncate(shm_fd, sizeof(shared_data_t))) {
+    if (-1 == ftruncate(shm_fd, sizeof(uint64_t))) {
       perror("ftruncate");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
 
     /* map shm */
-    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(shared_data_t), PROT_READ|PROT_WRITE,
+    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
 				    MAP_SHARED, shm_fd, 0))) {
       perror("mmap");
       cleanup_shobjs();
@@ -210,9 +203,8 @@ int main (int argc, char **argv)
     }
 
     /* init elapsed time ticks to zero */
-    ticks->counter = 0;
-    ticks->starttime = time(NULL);
-    if (-1 == munmap(ticks, (sizeof(shared_data_t)))) {
+    *ticks = 0;
+    if (-1 == munmap(ticks, (sizeof(uint64_t)))) {
       perror("munmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
