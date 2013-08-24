@@ -44,7 +44,7 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DPREFIX='"'$(PREFIX)'"'
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"'
 LIB_LDFLAGS += -shared
 LDFLAGS += -lrt
 LDADD += -ldl -lm -lpthread
