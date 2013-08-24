@@ -122,6 +122,29 @@ static char ft_spawn_target[1024];
 static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
+/**
+ * Static time_t to store our startup time, followed by a load-time library
+ * initialization declaration.
+ */
+static time_t ftpl_starttime = 0;
+
+static char user_faked_time_fmt[BUFSIZ] = {0};
+
+/** User supplied base time to fake */
+static time_t user_faked_time_time_t = -1;
+/** User supplied base time is set */
+static bool user_faked_time_set = false;
+/** Fractional user offset provided through FAKETIME env. var.*/
+static double frac_user_offset = 0;
+/** Speed up or slow down clock */
+static double user_rate = 1;
+static double user_per_tick_inc = 0;
+static bool user_per_tick_inc_set = false;
+
+enum ft_mode_t {FT_FREEZE, FT_OFFSET, FT_START_AT} ft_mode = FT_FREEZE;
+
+/** Time to fake is not provided through FAKETIME env. var. */
+static bool parse_config_file = true;
 
 void ft_cleanup (void) __attribute__ ((destructor));
 
@@ -480,11 +503,67 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 }
 #endif
 
-/*
- *  Static time_t to store our startup time, followed by a load-time library
- *  initialization declaration.
- */
-static time_t ftpl_starttime = 0;
+static void parse_ft_string(const char *user_faked_time)
+{
+  struct tm user_faked_time_tm;
+  char * tmp_time_fmt;
+  /* check whether the user gave us an absolute time to fake */
+  switch (user_faked_time[0]) {
+
+  default:  /* Try and interpret this as a specified time */
+    ft_mode = FT_FREEZE;
+    user_faked_time_tm.tm_isdst = -1;
+    if (NULL != strptime(user_faked_time, user_faked_time_fmt,
+			 &user_faked_time_tm)) {
+      user_faked_time_time_t = mktime(&user_faked_time_tm);
+      user_faked_time_set = true;
+    }
+    break;
+
+  case '+':
+  case '-': /* User-specified offset */
+    ft_mode = FT_OFFSET;
+    /* fractional time offsets contributed by Karl Chen in v0.8 */
+    frac_user_offset = atof(user_faked_time);
+
+    /* offset is in seconds by default, but the string may contain
+     * multipliers...
+     */
+    if (strchr(user_faked_time, 'm') != NULL) frac_user_offset *= 60;
+    else if (strchr(user_faked_time, 'h') != NULL) frac_user_offset *= 60 * 60;
+    else if (strchr(user_faked_time, 'd') != NULL) frac_user_offset *= 60 * 60 * 24;
+    else if (strchr(user_faked_time, 'y') != NULL) frac_user_offset *= 60 * 60 * 24 * 365;
+
+    /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+    if (strchr(user_faked_time, 'x') != NULL) {
+      user_rate = atof(strchr(user_faked_time, 'x')+1);
+    } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
+      /* increment time with every time() call*/
+      user_per_tick_inc = atof(tmp_time_fmt + 1);
+      user_per_tick_inc_set = true;
+    }
+    break;
+
+    /* Contributed by David North, TDI in version 0.7 */
+  case '@': /* Specific time, but clock along relative to that starttime */
+    ft_mode = FT_START_AT;
+    user_faked_time_tm.tm_isdst = -1;
+    (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
+
+    user_faked_time_time_t = mktime(&user_faked_time_tm);
+    if (user_faked_time_time_t != -1) {
+      /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+      if (strchr(user_faked_time, 'x') != NULL) {
+	user_rate = atof(strchr(user_faked_time, 'x')+1);
+      } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
+	/* increment time with every time() call*/
+	user_per_tick_inc = atof(tmp_time_fmt + 1);
+	user_per_tick_inc_set = true;
+      }
+    }
+    break;
+  }
+}
 
 void __attribute__ ((constructor)) ftpl_init(void)
 {
@@ -543,6 +622,19 @@ void __attribute__ ((constructor)) ftpl_init(void)
       }
     }
 
+    tmp_env = getenv("FAKETIME_FMT");
+    if (tmp_env == NULL) {
+      strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
+    } else {
+      strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
+    }
+
+    /* fake time supplied as environment variable? */
+    if (NULL != (tmp_env = getenv("FAKETIME"))) {
+      parse_config_file = false;
+      parse_ft_string(tmp_env);
+    }
+
 #ifdef __APPLE__
     /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
     clock_serv_t cclock;
@@ -573,15 +665,6 @@ static void remove_trailing_eols(char *line)
 
 
 time_t fake_time(time_t *time_tptr) {
-    static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
-    struct tm user_faked_time_tm;
-    time_t user_faked_time_time_t;
-    long user_offset;
-    double frac_user_offset;
-    char filename[BUFSIZ], line[BUFFERLEN];
-    FILE *faketimerc;
-    static const char *user_faked_time_fmt = NULL;
-    char * tmp_time_fmt;
 
     /* variables used for caching, introduced in version 0.6 */
     static time_t last_data_fetch = 0;  /* not fetched previously at first call */
@@ -643,6 +726,9 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 #endif
 
     if (cache_expired == 1) {
+        static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+	char filename[BUFSIZ], line[BUFFERLEN];
+	FILE *faketimerc;
 
         last_data_fetch = *time_tptr;
 
@@ -654,11 +740,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
         snprintf(user_faked_time, BUFFERLEN, "+0");
 
         /* fake time supplied as environment variable? */
-        if (getenv("FAKETIME") != NULL) {
-                (void) strncpy(user_faked_time, getenv("FAKETIME"), BUFFERLEN-2);
-                user_faked_time[BUFFERLEN-1] = 0;
-        }
-        else {
+        if (parse_config_file) {
                 /* check whether there's a .faketimerc in the user's home directory, or
                 * a system-wide /etc/faketimerc present.
                 * The /etc/faketimerc handling has been contributed by David Burley,
@@ -677,80 +759,54 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
                 }
                 fclose(faketimerc);
                 }
+		parse_ft_string(user_faked_time);
         } /* read fake time from file */
-
-
-        user_faked_time_fmt = getenv("FAKETIME_FMT");
-        if (user_faked_time_fmt == NULL)
-            user_faked_time_fmt = "%Y-%m-%d %T";
-
     } /* cache had expired */
 
     /* check whether the user gave us an absolute time to fake */
-    switch (user_faked_time[0]) {
+    switch (ft_mode) {
+    case FT_FREEZE:  /* a specified time */
+      if (user_faked_time_set) {
+	if (time_tptr != NULL) /* sanity check */
+	  *time_tptr = user_faked_time_time_t;
+      }
+      break;
 
-      default:  /* Try and interpret this as a specified time */
-        user_faked_time_tm.tm_isdst = -1;
-        (void) strptime(user_faked_time, user_faked_time_fmt, &user_faked_time_tm);
+    case FT_OFFSET: /* User-specified offset */
+      /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+      if (1 != user_rate) {
+	const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
+	const double timeadj = tdiff * (user_rate - 1.0);
+	*time_tptr += (long) timeadj;
+      } else if (user_per_tick_inc_set) {
+	/* increment time with every time() call*/
+	*time_tptr += next_time(user_per_tick_inc);
+      }
 
-        user_faked_time_time_t = mktime(&user_faked_time_tm);
-        if (user_faked_time_time_t != -1) {
-            if (time_tptr != NULL) /* sanity check */
-                *time_tptr = user_faked_time_time_t;
-        }
-        break;
+      *time_tptr += (long) frac_user_offset;
 
-      case '+':
-      case '-': /* User-specified offset */
-        /* fractional time offsets contributed by Karl Chen in v0.8 */
-        frac_user_offset = atof(user_faked_time);
-
-        /* offset is in seconds by default, but the string may contain
-         * multipliers...
-         */
-        if (strchr(user_faked_time, 'm') != NULL) frac_user_offset *= 60;
-        else if (strchr(user_faked_time, 'h') != NULL) frac_user_offset *= 60 * 60;
-        else if (strchr(user_faked_time, 'd') != NULL) frac_user_offset *= 60 * 60 * 24;
-        else if (strchr(user_faked_time, 'y') != NULL) frac_user_offset *= 60 * 60 * 24 * 365;
-
-        /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-        if (strchr(user_faked_time, 'x') != NULL) {
-            const double rate = atof(strchr(user_faked_time, 'x')+1);
-            const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
-            const double timeadj = tdiff * (rate - 1.0);
-            *time_tptr += (long) timeadj;
-        } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
-	    /* increment time with every time() call*/
-	    *time_tptr += next_time(atof(tmp_time_fmt + 1));
-        }
-
-        *time_tptr += (long) frac_user_offset;
-
-        break;
+      break;
 
       /* Contributed by David North, TDI in version 0.7 */
-      case '@': /* Specific time, but clock along relative to that starttime */
-        user_faked_time_tm.tm_isdst = -1;
-        (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
+    case FT_START_AT: /* Specific time, but clock along relative to that starttime */
+      if (user_faked_time_time_t != -1) {
+	long user_offset = - ( (long long int)ftpl_starttime - (long long int)user_faked_time_time_t );
 
-        user_faked_time_time_t = mktime(&user_faked_time_tm);
-        if (user_faked_time_time_t != -1) {
-            user_offset = - ( (long long int)ftpl_starttime - (long long int)user_faked_time_time_t );
+	/* Speed-up / slow-down contributed by Karl Chen in v0.8 */
+	if (1 != user_rate) {
+	  const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
+	  const double timeadj = tdiff * (user_rate - 1.0);
+	  *time_tptr += (long) timeadj;
+	} else if (user_per_tick_inc_set) {
+	  /* increment time with every time() call*/
+	  *time_tptr += next_time(user_per_tick_inc);
+	}
 
-            /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-            if (strchr(user_faked_time, 'x') != NULL) {
-                const double rate = atof(strchr(user_faked_time, 'x')+1);
-                const long tdiff = (long long) *time_tptr - (long long)ftpl_starttime;
-                const double timeadj = tdiff * (rate - 1.0);
-                *time_tptr += (long) timeadj;
-            } else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i'))) {
-                /* increment time with every time() call*/
-                *time_tptr += next_time(atof(tmp_time_fmt + 1));
-            }
-
-            *time_tptr += user_offset;
-        }
-        break;
+	*time_tptr += user_offset;
+      }
+      break;
+    default:
+      assert(0);
     }
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
