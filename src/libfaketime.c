@@ -637,7 +637,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
     clock_get_time(cclock, &mts);
     mach_port_deallocate(mach_task_self(), cclock);
     ftpl_starttime.tv_sec = mts.tv_sec;
-    ftpl_starttime.tv_nsec = mts.tv_sec;
+    ftpl_starttime.tv_nsec = mts.tv_nsec;
 #else
     (*real_clock_gettime)(CLOCK_REALTIME, &ftpl_starttime);
 #endif
