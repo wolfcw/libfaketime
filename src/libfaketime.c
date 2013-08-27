@@ -841,6 +841,14 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp) {
     static int cache_expired = 1;       /* considered expired at first call */
     static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
+    /* Per process timers are only sped up or slowed down */
+    if ((clk_id == CLOCK_PROCESS_CPUTIME_ID ) || (clk_id == CLOCK_THREAD_CPUTIME_ID)) {
+      if (user_rate_set) {
+	timespecmul(tp, user_rate, tp);
+      }
+      return 0;
+    }
+
     /* Fake only if the call is realtime clock related */
     if (clk_id != CLOCK_REALTIME) {
       return 0;
