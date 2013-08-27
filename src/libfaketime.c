@@ -23,15 +23,20 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
 #include <math.h>
+#include <errno.h>
 #include <string.h>
 #include <semaphore.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <netinet/in.h>
 
 #include "time_ops.h"
+#include "faketime_common.h"
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
@@ -89,12 +94,48 @@ int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
  *
  */
 
-/**
- * When advancing time linearly with each time(), etc. call, the calls are
- * counted in shared memory pointed at by ticks and protected by ticks_sem
- * semaphore */
-static sem_t *ticks_sem = NULL;
-static uint64_t *ticks = NULL;
+/** Semaphore protecting shared data */
+static sem_t *shared_sem = NULL;
+
+/** Data shared among faketime-spawned processes */
+static struct ft_shared_s *ft_shared = NULL;
+
+/** Storage format for timestamps written to file. Big endian.*/
+struct saved_timestamp {
+  int64_t sec;
+  uint64_t nsec;
+};
+
+static inline void timespec_from_saved (struct timespec *tp,
+					struct saved_timestamp *saved)
+{
+  /* read as big endian */
+#if __BYTE_ORDER == __BIG_ENDIAN
+  tp->tv_sec = saved->sec;
+  tp->tv_nsec = saved->nsec;
+#else
+  if (saved->sec < 0) {
+    uint64_t abs_sec = 0 - saved->sec;
+    ((uint32_t*)&(tp->tv_sec))[0] = ntohl(((uint32_t*)&abs_sec)[1]);
+    ((uint32_t*)&(tp->tv_sec))[1] = ntohl(((uint32_t*)&abs_sec)[0]);
+    tp->tv_sec = 0 - tp->tv_sec;
+  } else {
+    ((uint32_t*)&(tp->tv_sec))[0] = ntohl(((uint32_t*)&(saved->sec))[1]);
+    ((uint32_t*)&(tp->tv_sec))[1] = ntohl(((uint32_t*)&(saved->sec))[0]);
+  }
+  ((uint32_t*)&(tp->tv_nsec))[0] = ntohl(((uint32_t*)&(saved->nsec))[1]);
+  ((uint32_t*)&(tp->tv_nsec))[1] = ntohl(((uint32_t*)&(saved->nsec))[0]);
+
+#endif
+}
+
+/** Saved timestamps */
+static struct saved_timestamp *stss = NULL;
+static size_t infile_size;
+static bool infile_set = false;
+
+/** File fd to save timestamps to */
+static int outfile = -1;
 
 static bool limited_faking = false;
 static long callcounter = 0;
@@ -140,14 +181,14 @@ void ft_cleanup (void) __attribute__ ((destructor));
 static void ft_shm_init (void)
 {
   int ticks_shm_fd;
-  char sem_name[256], shm_name[256], *ft_shared = getenv("FAKETIME_SHARED");
-  if (ft_shared != NULL) {
-    if (sscanf(ft_shared, "%255s %255s", sem_name, shm_name) < 2 ) {
-      printf("Error parsing semaphor name and shared memory id from string: %s", ft_shared);
+  char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+  if (ft_shared_env != NULL) {
+    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2 ) {
+      printf("Error parsing semaphor name and shared memory id from string: %s", ft_shared_env);
       exit(1);
     }
 
-    if (SEM_FAILED == (ticks_sem = sem_open(sem_name, 0))) {
+    if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0))) {
       perror("sem_open");
       exit(1);
     }
@@ -156,7 +197,7 @@ static void ft_shm_init (void)
       perror("shm_open");
       exit(1);
     }
-    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
+    if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
             MAP_SHARED, ticks_shm_fd, 0))) {
       perror("mmap");
       exit(1);
@@ -167,30 +208,121 @@ static void ft_shm_init (void)
 void ft_cleanup (void)
 {
   /* detach from shared memory */
-  munmap(ticks, sizeof(uint64_t));
-  sem_close(ticks_sem);
+  if (ft_shared != NULL) {
+    munmap(ft_shared, sizeof(uint64_t));
+  }
+  if (stss != NULL) {
+    munmap(stss, infile_size);
+  }
+  if (shared_sem != NULL) {
+    sem_close(shared_sem);
+  }
 }
 
 static void next_time(struct timespec *tp, struct timespec *ticklen)
 {
-  if (ticks_sem != NULL) {
+  if (shared_sem != NULL) {
     struct timespec inc;
     /* lock */
-    if (sem_wait(ticks_sem) == -1) {
+    if (sem_wait(shared_sem) == -1) {
       perror("sem_wait");
       exit(1);
     }
-
     /* calculate and update elapsed time */
-    timespecmul(ticklen, *ticks, &inc);
+    timespecmul(ticklen, ft_shared->ticks, &inc);
     timespecadd(&user_faked_time_timespec, &inc, tp);
-    (*ticks)++;
+    (ft_shared->ticks)++;
     /* unlock */
-    if (sem_post(ticks_sem) == -1) {
+    if (sem_post(shared_sem) == -1) {
       perror("sem_post");
       exit(1);
     }
   }
+}
+
+static void save_time(struct timespec *tp)
+{
+  if ((shared_sem != NULL) && (outfile != -1)) {
+    struct saved_timestamp time_write;
+    ssize_t n = 0;
+
+    // write as big endian
+#if __BYTE_ORDER == __BIG_ENDIAN
+    time_write = {tp->tv_sec, tp->tv_nsec};
+#else
+  if (tp->tv_sec < 0) {
+    uint64_t abs_sec = 0 - tp->tv_sec;
+    ((uint32_t*)&(time_write.sec))[0] = htonl(((uint32_t*)&abs_sec)[1]);
+    ((uint32_t*)&(time_write.sec))[1] = htonl(((uint32_t*)&abs_sec)[0]);
+    tp->tv_sec = 0 - tp->tv_sec;
+  } else {
+    ((uint32_t*)&(time_write.sec))[0] = htonl(((uint32_t*)&(tp->tv_sec))[1]);
+    ((uint32_t*)&(time_write.sec))[1] = htonl(((uint32_t*)&(tp->tv_sec))[0]);
+  }
+    ((uint32_t*)&(time_write.nsec))[0] = htonl(((uint32_t*)&(tp->tv_nsec))[1]);
+    ((uint32_t*)&(time_write.nsec))[1] = htonl(((uint32_t*)&(tp->tv_nsec))[0]);
+#endif
+    /* lock */
+    if (sem_wait(shared_sem) == -1) {
+      perror("sem_wait");
+      exit(1);
+    }
+
+    lseek(outfile, 0, SEEK_END);
+    while ((sizeof(time_write) < (n += write(outfile, &(((char*)&time_write)[n]),
+					     sizeof(time_write) - n))) &&
+	   (errno == EINTR));
+
+    if ((n == -1) || (n < sizeof(time_write))) {
+      perror("Saving timestamp to file failed");
+    }
+
+    /* unlock */
+    if (sem_post(shared_sem) == -1) {
+      perror("sem_post");
+      exit(1);
+    }
+  }
+}
+
+/**
+ * Provide faked time from file.
+ * @return time is set from filen
+ */
+static bool load_time(struct timespec *tp)
+{
+  bool ret = false;
+  if ((shared_sem != NULL) && (infile_set)) {
+
+    /* lock */
+    if (sem_wait(shared_sem) == -1) {
+      perror("sem_wait");
+      exit(1);
+    }
+
+    if ((sizeof(stss[0]) * (ft_shared->file_idx + 1)) > infile_size) {
+      /* we are out of timstamps to replay, return to faking time by rules
+       * using last timestamp from file as the user provided timestamp */
+      timespec_from_saved(&user_faked_time_timespec, &stss[(infile_size / sizeof(stss[0])) - 1 ]);
+      ftpl_starttime = *tp;
+      if (ft_shared->ticks == 0) {
+	ft_shared->ticks = 1;
+      }
+      munmap(stss, infile_size);
+      infile_set = false;
+    } else {
+      timespec_from_saved(tp, &stss[ft_shared->file_idx]);
+      ft_shared->file_idx++;
+      ret = true;
+    }
+
+    /* unlock */
+    if (sem_post(shared_sem) == -1) {
+      perror("sem_post");
+      exit(1);
+    }
+  }
+  return ret;
 }
 
 #ifdef FAKE_STAT
@@ -621,6 +753,42 @@ void __attribute__ ((constructor)) ftpl_init(void)
       }
     }
 
+    if ((tmp_env = getenv("FAKETIME_SAVE_FILE")) != NULL) {
+      if (-1 == (outfile = open(tmp_env, O_RDWR | O_APPEND | O_CLOEXEC | O_CREAT,
+				S_IWUSR | S_IRUSR))) {
+	perror("Opening file for saving timestamps failed");
+	exit(EXIT_FAILURE);
+      }
+    }
+
+    /* load file only if reading timstamps from it is not finished yet */
+    if ((tmp_env = getenv("FAKETIME_LOAD_FILE")) != NULL) {
+      int infile = -1;
+      struct stat sb;
+      if (-1 == (infile = open(tmp_env, O_RDONLY|O_CLOEXEC))) {
+	perror("Opening file for loading timestamps failed");
+	exit(EXIT_FAILURE);
+      }
+
+      fstat(infile, &sb);
+      if (sizeof(stss[0]) > (infile_size = sb.st_size)) {
+	printf("There are no timstamps in the provided file to load timesamps from");
+	exit(EXIT_FAILURE);
+      }
+
+      if ((infile_size % sizeof(stss[0])) != 0) {
+	printf("File size is not multiple of timstamp size. It is probably damaged.");
+	exit(EXIT_FAILURE);
+      }
+
+      stss = mmap(NULL, infile_size, PROT_READ, MAP_SHARED, infile, 0);
+      if (stss == MAP_FAILED) {
+	perror("Mapping file for loading timestamps failed");
+	exit(EXIT_FAILURE);
+      };
+      infile_set = true;
+    }
+
     tmp_env = getenv("FAKETIME_FMT");
     if (tmp_env == NULL) {
       strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
@@ -772,6 +940,12 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
         } /* read fake time from file */
     } /* cache had expired */
 
+    if (infile_set) {
+      if (load_time(tp)) {
+	return 0;
+      }
+    }
+
     /* check whether the user gave us an absolute time to fake */
     switch (ft_mode) {
     case FT_FREEZE:  /* a specified time */
@@ -799,6 +973,7 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 #ifdef PTHREAD_SINGLETHREADED_TIME
     pthread_cleanup_pop(1);
 #endif
+    save_time(tp);
     return 0;
 }
 

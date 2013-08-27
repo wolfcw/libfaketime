@@ -32,6 +32,8 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 
+#include "faketime_common.h"
+
 const char version[] = "0.8";
 
 #ifdef __APPLE__
@@ -161,7 +163,7 @@ int main (int argc, char **argv)
     /* create semaphores and shared memory */
     int shm_fd;
     sem_t *sem;
-    uint64_t *ticks;
+    struct ft_shared_s *ft_shared;
     char shared_objs[PATH_BUFSIZE];
 
     snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%d", getpid());
@@ -189,7 +191,7 @@ int main (int argc, char **argv)
     }
 
     /* map shm */
-    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
+    if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
 				    MAP_SHARED, shm_fd, 0))) {
       perror("mmap");
       cleanup_shobjs();
@@ -203,8 +205,9 @@ int main (int argc, char **argv)
     }
 
     /* init elapsed time ticks to zero */
-    *ticks = 0;
-    if (-1 == munmap(ticks, (sizeof(uint64_t)))) {
+    ft_shared->ticks = 0;
+    ft_shared->file_idx = 0;
+    if (-1 == munmap(ft_shared, (sizeof(uint64_t)))) {
       perror("munmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
