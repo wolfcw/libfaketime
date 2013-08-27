@@ -152,10 +152,21 @@ static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
 /**
- * Static time_t to store our startup time, followed by a load-time library
+ * Static timespec to store our startup time, followed by a load-time library
  * initialization declaration.
  */
 static struct timespec ftpl_starttime = {0, -1};
+
+/**
+ * Static timespec to store our startup time, followed by a load-time library
+ * initialization declaration. Saved using CLOCK_MONOTONIC.
+ */
+static struct timespec ftpl_starttime_mon = {0, -1};
+/**
+ * Static timespec to store our startup time, followed by a load-time library
+ * initialization declaration. Saved using CLOCK_MONOTONIC_RAW.
+ */
+static struct timespec ftpl_starttime_mon_raw = {0, -1};
 
 static char user_faked_time_fmt[BUFSIZ] = {0};
 
@@ -304,7 +315,15 @@ static bool load_time(struct timespec *tp)
       /* we are out of timstamps to replay, return to faking time by rules
        * using last timestamp from file as the user provided timestamp */
       timespec_from_saved(&user_faked_time_timespec, &stss[(infile_size / sizeof(stss[0])) - 1 ]);
+#ifdef __APPLE__
       ftpl_starttime = *tp;
+      ftpl_starttime_mon = *tp;
+      ftpl_starttime_mon_raw = *tp;
+#else
+      clock_gettime(CLOCK_REALTIME, &ftpl_starttime);
+      clock_gettime(CLOCK_MONOTONIC, &ftpl_starttime_mon);
+      clock_gettime(CLOCK_MONOTONIC_RAW, &ftpl_starttime_mon_raw);
+#endif
       if (ft_shared->ticks == 0) {
 	ft_shared->ticks = 1;
       }
@@ -806,8 +825,14 @@ void __attribute__ ((constructor)) ftpl_init(void)
     mach_port_deallocate(mach_task_self(), cclock);
     ftpl_starttime.tv_sec = mts.tv_sec;
     ftpl_starttime.tv_nsec = mts.tv_nsec;
+    ftpl_starttime_mon.tv_sec = mts.tv_sec;
+    ftpl_starttime_mon.tv_nsec = mts.tv_nsec;
+    ftpl_starttime_mon_raw.tv_sec = mts.tv_sec;
+    ftpl_starttime_mon_raw.tv_nsec = mts.tv_nsec;
 #else
     (*real_clock_gettime)(CLOCK_REALTIME, &ftpl_starttime);
+    (*real_clock_gettime)(CLOCK_MONOTONIC, &ftpl_starttime_mon);
+    (*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &ftpl_starttime_mon_raw);
 #endif
 
     /* fake time supplied as environment variable? */
@@ -849,11 +874,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp) {
       return 0;
     }
 
-    /* Fake only if the call is realtime clock related */
-    if (clk_id != CLOCK_REALTIME) {
-      return 0;
-    }
-
     /* Sanity check by Karl Chan since v0.8 */
     if (tp == NULL) return -1;
 
@@ -870,33 +890,45 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
       if ((callcounter + 1) >= callcounter) callcounter++;
     }
 
-    if (limited_faking) {
-      /* Check whether we actually should be faking the returned timestamp. */
+    if (limited_faking || spawnsupport) {
       struct timespec tmp_ts;
       /* For debugging, output #seconds and #calls */
-      /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
-      timespecsub(tp, &ftpl_starttime, &tmp_ts);
-      if ((ft_start_after_secs != -1) && (tmp_ts.tv_sec < ft_start_after_secs)) return 0;
-      if ((ft_stop_after_secs != -1) && (tmp_ts.tv_sec >= ft_stop_after_secs)) return 0;
-      if ((ft_start_after_ncalls != -1) && (callcounter < ft_start_after_ncalls)) return 0;
-      if ((ft_stop_after_ncalls != -1) && (callcounter >= ft_stop_after_ncalls)) return 0;
-      /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
-
-    }
-
-    if (spawnsupport) {
-      /* check whether we should spawn an external command */
-
-      if (spawned == 0) { /* exec external command once only */
-	struct timespec tmp_ts;
+      switch (clk_id) {
+      case CLOCK_REALTIME:
 	timespecsub(tp, &ftpl_starttime, &tmp_ts);
-	if (((tmp_ts.tv_sec == ft_spawn_secs) || (callcounter == ft_spawn_ncalls)) && (spawned == 0)) {
-	  spawned = 1;
-	  system(ft_spawn_target);
+	break;
+      case CLOCK_MONOTONIC:
+	timespecsub(tp, &ftpl_starttime_mon, &tmp_ts);
+	break;
+      case CLOCK_MONOTONIC_RAW:
+	timespecsub(tp, &ftpl_starttime_mon_raw, &tmp_ts);
+	break;
+      default:
+	printf("Invalid clock_id for clock_gettime: %d", clk_id);
+	exit(EXIT_FAILURE);
+      }
+      if (limited_faking) {
+	/* Check whether we actually should be faking the returned timestamp. */
+	/* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
+	if ((ft_start_after_secs != -1) && (tmp_ts.tv_sec < ft_start_after_secs)) return 0;
+	if ((ft_stop_after_secs != -1) && (tmp_ts.tv_sec >= ft_stop_after_secs)) return 0;
+	if ((ft_start_after_ncalls != -1) && (callcounter < ft_start_after_ncalls)) return 0;
+	if ((ft_stop_after_ncalls != -1) && (callcounter >= ft_stop_after_ncalls)) return 0;
+	/* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
+
+      }
+
+      if (spawnsupport) {
+	/* check whether we should spawn an external command */
+
+	if (spawned == 0) { /* exec external command once only */
+	  if (((tmp_ts.tv_sec == ft_spawn_secs) || (callcounter == ft_spawn_ncalls)) && (spawned == 0)) {
+	    spawned = 1;
+	    system(ft_spawn_target);
+	  }
 	}
       }
     }
-
     if (last_data_fetch > 0) {
         if ((tp->tv_sec - last_data_fetch) > cache_duration) {
             cache_expired = 1;
@@ -966,7 +998,20 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
       /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
       if (user_rate_set) {
 	struct timespec tdiff, timeadj;
-	timespecsub(tp, &ftpl_starttime, &tdiff);
+	switch (clk_id) {
+	case CLOCK_REALTIME:
+	  timespecsub(tp, &ftpl_starttime, &tdiff);
+	  break;
+	case CLOCK_MONOTONIC:
+	  timespecsub(tp, &ftpl_starttime_mon, &tdiff);
+	  break;
+	case CLOCK_MONOTONIC_RAW:
+	  timespecsub(tp, &ftpl_starttime_mon_raw, &tdiff);
+	  break;
+	default:
+	  printf("Invalid clock_id for clock_gettime: %d", clk_id);
+	  exit(EXIT_FAILURE);
+	}
 	timespecmul(&tdiff, user_rate, &timeadj);
 	timespecadd(&user_faked_time_timespec, &timeadj, tp);
       } else if (user_per_tick_inc_set) {
