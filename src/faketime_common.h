@@ -1,5 +1,6 @@
 /*
- * Time operation macros based on sys/time.h
+ * Faketime's common definitions
+ *
  * Copyright 2013 Balint Reczey <balint@balintreczey.hu>
  *
  * This file is part of the FakeTime Preload Library.
