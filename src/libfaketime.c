@@ -220,6 +220,30 @@ void ft_cleanup (void)
   }
 }
 
+/** Get system time from system for all clocks */
+static void system_time_from_system (struct system_time_s * systime) {
+#ifdef __APPLE__
+  /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
+  clock_serv_t cclock;
+  mach_timespec_t mts;
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+  /* this is not faked */
+  clock_get_time(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
+  systime->real.tv_sec = mts.tv_sec;
+  systime->real.tv_nsec = mts.tv_nsec;
+  systime->mon.tv_sec = mts.tv_sec;
+  systime->mon.tv_nsec = mts.tv_nsec;
+  systime->mon_raw.tv_sec = mts.tv_sec;
+  systime->mon_raw.tv_nsec = mts.tv_nsec;
+#else
+  (*real_clock_gettime)(CLOCK_REALTIME, &systime->real);
+  (*real_clock_gettime)(CLOCK_MONOTONIC, &systime->mon);
+  (*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &systime->mon_raw);
+#endif
+}
+
+
 static void next_time(struct timespec *tp, struct timespec *ticklen)
 {
   if (shared_sem != NULL) {
@@ -309,15 +333,7 @@ static bool load_time(struct timespec *tp)
       if (ft_shared->ticks == 0) {
 	/* we set shared memory to stop using infile */
 	ft_shared->ticks = 1;
-#ifdef __APPLE__
-	ftpl_starttime.real = *tp;
-	ftpl_starttime.mon = *tp;
-	ftpl_starttime.mon_raw = *tp;
-#else
-	real_clock_gettime(CLOCK_REALTIME, &ftpl_starttime.real);
-	real_clock_gettime(CLOCK_MONOTONIC, &ftpl_starttime.mon);
-	real_clock_gettime(CLOCK_MONOTONIC_RAW, &ftpl_starttime.mon_raw);
-#endif
+	system_time_from_system(&ftpl_starttime);
 	ft_shared->start_time = ftpl_starttime;
       } else {
 	ftpl_starttime = ft_shared->start_time;
@@ -811,26 +827,27 @@ void __attribute__ ((constructor)) ftpl_init(void)
       strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
     }
 
-#ifdef __APPLE__
-    /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
-    clock_serv_t cclock;
-    mach_timespec_t mts;
-    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-    /* this is not faked */
-    clock_get_time(cclock, &mts);
-    mach_port_deallocate(mach_task_self(), cclock);
-    ftpl_starttime.real.tv_sec = mts.tv_sec;
-    ftpl_starttime.real.tv_nsec = mts.tv_nsec;
-    ftpl_starttime.mon.tv_sec = mts.tv_sec;
-    ftpl_starttime.mon.tv_nsec = mts.tv_nsec;
-    ftpl_starttime.mon_raw.tv_sec = mts.tv_sec;
-    ftpl_starttime.mon_raw.tv_nsec = mts.tv_nsec;
-#else
-    (*real_clock_gettime)(CLOCK_REALTIME, &ftpl_starttime.real);
-    (*real_clock_gettime)(CLOCK_MONOTONIC, &ftpl_starttime.mon);
-    (*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &ftpl_starttime.mon_raw);
-#endif
+    if (shared_sem != 0) {
+      if (sem_wait(shared_sem) == -1) {
+	perror("sem_wait");
+	exit(1);
+      }
+      if (ft_shared->start_time.real.tv_nsec == -1) {
+	/* set up global start time */
+	system_time_from_system(&ftpl_starttime);
+	ft_shared->start_time = ftpl_starttime;
+      } else {
+	/** get preset start time */
+	ftpl_starttime = ft_shared->start_time;
+      }
+      if (sem_post(shared_sem) == -1) {
+	perror("sem_post");
+	exit(1);
+      }
 
+    } else {
+      system_time_from_system(&ftpl_starttime);
+    }
     /* fake time supplied as environment variable? */
     if (NULL != (tmp_env = getenv("FAKETIME"))) {
       parse_config_file = false;
