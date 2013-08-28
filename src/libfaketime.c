@@ -320,9 +320,9 @@ static bool load_time(struct timespec *tp)
       ftpl_starttime_mon = *tp;
       ftpl_starttime_mon_raw = *tp;
 #else
-      clock_gettime(CLOCK_REALTIME, &ftpl_starttime);
-      clock_gettime(CLOCK_MONOTONIC, &ftpl_starttime_mon);
-      clock_gettime(CLOCK_MONOTONIC_RAW, &ftpl_starttime_mon_raw);
+	real_clock_gettime(CLOCK_REALTIME, &ftpl_starttime.real);
+	real_clock_gettime(CLOCK_MONOTONIC, &ftpl_starttime.mon);
+	real_clock_gettime(CLOCK_MONOTONIC_RAW, &ftpl_starttime.mon_raw);
 #endif
       if (ft_shared->ticks == 0) {
 	ft_shared->ticks = 1;
