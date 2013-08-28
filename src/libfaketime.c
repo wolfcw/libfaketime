@@ -64,7 +64,10 @@ static time_t (*real_time)(time_t *);
 static int (*real_ftime)(struct timeb *);
 static int (*real_gettimeofday)(struct timeval *, void *);
 static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
-
+static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
+static int (*real_usleep)(useconds_t usec);
+static unsigned int (*real_sleep)(unsigned int seconds);
+static unsigned int (*real_alarm)(unsigned int seconds);
 
 /* prototypes */
 time_t fake_time(time_t *time_tptr);
@@ -568,6 +571,83 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 }
 #endif
 
+/**
+ * Faked nanosleep()
+ */
+int nanosleep(const struct timespec *req, struct timespec *rem)
+{
+  int result;
+  struct timespec real_req;
+
+  if (real_nanosleep == NULL) {
+    return -1;
+  }
+  if (req != NULL) {
+    if (user_rate_set) {
+      timespecmul(req, 1.0 / user_rate, &real_req);
+    } else {
+      real_req = *req;
+    }
+  } else {
+    return -1;
+  }
+
+  result = (*real_nanosleep)(&real_req, rem);
+  if (result == -1) {
+    return result;
+  }
+
+  /* fake returned parts */
+  if ((rem != NULL) && ((rem->tv_sec != 0) || (rem->tv_nsec != 0))) {
+    if (user_rate_set) {
+      timespecmul(rem, user_rate, rem);
+    }
+  }
+  /* return the result to the caller */
+  return result;
+}
+
+/**
+ * Faked usleep()
+ */
+int usleep(useconds_t usec)
+{
+
+  if (real_usleep == NULL) {
+    return -1;
+  }
+
+  return (*real_usleep)((user_rate_set)?((1.0 / user_rate) * usec):usec);
+}
+
+/**
+ * Faked sleep()
+ */
+unsigned int sleep(unsigned int seconds)
+{
+  unsigned int ret;
+  if (real_sleep == NULL) {
+    return 0;
+  }
+
+  ret = (*real_sleep)((user_rate_set)?((1.0 / user_rate) * seconds):seconds);
+  return (user_rate_set)?(user_rate * ret):ret;
+}
+
+/**
+ * Faked alarm()
+ */
+unsigned int alarm(unsigned int seconds)
+{
+  unsigned int ret;
+  if (real_alarm == NULL) {
+    return -1;
+  }
+
+  ret = (*real_alarm)((user_rate_set)?((1.0 / user_rate) * seconds):seconds);
+  return (user_rate_set)?(user_rate * ret):ret;
+}
+
 time_t time(time_t *time_tptr) {
     time_t result;
     time_t null_dummy;
@@ -744,6 +824,10 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_ftime = dlsym(RTLD_NEXT, "ftime");
     real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
     real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
+    real_nanosleep = dlsym(RTLD_NEXT, "nanosleep");
+    real_usleep = dlsym(RTLD_NEXT, "usleep");
+    real_sleep = dlsym(RTLD_NEXT, "sleep");
+    real_alarm = dlsym(RTLD_NEXT, "alarm");
 
     ft_shm_init();
 #ifdef FAKE_STAT
