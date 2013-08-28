@@ -121,6 +121,11 @@ static time_t (*real_time)(time_t *);
 static int (*real_ftime)(struct timeb *);
 static int (*real_gettimeofday)(struct timeval *, void *);
 static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
+static int (*real_timer_settime)(timer_t timerid, int flags,
+				 const struct itimerspec *new_value,
+				 struct itimerspec * old_value);
+static int (*real_timer_gettime)(timer_t timerid,
+				 struct itimerspec *curr_value);
 static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
 static int (*real_usleep)(useconds_t usec);
 static unsigned int (*real_sleep)(unsigned int seconds);
@@ -645,6 +650,96 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 #endif
 
 /**
+ * Faked timer_settime()
+ * Does not affect timer speed when stepping clock with each time() call.
+ */
+int timer_settime(timer_t timerid, int flags,
+		  const struct itimerspec *new_value,
+		  struct itimerspec *old_value)
+{
+  int result;
+  struct itimerspec new_real, old_real;
+  struct itimerspec *new_real_pt = &new_real, *old_real_pt = &old_real;
+
+  if (real_timer_settime == NULL) {
+    return -1;
+  }
+
+  if (new_value == NULL) {
+    new_real_pt = NULL;
+  } else if (dont_fake) {
+    /* cast away constness*/
+    new_real_pt = (struct itimerspec *)new_value;
+  } else {
+    // TODO fake
+    struct timespec tdiff, timeadj;
+    timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
+    if (user_rate_set) {
+      timespecmul(&timeadj, 1.0/user_rate, &tdiff);
+    } else {
+      tdiff = timeadj;
+    }
+    /* only CLOCK_REALTIME is handled */
+    timespecadd(&ftpl_starttime.real, &tdiff, &new_real.it_value);
+
+    new_real.it_value = new_value->it_value;
+    if (user_rate_set) {
+      timespecmul(&new_value->it_interval, 1.0/user_rate, &new_real.it_interval);
+    }
+  }
+  if (old_value == NULL) {
+    old_real_pt = NULL;
+  } else if (dont_fake) {
+    old_real_pt = old_value;
+  } else {
+    old_real = *old_value;
+  }
+
+  DONT_FAKE_TIME(result = (*real_timer_settime)(timerid, flags, new_real_pt, old_real_pt));
+  if (result == -1) {
+    return result;
+  }
+
+  /* fake returned parts */
+  if ((old_value != NULL) && !dont_fake) {
+    result = fake_clock_gettime(CLOCK_REALTIME, &old_real.it_value);
+    if (user_rate_set) {
+      timespecmul(&old_real.it_interval, user_rate, &old_value->it_interval);
+    }
+  }
+  /* return the result to the caller */
+  return result;
+}
+
+/**
+ * Faked timer_gettime()
+ * Does not affect timer speed when stepping clock with each time() call.
+ */
+int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
+{
+  int result;
+
+  if (real_timer_gettime == NULL) {
+    return -1;
+  }
+
+  DONT_FAKE_TIME(result = (*real_timer_gettime)(timerid, curr_value));
+  if (result == -1) {
+    return result;
+  }
+
+  /* fake returned parts */
+  if (curr_value != NULL) {
+    if (user_rate_set && !dont_fake) {
+      timespecmul(&curr_value->it_interval, user_rate, &curr_value->it_interval);
+      timespecmul(&curr_value->it_value, user_rate, &curr_value->it_value);
+    }
+  }
+  /* return the result to the caller */
+  return result;
+}
+
+/**
  * Faked nanosleep()
  */
 int nanosleep(const struct timespec *req, struct timespec *rem)
@@ -1002,6 +1097,8 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_alarm = dlsym(RTLD_NEXT, "alarm");
     real_poll = dlsym(RTLD_NEXT, "poll");
     real_ppoll = dlsym(RTLD_NEXT, "ppoll");
+    real_timer_settime = dlsym(RTLD_NEXT, "timer_settime");
+    real_timer_gettime = dlsym(RTLD_NEXT, "timer_gettime");
 #ifdef __APPLE__
     real_clock_get_time = dlsym(RTLD_NEXT, "clock_get_time");
     real_clock_gettime = apple_clock_gettime;
