@@ -151,22 +151,12 @@ static char ft_spawn_target[1024];
 static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
+
 /**
  * Static timespec to store our startup time, followed by a load-time library
  * initialization declaration.
  */
-static struct timespec ftpl_starttime = {0, -1};
-
-/**
- * Static timespec to store our startup time, followed by a load-time library
- * initialization declaration. Saved using CLOCK_MONOTONIC.
- */
-static struct timespec ftpl_starttime_mon = {0, -1};
-/**
- * Static timespec to store our startup time, followed by a load-time library
- * initialization declaration. Saved using CLOCK_MONOTONIC_RAW.
- */
-static struct timespec ftpl_starttime_mon_raw = {0, -1};
+static struct system_time_s ftpl_starttime = {{0, -1}, {0, -1}, {0, -1}};
 
 static char user_faked_time_fmt[BUFSIZ] = {0};
 
@@ -315,18 +305,24 @@ static bool load_time(struct timespec *tp)
       /* we are out of timstamps to replay, return to faking time by rules
        * using last timestamp from file as the user provided timestamp */
       timespec_from_saved(&user_faked_time_timespec, &stss[(infile_size / sizeof(stss[0])) - 1 ]);
+
+      if (ft_shared->ticks == 0) {
+	/* we set shared memory to stop using infile */
+	ft_shared->ticks = 1;
 #ifdef __APPLE__
-      ftpl_starttime = *tp;
-      ftpl_starttime_mon = *tp;
-      ftpl_starttime_mon_raw = *tp;
+	ftpl_starttime.real = *tp;
+	ftpl_starttime.mon = *tp;
+	ftpl_starttime.mon_raw = *tp;
 #else
 	real_clock_gettime(CLOCK_REALTIME, &ftpl_starttime.real);
 	real_clock_gettime(CLOCK_MONOTONIC, &ftpl_starttime.mon);
 	real_clock_gettime(CLOCK_MONOTONIC_RAW, &ftpl_starttime.mon_raw);
 #endif
-      if (ft_shared->ticks == 0) {
-	ft_shared->ticks = 1;
+	ft_shared->start_time = ftpl_starttime;
+      } else {
+	ftpl_starttime = ft_shared->start_time;
       }
+
       munmap(stss, infile_size);
       infile_set = false;
     } else {
@@ -687,7 +683,7 @@ static void parse_ft_string(const char *user_faked_time)
 
     user_offset.tv_sec = floor(frac_offset);
     user_offset.tv_nsec = (frac_offset - user_offset.tv_sec) * SEC_TO_nSEC;
-    timespecadd(&ftpl_starttime, &user_offset, &user_faked_time_timespec);
+    timespecadd(&ftpl_starttime.real, &user_offset, &user_faked_time_timespec);
     goto parse_modifiers;
     break;
 
@@ -823,16 +819,16 @@ void __attribute__ ((constructor)) ftpl_init(void)
     /* this is not faked */
     clock_get_time(cclock, &mts);
     mach_port_deallocate(mach_task_self(), cclock);
-    ftpl_starttime.tv_sec = mts.tv_sec;
-    ftpl_starttime.tv_nsec = mts.tv_nsec;
-    ftpl_starttime_mon.tv_sec = mts.tv_sec;
-    ftpl_starttime_mon.tv_nsec = mts.tv_nsec;
-    ftpl_starttime_mon_raw.tv_sec = mts.tv_sec;
-    ftpl_starttime_mon_raw.tv_nsec = mts.tv_nsec;
+    ftpl_starttime.real.tv_sec = mts.tv_sec;
+    ftpl_starttime.real.tv_nsec = mts.tv_nsec;
+    ftpl_starttime.mon.tv_sec = mts.tv_sec;
+    ftpl_starttime.mon.tv_nsec = mts.tv_nsec;
+    ftpl_starttime.mon_raw.tv_sec = mts.tv_sec;
+    ftpl_starttime.mon_raw.tv_nsec = mts.tv_nsec;
 #else
-    (*real_clock_gettime)(CLOCK_REALTIME, &ftpl_starttime);
-    (*real_clock_gettime)(CLOCK_MONOTONIC, &ftpl_starttime_mon);
-    (*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &ftpl_starttime_mon_raw);
+    (*real_clock_gettime)(CLOCK_REALTIME, &ftpl_starttime.real);
+    (*real_clock_gettime)(CLOCK_MONOTONIC, &ftpl_starttime.mon);
+    (*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &ftpl_starttime.mon_raw);
 #endif
 
     /* fake time supplied as environment variable? */
@@ -895,13 +891,13 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
       /* For debugging, output #seconds and #calls */
       switch (clk_id) {
       case CLOCK_REALTIME:
-	timespecsub(tp, &ftpl_starttime, &tmp_ts);
+	timespecsub(tp, &ftpl_starttime.real, &tmp_ts);
 	break;
       case CLOCK_MONOTONIC:
-	timespecsub(tp, &ftpl_starttime_mon, &tmp_ts);
+	timespecsub(tp, &ftpl_starttime.mon, &tmp_ts);
 	break;
       case CLOCK_MONOTONIC_RAW:
-	timespecsub(tp, &ftpl_starttime_mon_raw, &tmp_ts);
+	timespecsub(tp, &ftpl_starttime.mon_raw, &tmp_ts);
 	break;
       default:
 	printf("Invalid clock_id for clock_gettime: %d", clk_id);
@@ -1000,13 +996,13 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 	struct timespec tdiff, timeadj;
 	switch (clk_id) {
 	case CLOCK_REALTIME:
-	  timespecsub(tp, &ftpl_starttime, &tdiff);
+	  timespecsub(tp, &ftpl_starttime.real, &tdiff);
 	  break;
 	case CLOCK_MONOTONIC:
-	  timespecsub(tp, &ftpl_starttime_mon, &tdiff);
+	  timespecsub(tp, &ftpl_starttime.mon, &tdiff);
 	  break;
 	case CLOCK_MONOTONIC_RAW:
-	  timespecsub(tp, &ftpl_starttime_mon_raw, &tdiff);
+	  timespecsub(tp, &ftpl_starttime.mon_raw, &tdiff);
 	  break;
 	default:
 	  printf("Invalid clock_id for clock_gettime: %d", clk_id);

@@ -207,7 +207,14 @@ int main (int argc, char **argv)
     /* init elapsed time ticks to zero */
     ft_shared->ticks = 0;
     ft_shared->file_idx = 0;
-    if (-1 == munmap(ft_shared, (sizeof(uint64_t)))) {
+    ft_shared->start_time.real.tv_sec = 0;
+    ft_shared->start_time.real.tv_nsec = -1;
+    ft_shared->start_time.mon.tv_sec = 0;
+    ft_shared->start_time.mon.tv_nsec = -1;
+    ft_shared->start_time.mon_raw.tv_sec = 0;
+    ft_shared->start_time.mon_raw.tv_nsec = -1;
+
+    if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s)))) {
       perror("munmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);

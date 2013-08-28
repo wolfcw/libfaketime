@@ -24,6 +24,16 @@
 
 #include <stdint.h>
 
+struct system_time_s {
+  /** System time according to CLOCK_REALTIME */
+  struct timespec real;
+  /** System time according to CLOCK_MONOTONIC */
+  struct timespec mon;
+  /** System time according to CLOCK_MONOTONIC_RAW */
+  struct timespec mon_raw;
+};
+
+
 /** Data shared among faketime-spawned processes */
 struct ft_shared_s {
   /**
@@ -32,6 +42,8 @@ struct ft_shared_s {
   uint64_t ticks;
   /** Index of timstamp to be loaded from file */
   uint64_t file_idx;
+  /** System time Faketime started at */
+  struct system_time_s start_time;
 };
 
 #endif
