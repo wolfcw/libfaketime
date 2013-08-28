@@ -1008,8 +1008,11 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
       break;
 
     case FT_START_AT: /* User-specified offset */
-      /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-      if (user_rate_set) {
+      if (user_per_tick_inc_set) {
+	/* increment time with every time() call*/
+	next_time(tp, &user_per_tick_inc);
+      } else {
+	/* Speed-up / slow-down contributed by Karl Chen in v0.8 */
 	struct timespec tdiff, timeadj;
 	switch (clk_id) {
 	case CLOCK_REALTIME:
@@ -1025,11 +1028,12 @@ static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
 	  printf("Invalid clock_id for clock_gettime: %d", clk_id);
 	  exit(EXIT_FAILURE);
 	}
-	timespecmul(&tdiff, user_rate, &timeadj);
+	if (user_rate_set) {
+	  timespecmul(&tdiff, user_rate, &timeadj);
+	} else {
+	  timeadj = tdiff;
+	}
 	timespecadd(&user_faked_time_timespec, &timeadj, tp);
-      } else if (user_per_tick_inc_set) {
-	/* increment time with every time() call*/
-	next_time(tp, &user_per_tick_inc);
       }
       break;
     default:
