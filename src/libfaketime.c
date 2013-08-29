@@ -51,6 +51,19 @@
 
 #define BUFFERLEN   256
 
+/* We fix endiannes on Apple to little endian */
+#ifdef __APPLE__
+#ifndef __BIG_ENDIAN
+#define __BIG_ENDIAN 4321
+#endif
+#ifndef __LITTLE_ENDIAN
+#define __LITTLE_ENDIAN 1234
+#endif
+#ifndef __BYTE_ORDER
+#define __BYTE_ORDER __LITTLE_ENDIAN
+#endif
+#endif
+
 /* real pointer to faked functions */
 static int (*real_stat) (int, const char *, struct stat *);
 static int (*real_fstat) (int, int, struct stat *);
