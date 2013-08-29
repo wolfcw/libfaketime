@@ -46,6 +46,11 @@
 
 #endif
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+ 
 #include <sys/timeb.h>
 #include <dlfcn.h>
 
@@ -63,7 +68,9 @@ static int (*real_lstat64) (int, const char *, struct stat64 *);
 static time_t (*real_time)(time_t *);
 static int (*real_ftime)(struct timeb *);
 static int (*real_gettimeofday)(struct timeval *, void *);
+#ifdef POSIX_REALTIME
 static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
+#endif
 static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
 static int (*real_usleep)(useconds_t usec);
 static unsigned int (*real_sleep)(unsigned int seconds);
@@ -73,7 +80,9 @@ static unsigned int (*real_alarm)(unsigned int seconds);
 time_t fake_time(time_t *time_tptr);
 int    fake_ftime(struct timeb *tp);
 int    fake_gettimeofday(struct timeval *tv, void *tz);
+#ifdef POSIX_REALTIME
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
+#endif
 
 /*
  * Intercepted system calls:
@@ -719,6 +728,7 @@ int gettimeofday(struct timeval *tv, void *tz) {
     return result;
 }
 
+#ifdef POSIX_REALTIME
 int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     int result;
 
@@ -744,6 +754,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     /* return the result to the caller */
     return result;
 }
+#endif
 
 static void parse_ft_string(const char *user_faked_time)
 {
@@ -823,7 +834,9 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_time = dlsym(RTLD_NEXT, "time");
     real_ftime = dlsym(RTLD_NEXT, "ftime");
     real_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
+#ifdef POSIX_REALTIME
     real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
+#endif
     real_nanosleep = dlsym(RTLD_NEXT, "nanosleep");
     real_usleep = dlsym(RTLD_NEXT, "usleep");
     real_sleep = dlsym(RTLD_NEXT, "sleep");

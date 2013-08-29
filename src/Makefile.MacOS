@@ -50,7 +50,7 @@ PREFIX = /usr/local
 # 10.5
 #CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch ppc
 # 10.6
-CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"'
+CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"' -std=gnu99
 LIB_SRC = libfaketime.c
 
 SONAME = 1
