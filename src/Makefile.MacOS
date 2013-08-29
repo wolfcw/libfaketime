@@ -71,6 +71,9 @@ all: ${LIBS} ${BINS}
 libfaketime.dylib.${SONAME}: ${LIB_SRC}
 	${CC} -o $@ ${CFLAGS} $<
 
+faketime:
+	${CC} -o faketime faketime.c -DPREFIX='"'$(PREFIX)'"'
+
 clean:
 	@rm -f ${OBJ} ${LIBS} ${BINS}
 
