@@ -5,3 +5,4 @@ Open issues / next steps for libfaketime development
 - make the new "limiting" and "spawning" features more flexible to use
   and available through the wrapper shell script
 - fake timer_create and friends
+- handle CLOCK_REALTIME_COARSE and CLOCK_MONOTONIC_COARSE

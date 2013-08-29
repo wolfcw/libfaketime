@@ -53,15 +53,35 @@
 
 /* We fix endiannes on Apple to little endian */
 #ifdef __APPLE__
+
+/* We fix endianness on Apple to little endian */
 #ifndef __BIG_ENDIAN
 #define __BIG_ENDIAN 4321
 #endif
+
 #ifndef __LITTLE_ENDIAN
 #define __LITTLE_ENDIAN 1234
 #endif
+
 #ifndef __BYTE_ORDER
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
+
+/* clock_gettime() and related clock definitions are missing on __APPLE__ */
+#ifndef CLOCK_REALTIME
+/* from GNU C Library time.h */
+/* Identifier for system-wide realtime clock.  */
+#define CLOCK_REALTIME               0
+/* Monotonic system-wide clock.  */
+#define CLOCK_MONOTONIC              1
+/* High-resolution timer from the CPU.  */
+#define CLOCK_PROCESS_CPUTIME_ID     2
+/* Thread-specific CPU-time clock.  */
+#define CLOCK_THREAD_CPUTIME_ID      3
+/* Monotonic system-wide clock, not adjusted for frequency scaling.  */
+#define CLOCK_MONOTONIC_RAW          4
+#endif
+
 #endif
 
 /* real pointer to faked functions */
