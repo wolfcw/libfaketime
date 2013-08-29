@@ -309,7 +309,8 @@ static void save_time(struct timespec *tp)
 
     // write as big endian
 #if __BYTE_ORDER == __BIG_ENDIAN
-    time_write = {tp->tv_sec, tp->tv_nsec};
+    time_write.sec = tp->tv_sec;
+    time_write.nsec = tp->tv_nsec;
 #else
   if (tp->tv_sec < 0) {
     uint64_t abs_sec = 0 - tp->tv_sec;
