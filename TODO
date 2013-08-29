@@ -4,4 +4,3 @@ Open issues / next steps for libfaketime development
 - use the new testing framework to also implement unit tests
 - make the new "limiting" and "spawning" features more flexible to use
   and available through the wrapper shell script
-- fake timer_create and friends

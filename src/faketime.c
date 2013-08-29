@@ -32,8 +32,6 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 
-#include "faketime_common.h"
-
 const char version[] = "0.8";
 
 #ifdef __APPLE__
@@ -163,7 +161,7 @@ int main (int argc, char **argv)
     /* create semaphores and shared memory */
     int shm_fd;
     sem_t *sem;
-    struct ft_shared_s *ft_shared;
+    uint64_t *ticks;
     char shared_objs[PATH_BUFSIZE];
 
     snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%d", getpid());
@@ -191,7 +189,7 @@ int main (int argc, char **argv)
     }
 
     /* map shm */
-    if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
+    if (MAP_FAILED == (ticks = mmap(NULL, sizeof(uint64_t), PROT_READ|PROT_WRITE,
 				    MAP_SHARED, shm_fd, 0))) {
       perror("mmap");
       cleanup_shobjs();
@@ -205,16 +203,8 @@ int main (int argc, char **argv)
     }
 
     /* init elapsed time ticks to zero */
-    ft_shared->ticks = 0;
-    ft_shared->file_idx = 0;
-    ft_shared->start_time.real.tv_sec = 0;
-    ft_shared->start_time.real.tv_nsec = -1;
-    ft_shared->start_time.mon.tv_sec = 0;
-    ft_shared->start_time.mon.tv_nsec = -1;
-    ft_shared->start_time.mon_raw.tv_sec = 0;
-    ft_shared->start_time.mon_raw.tv_nsec = -1;
-
-    if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s)))) {
+    *ticks = 0;
+    if (-1 == munmap(ticks, (sizeof(uint64_t)))) {
       perror("munmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
