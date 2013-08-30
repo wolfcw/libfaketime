@@ -39,7 +39,8 @@
 #     the dynamic disabling of the FAKE_STAT calls.
 #
 
-CC = gcc
+# default to clang to support thread local variables
+CC ?= clang
 INSTALL = install
 
 PREFIX ?= /usr/local
