@@ -80,6 +80,12 @@
 #define CLOCK_THREAD_CPUTIME_ID      3
 /* Monotonic system-wide clock, not adjusted for frequency scaling.  */
 #define CLOCK_MONOTONIC_RAW          4
+
+typedef int clockid_t;
+
+#include <mach/clock.h>
+#include <mach/mach.h>
+
 #endif
 
 #endif
