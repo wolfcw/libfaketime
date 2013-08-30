@@ -70,10 +70,10 @@
 /* clock_gettime() and related clock definitions are missing on __APPLE__ */
 #ifndef CLOCK_REALTIME
 /* from GNU C Library time.h */
-/* Identifier for system-wide realtime clock.  */
-#define CLOCK_REALTIME               0
-/* Monotonic system-wide clock.  */
-#define CLOCK_MONOTONIC              1
+/* Identifier for system-wide realtime clock. ( == 1) */
+#define CLOCK_REALTIME               CALENDAR_CLOCK
+/* Monotonic system-wide clock. (== 0) */
+#define CLOCK_MONOTONIC              SYSTEM_CLOCK
 /* High-resolution timer from the CPU.  */
 #define CLOCK_PROCESS_CPUTIME_ID     2
 /* Thread-specific CPU-time clock.  */
@@ -124,7 +124,10 @@ static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
 static int (*real_usleep)(useconds_t usec);
 static unsigned int (*real_sleep)(unsigned int seconds);
 static unsigned int (*real_alarm)(unsigned int seconds);
-
+#ifdef __APPLE__
+static int (*real_clock_get_time)(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
+static clock_serv_t clock_serv_real;
+#endif
 /* prototypes */
 time_t fake_time(time_t *time_tptr);
 int    fake_ftime(struct timeb *tp);
@@ -285,12 +288,13 @@ static void system_time_from_system (struct system_time_s * systime) {
   /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
   clock_serv_t cclock;
   mach_timespec_t mts;
-  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-  /* this is not faked */
-  clock_get_time(cclock, &mts);
-  mach_port_deallocate(mach_task_self(), cclock);
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &clock_serv_real);
+  (*real_clock_get_time)(clock_serv_real, &mts);
   systime->real.tv_sec = mts.tv_sec;
   systime->real.tv_nsec = mts.tv_nsec;
+  host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
+  (*real_clock_get_time)(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
   systime->mon.tv_sec = mts.tv_sec;
   systime->mon.tv_nsec = mts.tv_nsec;
   systime->mon_raw.tv_sec = mts.tv_sec;
@@ -898,6 +902,9 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_usleep = dlsym(RTLD_NEXT, "usleep");
     real_sleep = dlsym(RTLD_NEXT, "sleep");
     real_alarm = dlsym(RTLD_NEXT, "alarm");
+#ifdef __APPLE__
+    real_clock_get_time = dlsym(RTLD_NEXT, "clock_get_time");
+#endif
 
     ft_shm_init();
 #ifdef FAKE_STAT
@@ -1238,6 +1245,39 @@ int fake_gettimeofday(struct timeval *tv, void *tz) {
 
   return ret;
 }
+
+#ifdef __APPLE__
+
+int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
+{
+  int result;
+  struct timespec ts;
+  if (NULL == real_clock_get_time) {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original clock_get_time() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
+
+  /*
+   * Initialize our result with the real current time from CALENDAR_CLOCK.
+   * This is a bit of cheating, but we don't keep track of obtained clock
+   * services.
+   */
+  DONT_FAKE_TIME(result = (*real_clock_get_time)(clock_serv_real, cur_timeclockid_t));
+  if (result == -1) return result; /* original function failed */
+
+  /* pass the real current time to our faking version, overwriting it */
+  ts.tv_sec = cur_timeclockid_t->tv_sec;
+  ts.tv_sec = cur_timeclockid_t->tv_nsec;
+  result = fake_clock_gettime(CLOCK_REALTIME, &ts);
+  cur_timeclockid_t->tv_sec = ts.tv_sec;
+  cur_timeclockid_t->tv_nsec = ts.tv_nsec;
+
+  /* return the result to the caller */
+  return result;
+}
+#endif
 
 /*
  * This causes serious issues in Mac OS X 10.7 Lion and is disabled there
