@@ -84,6 +84,23 @@
 
 #endif
 
+/**
+ * Per thread variable which we turn on inside real_* calls to avoid modifying
+ * time multiple times
+ */
+__thread bool dont_fake = false;
+
+/** Wrapper for function calls which we want to return system time */
+#define DONT_FAKE_TIME(call)			\
+  {						\
+    bool dont_fake_orig = dont_fake;		\
+    if (!dont_fake) {				\
+      dont_fake = true;				\
+    }						\
+    call;					\
+    dont_fake = dont_fake_orig;			\
+  } while (0)
+
 /* real pointer to faked functions */
 static int (*real_stat) (int, const char *, struct stat *);
 static int (*real_fstat) (int, int, struct stat *);
@@ -273,9 +290,9 @@ static void system_time_from_system (struct system_time_s * systime) {
   systime->mon_raw.tv_sec = mts.tv_sec;
   systime->mon_raw.tv_nsec = mts.tv_nsec;
 #else
-  (*real_clock_gettime)(CLOCK_REALTIME, &systime->real);
-  (*real_clock_gettime)(CLOCK_MONOTONIC, &systime->mon);
-  (*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &systime->mon_raw);
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &systime->real));
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC, &systime->mon));
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &systime->mon_raw));
 #endif
 }
 
@@ -415,7 +432,8 @@ int __xstat (int ver, const char *path, struct stat *buf) {
     return -1; /* propagate error to caller */
   }
 
-  int result = real_stat(ver, path, buf);
+  int result;
+  DONT_FAKE_TIME(result = real_stat(ver, path, buf));
   if (result == -1) {
     return -1;
   }
@@ -440,7 +458,8 @@ int __fxstat (int ver, int fildes, struct stat *buf) {
     return -1; /* propagate error to caller */
   }
 
-  int result = real_fstat(ver, fildes, buf);
+  int result;
+  DONT_FAKE_TIME(result = real_fstat(ver, fildes, buf));
   if (result == -1) {
     return -1;
   }
@@ -466,7 +485,8 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
     return -1; /* propagate error to caller */
   }
 
-  int result = real_fstatat(ver, fildes, filename, buf, flag);
+  int result;
+  DONT_FAKE_TIME(result = real_fstatat(ver, fildes, filename, buf, flag));
   if (result == -1) {
     return -1;
   }
@@ -491,7 +511,8 @@ int __lxstat (int ver, const char *path, struct stat *buf) {
     return -1; /* propagate error to caller */
   }
 
-  int result = real_lstat(ver, path, buf);
+  int result;
+  DONT_FAKE_TIME(result = real_lstat(ver, path, buf));
   if (result == -1) {
     return -1;
   }
@@ -515,7 +536,8 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf) {
     return -1; /* propagate error to caller */
   }
 
-  int result=real_stat64(ver, path, buf);
+  int result;
+  DONT_FAKE_TIME(result = real_stat64(ver, path, buf));
   if (result == -1) {
     return -1;
   }
@@ -539,7 +561,8 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf) {
     return -1; /* propagate error to caller */
   }
 
-  int result = real_fstat64(ver, fildes, buf);
+  int result;
+  DONT_FAKE_TIME(result = real_fstat64(ver, fildes, buf));
   if (result == -1){
     return -1;
   }
@@ -564,7 +587,8 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
     return -1; /* propagate error to caller */
   }
 
-  int result = real_fstatat64(ver, fildes, filename, buf, flag);
+  int result;
+  DONT_FAKE_TIME(result = real_fstatat64(ver, fildes, filename, buf, flag));
   if (result == -1){
     return -1;
   }
@@ -589,7 +613,8 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
     return -1; /* propagate error to caller */
   }
 
-  int result = real_lstat64(ver, path, buf);
+  int result;
+  DONT_FAKE_TIME(result = real_lstat64(ver, path, buf));
   if (result == -1){
     return -1;
   }
@@ -617,7 +642,7 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
     return -1;
   }
   if (req != NULL) {
-    if (user_rate_set) {
+    if (user_rate_set && !dont_fake) {
       timespecmul(req, 1.0 / user_rate, &real_req);
     } else {
       real_req = *req;
@@ -626,14 +651,14 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
     return -1;
   }
 
-  result = (*real_nanosleep)(&real_req, rem);
+  DONT_FAKE_TIME(result = (*real_nanosleep)(&real_req, rem));
   if (result == -1) {
     return result;
   }
 
   /* fake returned parts */
   if ((rem != NULL) && ((rem->tv_sec != 0) || (rem->tv_nsec != 0))) {
-    if (user_rate_set) {
+    if (user_rate_set && !dont_fake) {
       timespecmul(rem, user_rate, rem);
     }
   }
@@ -647,11 +672,14 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 int usleep(useconds_t usec)
 {
 
+  int result;
+  useconds_t usec_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * usec):usec ;
   if (real_usleep == NULL) {
     return -1;
   }
 
-  return (*real_usleep)((user_rate_set)?((1.0 / user_rate) * usec):usec);
+  DONT_FAKE_TIME(result = (*real_usleep)(usec_real));
+   return result;
 }
 
 /**
@@ -660,11 +688,12 @@ int usleep(useconds_t usec)
 unsigned int sleep(unsigned int seconds)
 {
   unsigned int ret;
+  unsigned int seconds_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * seconds):seconds;
   if (real_sleep == NULL) {
     return 0;
   }
 
-  ret = (*real_sleep)((user_rate_set)?((1.0 / user_rate) * seconds):seconds);
+  DONT_FAKE_TIME(ret = (*real_sleep)(seconds_real));
   return (user_rate_set)?(user_rate * ret):ret;
 }
 
@@ -674,11 +703,12 @@ unsigned int sleep(unsigned int seconds)
 unsigned int alarm(unsigned int seconds)
 {
   unsigned int ret;
+  unsigned int seconds_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * seconds):seconds;
   if (real_alarm == NULL) {
     return -1;
   }
 
-  ret = (*real_alarm)((user_rate_set)?((1.0 / user_rate) * seconds):seconds);
+  DONT_FAKE_TIME(ret = (*real_alarm)(seconds_real));
   return (user_rate_set)?(user_rate * ret):ret;
 }
 
@@ -689,7 +719,7 @@ time_t time(time_t *time_tptr) {
         time_tptr = &null_dummy;
         /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
     }
-    result = (*real_time)(time_tptr);
+    DONT_FAKE_TIME(result = (*real_time)(time_tptr));
     if (result == ((time_t) -1)) return result;
 
     /* pass the real current time to our faking version, overwriting it */
@@ -717,7 +747,7 @@ int ftime(struct timeb *tp) {
     }
 
     /* initialize our result with the real current time */
-    result = (*real_ftime)(tp);
+    DONT_FAKE_TIME(result = (*real_ftime)(tp));
 
     /* pass the real current ftime to our faking version, overwriting it */
     result = fake_ftime(tp);
@@ -743,7 +773,7 @@ int gettimeofday(struct timeval *tv, void *tz) {
     }
 
     /* initialize our result with the real current time */
-    result = (*real_gettimeofday)(tv, tz);
+    DONT_FAKE_TIME(result = (*real_gettimeofday)(tv, tz));
     if (result == -1) return result; /* original function failed */
 
     /* pass the real current time to our faking version, overwriting it */
@@ -769,7 +799,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp) {
     }
 
     /* initialize our result with the real current time */
-    result = (*real_clock_gettime)(clk_id, tp);
+    DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, tp));
     if (result == -1) return result; /* original function failed */
 
     /* pass the real current time to our faking version, overwriting it */
@@ -997,6 +1027,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp) {
     static int cache_expired = 1;       /* considered expired at first call */
     static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
+    if (dont_fake) return 0;
     /* Per process timers are only sped up or slowed down */
     if ((clk_id == CLOCK_PROCESS_CPUTIME_ID ) || (clk_id == CLOCK_THREAD_CPUTIME_ID)) {
       if (user_rate_set) {
