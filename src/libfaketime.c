@@ -121,11 +121,13 @@ static time_t (*real_time)(time_t *);
 static int (*real_ftime)(struct timeb *);
 static int (*real_gettimeofday)(struct timeval *, void *);
 static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
+#ifndef __APPLE__
 static int (*real_timer_settime)(timer_t timerid, int flags,
 				 const struct itimerspec *new_value,
 				 struct itimerspec * old_value);
 static int (*real_timer_gettime)(timer_t timerid,
 				 struct itimerspec *curr_value);
+#endif
 static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
 static int (*real_usleep)(useconds_t usec);
 static unsigned int (*real_sleep)(unsigned int seconds);
@@ -649,6 +651,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 }
 #endif
 
+#ifndef __APPLE__
 /**
  * Faked timer_settime()
  * Does not affect timer speed when stepping clock with each time() call.
@@ -738,6 +741,8 @@ int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
   /* return the result to the caller */
   return result;
 }
+
+#endif
 
 /**
  * Faked nanosleep()
@@ -1097,12 +1102,12 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_alarm = dlsym(RTLD_NEXT, "alarm");
     real_poll = dlsym(RTLD_NEXT, "poll");
     real_ppoll = dlsym(RTLD_NEXT, "ppoll");
-    real_timer_settime = dlsym(RTLD_NEXT, "timer_settime");
-    real_timer_gettime = dlsym(RTLD_NEXT, "timer_gettime");
 #ifdef __APPLE__
     real_clock_get_time = dlsym(RTLD_NEXT, "clock_get_time");
     real_clock_gettime = apple_clock_gettime;
 #else
+    real_timer_settime = dlsym(RTLD_NEXT, "timer_settime");
+    real_timer_gettime = dlsym(RTLD_NEXT, "timer_gettime");
     real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
 #endif
 
