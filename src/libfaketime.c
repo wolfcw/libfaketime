@@ -689,7 +689,7 @@ int usleep(useconds_t usec)
   }
 
   DONT_FAKE_TIME(result = (*real_usleep)(usec_real));
-   return result;
+  return result;
 }
 
 /**
@@ -704,7 +704,7 @@ unsigned int sleep(unsigned int seconds)
   }
 
   DONT_FAKE_TIME(ret = (*real_sleep)(seconds_real));
-  return (user_rate_set)?(user_rate * ret):ret;
+  return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
 }
 
 /**
@@ -719,7 +719,7 @@ unsigned int alarm(unsigned int seconds)
   }
 
   DONT_FAKE_TIME(ret = (*real_alarm)(seconds_real));
-  return (user_rate_set)?(user_rate * ret):ret;
+  return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
 }
 
 time_t time(time_t *time_tptr) {
