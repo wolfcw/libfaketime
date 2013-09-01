@@ -19,7 +19,6 @@ Content of this file:
    g) Using the "faketime" wrapper script
    h) "Limiting" libfaketime
    i) Spawning an external process
-   j) Saving timestamps to file, loading them from file
 5. License
 6. Contact
 
@@ -425,31 +424,11 @@ This will run the "echo" command with the given parameter during the first
 time-related system function call that "myprogram" performs after running for 5
 seconds.
 
-4j) Saving timestamps to file, loading them from file
---------------------------------
-
-Faketime can save faked timestamps to a file specified by FAKETIME_SAVE_FILE
-environment variable. It can also use the file specified by FAKETIME_LOAD_FILE
-to replay timestamps from it. After consuming the whole file faketime returns
-to using the rule set in FAKETIME variable, but the timestamp processes will
-start counting from will be the last timestamp in the file.
-
-The file stores each timestamp in a stream of saved_timestamp structs
-without any metadata or padding:
-
-/** Storage format for timestamps written to file. Big endian.*/
-struct saved_timestamp {
-  int64_t sec;
-  uint64_t nsec;
-};
-
-
-Faketime needs to be run using the faketime wrapper to use the files.
 
 5. License
 ----------
 
-FTPL has been released under the GNU Public License, GPL. Please see xthe
+FTPL has been released under the GNU Public License, GPL. Please see the
 included COPYING file.
 
 
