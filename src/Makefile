@@ -30,14 +30,6 @@
 #           frequently. Disabling the cache may negatively influence the
 #           performance.
 #
-#     LIMITEDFAKING
-#		  - Support environment variables that limit time faking to certain
-#		    time intervals or number of function calls.
-#
-#     SPAWNSUPPORT
-#         - Enable support for spawning an external process at a given
-#           timestamp.
-#
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
 #
@@ -52,7 +44,7 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPOSIX_REALTIME -DLIMITEDFAKING -DSPAWNSUPPORT -DPREFIX='"'$(PREFIX)'"'
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"'
 LIB_LDFLAGS += -shared
 LDFLAGS += -lrt
 LDADD += -ldl -lm -lpthread
