@@ -1,3 +1,29 @@
+Since 0.9:
+    - Balint Reczey added support for nanosecond resolution, saving
+      timestamps to files, speeding up and slowing down per-process
+      timers, CLOCK_MONOTONIC and CLOCK_MONOTONIC_RAW, faketime
+      support for system calls such as sleep() and alarm().
+    - Applied a patch by Gerardo Malazdrewicz and Toni G to restore
+      compatibility with newer versions of glibc.
+    - Balint Reczey added an option to use the same global clock setting
+      for all libfaketime-spawned processes.
+    - Balint Reczey has rewritten the faketime wrapper shell script in C
+      and refactored libfaketime.
+    - Balint Reczey added support for advancing the time with each time-
+      related system call ("deterministic time").
+    - Added "timeprivacy" wrapper by adrelanos; it ensures that programs
+      are started with unique timestamps.
+    - Code and documentation cleanup by Tomi Ollila.
+    - Reworked Makefiles for more flexible installation, including fixes
+      by Lukas Fleischner, Daniel Kahm Gillmor, and Hugues Andreux.
+    - Fixed license issues as pointed out by Paul Wouters.
+    - Mac OS X support has been improved for OS X 10.7 and 10.8; due to
+      changes to the underlying libraries on OS X, libfaketime 0.9.5 will
+      no longer work with OS X < 10.6; use libfaketime 0.9(.1) for older
+      OS X installations.
+    - Don Fong has contributed a new framework for functional tests.
+      Petr Salinger ensured its compatibility with GNU/kFreeBSD.
+
 Since 0.8.2:
     - Added support for "limited faking".
       You can optionally specify when libfaketime starts to fake the

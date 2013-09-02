@@ -1,8 +1,16 @@
 README file for libfaketime on Mac OS X
 =======================================
 
-Support for Mac OS X is still preliminary. Development and tests are
-done under 10.7 Lion only currently.
+Support for Mac OS X is still considered preliminary, although many
+command line and GUI applications will run stable.
+
+Developments and tests are done on OSX 10.8+ currently, although the
+current version will also work with OSX 10.7.
+
+Version 0.9.5 no longer works with OSX < 10.6 due to changes in the
+underlying system libraries. If you need libfaketime on OSX < 10.6,
+please use libfaketime version 0.9.
+
 
 Compiling and using libfaketime on OS X is slightly different than
 on Linux. Please make sure to read the README file for general
@@ -34,7 +42,7 @@ Please refer to the general README file concerning the format
 of the FAKETIME environment variable value and other environment
 variables that are related to it.
 
-The "faketime" wrapper shell script has been adapted to OS X;
+The "faketime" wrapper application has been adapted to OS X;
 it offers the same limited libfaketime functionality as on Linux
 in a simple-to-use manner without the need to manually set
 those environment variables.
@@ -44,9 +52,10 @@ those environment variables.
 --------------------------------------------
 
 Given the limited number of system calls libfaketime intercepts,
-it does not work too well with GUI applications on OS X. Crashes
-after a random time are common issues, some applications will
-not or at least not always see the faked time, and so on.
+it may not work too well with specific GUI applications on OS X.
+This can result in crashes after a seemingly random time, or an
+application will not or at least not always see the faked time,
+and so on.
 
 A safe way to try out whether a specific application works fine
 with libfaketime is to start it from the command line. Perform
@@ -87,6 +96,12 @@ to make sure the change to Info.plist does not go unnoticed.
 Please note that modifications to Info.plist will be lost when the
 application is updated, so this process needs to be repeated after
 such updates, including own new builds when using Xcode.
+
+Please feel free to report non-working applications on the Github
+libfaketime issues website. This may help us to identify further
+time-related system calls that need to be intercepted on OSX.
+
+    https://github.com/wolfcw/libfaketime/issues
 
 
 4) Notes for developers of OS X applications
