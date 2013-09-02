@@ -1,0 +1,31 @@
+INSTALL ?= install
+
+all:
+	$(MAKE) -f Makefile.OSX -C src all
+
+test:
+	$(MAKE) -f Makefile.OSX -C test all
+
+install:
+	$(MAKE) -f Makefile.OSX -C src install
+	$(MAKE) -f Makefile.OSX -C man install
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/share/doc/faketime/"
+	$(INSTALL) -m0644 README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	$(INSTALL) -m0644 NEWS "${DESTDIR}${PREFIX}/share/doc/faketime/NEWS"
+
+uninstall:
+	$(MAKE) -f Makefile.OSX -C src uninstall
+	$(MAKE) -f Makefile.OSX -C man uninstall
+	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	rm -f "${DESTDIR}${PREFIX}/share/doc/faketime/NEWS"
+	rmdir "${DESTDIR}${PREFIX}/share/doc/faketime"
+
+clean:
+	$(MAKE) -f Makefile.OSX -C src clean
+	$(MAKE) -f Makefile.OSX -C test clean
+
+distclean:
+	$(MAKE) -f Makefile.OSX -C src distclean
+	$(MAKE) -f Makefile.OSX -C test distclean
+
+.PHONY: all test install uninstall clean distclean
