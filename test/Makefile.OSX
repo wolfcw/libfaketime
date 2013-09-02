@@ -16,7 +16,7 @@ timetest: ${OBJ}
 
 test: timetest functest
 	@echo
-	@./test.sh
+	@./test_OSX.sh
 
 # run functional tests
 functest:
