@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <time.h>
 #include <math.h>
 #include <errno.h>
@@ -124,6 +125,9 @@ static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
 static int (*real_usleep)(useconds_t usec);
 static unsigned int (*real_sleep)(unsigned int seconds);
 static unsigned int (*real_alarm)(unsigned int seconds);
+static int (*real_poll)(struct pollfd *, nfds_t, int);
+static int (*real_ppoll)(struct pollfd *, nfds_t,
+               const struct timespec *, const sigset_t *);
 #ifdef __APPLE__
 static int (*real_clock_get_time)(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
 static clock_serv_t clock_serv_real;
@@ -722,6 +726,48 @@ unsigned int alarm(unsigned int seconds)
   return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
 }
 
+/**
+ * Faked ppoll()
+ */
+int ppoll(struct pollfd *fds, nfds_t nfds,
+	  const struct timespec *timeout_ts, const sigset_t *sigmask)
+{
+  struct timespec real_timeout, *real_timeout_pt;
+  int ret;
+
+  if (real_ppoll == NULL) {
+    return -1;
+  }
+  if (timeout_ts != NULL) {
+    if (user_rate_set && !dont_fake && (timeout_ts->tv_sec > 0)) {
+      timespecmul(timeout_ts, 1.0 / user_rate, &real_timeout);
+      real_timeout_pt = &real_timeout;
+    } else {
+      /* cast away constness */
+      real_timeout_pt = (struct timespec *)timeout_ts;
+    }
+  } else {
+    real_timeout_pt = NULL;
+  }
+
+  DONT_FAKE_TIME(ret = (*real_ppoll)(fds, nfds, real_timeout_pt, sigmask));
+  return ret;
+}
+
+/**
+ * Faked poll()
+ */
+int poll(struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  int ret, timeout_real = (user_rate_set && !dont_fake && (timeout > 0))?(timeout / user_rate):timeout;
+  if (real_poll == NULL) {
+    return -1;
+  }
+
+  DONT_FAKE_TIME(ret = (*real_poll)(fds, nfds, timeout_real));
+  return ret;
+}
+
 time_t time(time_t *time_tptr) {
     time_t result;
     time_t null_dummy;
@@ -902,6 +948,8 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_usleep = dlsym(RTLD_NEXT, "usleep");
     real_sleep = dlsym(RTLD_NEXT, "sleep");
     real_alarm = dlsym(RTLD_NEXT, "alarm");
+    real_poll = dlsym(RTLD_NEXT, "poll");
+    real_ppoll = dlsym(RTLD_NEXT, "ppoll");
 #ifdef __APPLE__
     real_clock_get_time = dlsym(RTLD_NEXT, "clock_get_time");
 #endif
