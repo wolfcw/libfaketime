@@ -685,14 +685,27 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
  */
 int usleep(useconds_t usec)
 {
-
   int result;
-  useconds_t usec_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * usec):usec ;
-  if (real_usleep == NULL) {
-    return -1;
-  }
 
-  DONT_FAKE_TIME(result = (*real_usleep)(usec_real));
+  if (user_rate_set && !dont_fake) {
+    struct timespec real_req;
+
+    if (real_nanosleep == NULL) {
+      /* fall back to usleep() */
+      if (real_usleep == NULL) {
+	return -1;
+      }
+      DONT_FAKE_TIME(result = (*real_usleep)((1.0 / user_rate) * usec));
+      return result;
+    }
+
+    real_req.tv_sec = usec / 1000000;
+    real_req.tv_nsec = (usec % 1000000) * 1000;
+    timespecmul(&real_req, 1.0 / user_rate, &real_req);
+    DONT_FAKE_TIME(result = (*real_nanosleep)(&real_req, NULL));
+  } else {
+    DONT_FAKE_TIME(result = (*real_usleep)(usec));
+  }
   return result;
 }
 
@@ -701,18 +714,45 @@ int usleep(useconds_t usec)
  */
 unsigned int sleep(unsigned int seconds)
 {
-  unsigned int ret;
-  unsigned int seconds_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * seconds):seconds;
-  if (real_sleep == NULL) {
-    return 0;
-  }
+  if (user_rate_set && !dont_fake) {
+    if (real_nanosleep == NULL) {
+      /* fall back to sleep */
+      unsigned int ret;
+      if (real_sleep == NULL) {
+	return 0;
+      }
+      DONT_FAKE_TIME(ret = (*real_sleep)((1.0 / user_rate) * seconds));
+      return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
+    } else {
+      int result;
+      struct timespec real_req = {seconds, 0}, rem;
+      timespecmul(&real_req, 1.0 / user_rate, &real_req);
 
-  DONT_FAKE_TIME(ret = (*real_sleep)(seconds_real));
-  return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
+      DONT_FAKE_TIME(result = (*real_nanosleep)(&real_req, &rem));
+      if (result == -1) {
+	return 0;
+      }
+
+      /* fake returned parts */
+      if ((rem.tv_sec != 0) || (rem.tv_nsec != 0)) {
+	timespecmul(&rem, user_rate, &rem);
+      }
+      /* return the result to the caller */
+      return rem.tv_sec;
+    }
+  } else {
+    /* no need to fake anything */
+    unsigned int ret;
+    DONT_FAKE_TIME(ret = (*real_sleep)(seconds));
+    return ret;
+  }
 }
+
 
 /**
  * Faked alarm()
+ * @note due to rounding alarm(2) with faketime -f '+0 x7' won't wait 2/7
+ * wall clock seconds but 0 seconds
  */
 unsigned int alarm(unsigned int seconds)
 {
