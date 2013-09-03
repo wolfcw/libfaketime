@@ -448,30 +448,8 @@ static bool load_time(struct timespec *tp)
 
 /* 
  *      =======================================================================
- *      Faked system functions                                      === FAKE(1)
+ *      Faked system functions: file related                     === FAKE(FILE)
  *      =======================================================================
- */
-
-/*
- * Intercepted system calls:
- *  - time()
- *  - ftime()
- *  - gettimeofday()
- *  - clock_gettime()
- *
- *  Since version 0.7, if FAKE_INTERNAL_CALLS is defined, also calls to
- *  __time(), __ftime(), __gettimeofday(), and __clock_gettime() will be
- *  intercepted.
- *
- *  Thanks to a contribution by Philipp Hachtmann, the following
- *  system calls will also be time-adjusted depending on the compile
- *  switches used + any environmental variables present.
- *
- *  - stat()
- *  - fstat()
- *  - lstat()
- *  - the 64-bit versions of those three
- *
  */
 
 #ifdef FAKE_STAT
@@ -731,6 +709,13 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
 }
 #endif
 
+/* 
+ *      =======================================================================
+ *      Faked system functions: sleep/alarm/poll related        === FAKE(SLEEP)
+ *      =======================================================================
+ *      Contributed by Balint Reczey in v0.9.5
+ */
+
 /*
  * Faked nanosleep()
  */
@@ -874,112 +859,124 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 }
 
 
+/* 
+ *      =======================================================================
+ *      Faked system functions: basic time functions             === FAKE(TIME)
+ *      =======================================================================
+ */
+
 time_t time(time_t *time_tptr) 
 {
-    time_t result;
-    time_t null_dummy;
-    if (time_tptr == NULL) 
-    {
-        time_tptr = &null_dummy;
-        /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
-    }
-    DONT_FAKE_TIME(result = (*real_time)(time_tptr));
-    if (result == ((time_t) -1)) return result;
+  time_t result;
+  time_t null_dummy;
+  if (time_tptr == NULL) 
+  {
+      time_tptr = &null_dummy;
+      /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
+  }
+  DONT_FAKE_TIME(result = (*real_time)(time_tptr));
+  if (result == ((time_t) -1)) return result;
 
-    /* pass the real current time to our faking version, overwriting it */
-    result = fake_time(time_tptr);
+  /* pass the real current time to our faking version, overwriting it */
+  result = fake_time(time_tptr);
 
-    /* return the result to the caller */
-    return result;
+  /* return the result to the caller */
+  return result;
 }
-
 
 int ftime(struct timeb *tp) 
 {
-    int result;
+  int result;
 
-    /* sanity check */
-    if (tp == NULL)
-        return 0;               /* ftime() always returns 0, see manpage */
+  /* sanity check */
+  if (tp == NULL)
+    return 0;               /* ftime() always returns 0, see manpage */
 
-    /* Check whether we've got a pointer to the real ftime() function yet */
-    if (NULL == real_ftime) 
-    {  /* dlsym() failed */
+  /* Check whether we've got a pointer to the real ftime() function yet */
+  if (NULL == real_ftime) 
+  {  /* dlsym() failed */
 #ifdef DEBUG
-            (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
+    (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
 #endif
-            tp = NULL;
-            return 0; /* propagate error to caller */
-    }
+    tp = NULL;
+    return 0; /* propagate error to caller */
+  }
 
-    /* initialize our result with the real current time */
-    DONT_FAKE_TIME(result = (*real_ftime)(tp));
+  /* initialize our result with the real current time */
+  DONT_FAKE_TIME(result = (*real_ftime)(tp));
 
-    /* pass the real current ftime to our faking version, overwriting it */
-    result = fake_ftime(tp);
+  /* pass the real current ftime to our faking version, overwriting it */
+  result = fake_ftime(tp);
 
-    /* return the result to the caller */
-    return result; /* will always be 0 (see manpage) */
+  /* return the result to the caller */
+  return result; /* will always be 0 (see manpage) */
 }
 
 int gettimeofday(struct timeval *tv, void *tz) 
 {
-    int result;
+  int result;
 
-    /* sanity check */
-    if (tv == NULL) 
-    {
-        return -1;
-    }
+  /* sanity check */
+  if (tv == NULL) 
+  {
+    return -1;
+  }
 
-    /* Check whether we've got a pointer to the real ftime() function yet */
-    if (NULL == real_gettimeofday) 
-    {  /* dlsym() failed */
+  /* Check whether we've got a pointer to the real ftime() function yet */
+  if (NULL == real_gettimeofday) 
+  {  /* dlsym() failed */
 #ifdef DEBUG
-            (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
+    (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
 #endif
-            return -1; /* propagate error to caller */
-    }
+    return -1; /* propagate error to caller */
+  }
 
-    /* initialize our result with the real current time */
-    DONT_FAKE_TIME(result = (*real_gettimeofday)(tv, tz));
-    if (result == -1) return result; /* original function failed */
+  /* initialize our result with the real current time */
+  DONT_FAKE_TIME(result = (*real_gettimeofday)(tv, tz));
+  if (result == -1) return result; /* original function failed */
 
-    /* pass the real current time to our faking version, overwriting it */
-    result = fake_gettimeofday(tv, tz);
+  /* pass the real current time to our faking version, overwriting it */
+  result = fake_gettimeofday(tv, tz);
 
-    /* return the result to the caller */
-    return result;
+  /* return the result to the caller */
+  return result;
 }
 
 int clock_gettime(clockid_t clk_id, struct timespec *tp) 
 {
-    int result;
+  int result;
 
-    /* sanity check */
-    if (tp == NULL) 
-    {
-        return -1;
-    }
+  /* sanity check */
+  if (tp == NULL) 
+  {
+    return -1;
+  }
 
-    if (NULL == real_clock_gettime) 
-    {  /* dlsym() failed */
+  if (NULL == real_clock_gettime) 
+  {  /* dlsym() failed */
 #ifdef DEBUG
-            (void) fprintf(stderr, "faketime problem: original clock_gettime() not found.\n");
+    (void) fprintf(stderr, "faketime problem: original clock_gettime() not found.\n");
 #endif
-            return -1; /* propagate error to caller */
-    }
+    return -1; /* propagate error to caller */
+  }
 
-    /* initialize our result with the real current time */
-    DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, tp));
-    if (result == -1) return result; /* original function failed */
+  /* initialize our result with the real current time */
+  DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, tp));
+  if (result == -1) return result; /* original function failed */
 
-    /* pass the real current time to our faking version, overwriting it */
-    result = fake_clock_gettime(clk_id, tp);
+  /* pass the real current time to our faking version, overwriting it */
+  result = fake_clock_gettime(clk_id, tp);
 
-    /* return the result to the caller */
-    return result;
+  /* return the result to the caller */
+  return result;
 }
+
+
+/* 
+ *      =======================================================================
+ *      Parsing the user's faketime requests                          === PARSE
+ *      =======================================================================
+ */
 
 static void parse_ft_string(const char *user_faked_time)
 {
@@ -1056,185 +1053,191 @@ parse_modifiers:
 
 void __attribute__ ((constructor)) ftpl_init(void)
 {
-    char *tmp_env;
+  char *tmp_env;
 
-    /* Look up all real_* functions. NULL will mark missing ones. */
-    real_stat =             dlsym(RTLD_NEXT, "__xstat");
-    real_fstat =            dlsym(RTLD_NEXT, "__fxstat");
-    real_fstatat =          dlsym(RTLD_NEXT, "__fxstatat");
-    real_lstat =            dlsym(RTLD_NEXT, "__lxstat");
-    real_stat64 =           dlsym(RTLD_NEXT,"__xstat64");
-    real_fstat64 =          dlsym(RTLD_NEXT, "__fxstat64");
-    real_fstatat64 =        dlsym(RTLD_NEXT, "__fxstatat64");
-    real_lstat64 =          dlsym(RTLD_NEXT, "__lxstat64");
-    real_time =             dlsym(RTLD_NEXT, "time");
-    real_ftime =            dlsym(RTLD_NEXT, "ftime");
-    real_gettimeofday =     dlsym(RTLD_NEXT, "gettimeofday");
-    real_clock_gettime =    dlsym(RTLD_NEXT, "clock_gettime");
-    real_nanosleep =        dlsym(RTLD_NEXT, "nanosleep");
-    real_usleep =           dlsym(RTLD_NEXT, "usleep");
-    real_sleep =            dlsym(RTLD_NEXT, "sleep");
-    real_alarm =            dlsym(RTLD_NEXT, "alarm");
-    real_poll =             dlsym(RTLD_NEXT, "poll");
-    real_ppoll =            dlsym(RTLD_NEXT, "ppoll");
+  /* Look up all real_* functions. NULL will mark missing ones. */
+  real_stat =             dlsym(RTLD_NEXT, "__xstat");
+  real_fstat =            dlsym(RTLD_NEXT, "__fxstat");
+  real_fstatat =          dlsym(RTLD_NEXT, "__fxstatat");
+  real_lstat =            dlsym(RTLD_NEXT, "__lxstat");
+  real_stat64 =           dlsym(RTLD_NEXT,"__xstat64");
+  real_fstat64 =          dlsym(RTLD_NEXT, "__fxstat64");
+  real_fstatat64 =        dlsym(RTLD_NEXT, "__fxstatat64");
+  real_lstat64 =          dlsym(RTLD_NEXT, "__lxstat64");
+  real_time =             dlsym(RTLD_NEXT, "time");
+  real_ftime =            dlsym(RTLD_NEXT, "ftime");
+  real_gettimeofday =     dlsym(RTLD_NEXT, "gettimeofday");
+  real_clock_gettime =    dlsym(RTLD_NEXT, "clock_gettime");
+  real_nanosleep =        dlsym(RTLD_NEXT, "nanosleep");
+  real_usleep =           dlsym(RTLD_NEXT, "usleep");
+  real_sleep =            dlsym(RTLD_NEXT, "sleep");
+  real_alarm =            dlsym(RTLD_NEXT, "alarm");
+  real_poll =             dlsym(RTLD_NEXT, "poll");
+  real_ppoll =            dlsym(RTLD_NEXT, "ppoll");
 #ifdef __APPLE__
-    real_clock_get_time =   dlsym(RTLD_NEXT, "clock_get_time");
+  real_clock_get_time =   dlsym(RTLD_NEXT, "clock_get_time");
 #endif
 
-    ft_shm_init();
+  ft_shm_init();
 #ifdef FAKE_STAT
-    if (getenv("NO_FAKE_STAT")!=NULL) 
-    {
-      fake_stat_disabled = 1;  //Note that this is NOT re-checked
-    }
+  if (getenv("NO_FAKE_STAT")!=NULL) 
+  {
+    fake_stat_disabled = 1;  //Note that this is NOT re-checked
+  }
 #endif
 
-    /* Check whether we actually should be faking the returned timestamp. */
+  /* Check whether we actually should be faking the returned timestamp. */
 
-    if ((tmp_env = getenv("FAKETIME_START_AFTER_SECONDS")) != NULL) 
+  if ((tmp_env = getenv("FAKETIME_START_AFTER_SECONDS")) != NULL) 
+  {
+    ft_start_after_secs = atol(tmp_env);
+    limited_faking = true;
+  }
+  if ((tmp_env = getenv("FAKETIME_STOP_AFTER_SECONDS")) != NULL) 
+  {
+    ft_stop_after_secs = atol(tmp_env);
+    limited_faking = true;
+  }
+  if ((tmp_env = getenv("FAKETIME_START_AFTER_NUMCALLS")) != NULL) 
+  {
+    ft_start_after_ncalls = atol(tmp_env);
+    limited_faking = true;
+  }
+  if ((tmp_env = getenv("FAKETIME_STOP_AFTER_NUMCALLS")) != NULL) 
+  {
+    ft_stop_after_ncalls = atol(tmp_env);
+    limited_faking = true;
+  }
+
+  /* check whether we should spawn an external command */
+  if ((tmp_env = getenv("FAKETIME_SPAWN_TARGET")) != NULL) 
+  {
+    spawnsupport = true;
+    (void) strncpy(ft_spawn_target, getenv("FAKETIME_SPAWN_TARGET"), 1024);
+    if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL) 
     {
-      ft_start_after_secs = atol(tmp_env);
-      limited_faking = true;
+      ft_spawn_secs = atol(tmp_env);
     }
-    if ((tmp_env = getenv("FAKETIME_STOP_AFTER_SECONDS")) != NULL) 
+    if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL) 
     {
-      ft_stop_after_secs = atol(tmp_env);
-      limited_faking = true;
+  	  ft_spawn_ncalls = atol(tmp_env);
     }
-    if ((tmp_env = getenv("FAKETIME_START_AFTER_NUMCALLS")) != NULL) 
+  }
+
+  if ((tmp_env = getenv("FAKETIME_SAVE_FILE")) != NULL) 
+  {
+    if (-1 == (outfile = open(tmp_env, O_RDWR | O_APPEND | O_CLOEXEC | O_CREAT,
+			                  S_IWUSR | S_IRUSR))) 
     {
-      ft_start_after_ncalls = atol(tmp_env);
-      limited_faking = true;
+  	  perror("Opening file for saving timestamps failed");
+	  exit(EXIT_FAILURE);
     }
-    if ((tmp_env = getenv("FAKETIME_STOP_AFTER_NUMCALLS")) != NULL) 
+  }
+
+  /* load file only if reading timstamps from it is not finished yet */
+  if ((tmp_env = getenv("FAKETIME_LOAD_FILE")) != NULL) 
+  {
+    int infile = -1;
+    struct stat sb;
+    if (-1 == (infile = open(tmp_env, O_RDONLY|O_CLOEXEC))) 
     {
-      ft_stop_after_ncalls = atol(tmp_env);
-      limited_faking = true;
-    }
-
-    /* check whether we should spawn an external command */
-    if ((tmp_env = getenv("FAKETIME_SPAWN_TARGET")) != NULL) 
-    {
-      spawnsupport = true;
-      (void) strncpy(ft_spawn_target, getenv("FAKETIME_SPAWN_TARGET"), 1024);
-
-      if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL) 
-      {
-	    ft_spawn_secs = atol(tmp_env);
-      }
-      if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL) 
-      {
-    	ft_spawn_ncalls = atol(tmp_env);
-      }
-    }
-
-    if ((tmp_env = getenv("FAKETIME_SAVE_FILE")) != NULL) 
-    {
-      if (-1 == (outfile = open(tmp_env, O_RDWR | O_APPEND | O_CLOEXEC | O_CREAT,
-				S_IWUSR | S_IRUSR))) 
-      {
-    	perror("Opening file for saving timestamps failed");
-	    exit(EXIT_FAILURE);
-      }
-    }
-
-    /* load file only if reading timstamps from it is not finished yet */
-    if ((tmp_env = getenv("FAKETIME_LOAD_FILE")) != NULL) 
-    {
-      int infile = -1;
-      struct stat sb;
-      if (-1 == (infile = open(tmp_env, O_RDONLY|O_CLOEXEC))) 
-      {
-	    perror("Opening file for loading timestamps failed");
-    	exit(EXIT_FAILURE);
-      }
-
-      fstat(infile, &sb);
-      if (sizeof(stss[0]) > (infile_size = sb.st_size)) 
-      {
-    	printf("There are no timestamps in the provided file to load timestamps from");
-	    exit(EXIT_FAILURE);
-      }
-
-      if ((infile_size % sizeof(stss[0])) != 0) 
-      {
-    	printf("File size is not multiple of timestamp size. It is probably damaged.");
-    	exit(EXIT_FAILURE);
-      }
-
-      stss = mmap(NULL, infile_size, PROT_READ, MAP_SHARED, infile, 0);
-      if (stss == MAP_FAILED) 
-      {
-    	perror("Mapping file for loading timestamps failed");
-	    exit(EXIT_FAILURE);
-      }
-      infile_set = true;
+      perror("Opening file for loading timestamps failed");
+      exit(EXIT_FAILURE);
     }
 
-    tmp_env = getenv("FAKETIME_FMT");
-    if (tmp_env == NULL) 
+    fstat(infile, &sb);
+    if (sizeof(stss[0]) > (infile_size = sb.st_size)) 
     {
-      strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
+      printf("There are no timestamps in the provided file to load timestamps from");
+	  exit(EXIT_FAILURE);
+    }
+
+    if ((infile_size % sizeof(stss[0])) != 0) 
+    {
+      printf("File size is not multiple of timestamp size. It is probably damaged.");
+      exit(EXIT_FAILURE);
+    }
+
+    stss = mmap(NULL, infile_size, PROT_READ, MAP_SHARED, infile, 0);
+    if (stss == MAP_FAILED) 
+    {
+      perror("Mapping file for loading timestamps failed");
+	  exit(EXIT_FAILURE);
+    }
+    infile_set = true;
+  }
+
+  tmp_env = getenv("FAKETIME_FMT");
+  if (tmp_env == NULL) 
+  {
+    strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
+  } 
+  else 
+  {
+    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
+  }
+
+  if (shared_sem != 0) 
+  {
+    if (sem_wait(shared_sem) == -1) 
+    {
+  	  perror("sem_wait");
+      exit(1);
+    }
+    if (ft_shared->start_time.real.tv_nsec == -1) 
+    {
+      /* set up global start time */
+	  system_time_from_system(&ftpl_starttime);
+      ft_shared->start_time = ftpl_starttime;
     } 
     else 
     {
-      strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
+      /** get preset start time */
+      ftpl_starttime = ft_shared->start_time;
     }
-
-    if (shared_sem != 0) 
+    if (sem_post(shared_sem) == -1) 
     {
-      if (sem_wait(shared_sem) == -1) 
-      {
-    	perror("sem_wait");
-    	exit(1);
-      }
-      if (ft_shared->start_time.real.tv_nsec == -1) 
-      {
-    	/* set up global start time */
-	    system_time_from_system(&ftpl_starttime);
-    	ft_shared->start_time = ftpl_starttime;
-      } 
-      else 
-      {
-        /** get preset start time */
-    	ftpl_starttime = ft_shared->start_time;
-      }
-      if (sem_post(shared_sem) == -1) 
-      {
-	    perror("sem_post");
-    	exit(1);
-      }
-    } 
-    else 
-    {
-      system_time_from_system(&ftpl_starttime);
+	  perror("sem_post");
+      exit(1);
     }
-    /* fake time supplied as environment variable? */
-    if (NULL != (tmp_env = getenv("FAKETIME"))) 
-    {
-      parse_config_file = false;
-      parse_ft_string(tmp_env);
-    }
-}
-
-static void remove_trailing_eols(char *line)
-{
-	char *endp = line + strlen(line);
-	/*
-	 * erase the last char if it's a newline
-	 * or carriage return, and back up.
-	 * keep doing this, but don't back up
-	 * past the beginning of the string.
-	 */
-# define is_eolchar(c) ((c) == '\n' || (c) == '\r')
-	while (endp > line && is_eolchar(endp[-1]))
-		*--endp = '\0';
+  } 
+  else 
+  {
+    system_time_from_system(&ftpl_starttime);
+  }
+  /* fake time supplied as environment variable? */
+  if (NULL != (tmp_env = getenv("FAKETIME"))) 
+  {
+    parse_config_file = false;
+    parse_ft_string(tmp_env);
+  }
 }
 
 
 /* 
  *      =======================================================================
- *      Faked system functions                                      === FAKE(2)
+ *      Helper functions                                             === HELPER
+ *      =======================================================================
+ */
+
+static void remove_trailing_eols(char *line)
+{
+  char *endp = line + strlen(line);
+  /*
+   * erase the last char if it's a newline
+   * or carriage return, and back up.
+   * keep doing this, but don't back up
+   * past the beginning of the string.
+   */
+# define is_eolchar(c) ((c) == '\n' || (c) == '\r')
+  while (endp > line && is_eolchar(endp[-1]))
+	*--endp = '\0';
+}
+
+
+/* 
+ *      =======================================================================
+ *      Implementation of faked functions                        === FAKE(FAKE)
  *      =======================================================================
  */
 
@@ -1441,7 +1444,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   return 0;
 }
 
-
 time_t fake_time(time_t *time_tptr) 
 {
   struct timespec tp;
@@ -1481,6 +1483,13 @@ int fake_gettimeofday(struct timeval *tv, void *tz)
   return ret;
 }
 
+
+/* 
+ *      =======================================================================
+ *      Faked system functions: Apple Mac OS X specific           === FAKE(OSX)
+ *      =======================================================================
+ */
+
 #ifdef __APPLE__
 int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
 {
@@ -1517,12 +1526,12 @@ int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
 
 /* 
  *      =======================================================================
- *      Faked system-internal functions                            === FAKE-INT
+ *      Faked system-internal functions                           === FAKE(INT)
  *      =======================================================================
  */
 
 /*
- * The following __interceptions cause serious issues in Mac OS X 10.7 and higher and are therefore #ifndef'ed
+ * The following __interceptions cause serious issues in Mac OS X 10.7 (and higher) and are therefore #ifndef'ed
  */
 #ifndef __APPLE__
 /* Added in v0.7 as suggested by Jamie Cameron, Google */
