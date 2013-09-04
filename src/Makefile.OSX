@@ -18,11 +18,8 @@
 #           without this, but the performance impact may require you to
 #           try it unsynchronized.
 #
-#     FAKE_INTERNAL_CALLS
-#         - Also intercept libc internal __functions, e.g. not just time(),
-#           but also __time(). Enhances compatibility with applications
-#           that make use of low-level system calls, such as Java Virtual
-#           Machines.
+# 	  FAKE_SLEEP
+# 	      - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
 #
 #     NO_CACHING
 #         - Disables the caching of the fake time offset. Only disable caching
@@ -49,9 +46,9 @@ PREFIX ?= /usr/local
 # versions of XCode support different subsets of architectures, depending on
 # age.
 # 10.5
-#CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch ppc
+#CFLAGS = -dynamiclib -arch i386 -arch ppc
 # 10.6
-CFLAGS = -dynamiclib -DFAKE_INTERNAL_CALLS -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"'
+CFLAGS = -dynamiclib -DFAKE_SLEEP -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"'
 LIB_SRC = libfaketime.c
 
 SONAME = 1

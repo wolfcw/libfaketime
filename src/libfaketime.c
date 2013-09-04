@@ -117,16 +117,20 @@ static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
 static int          (*real_clock_gettime)   (clockid_t clk_id, struct timespec *tp);
 #ifndef __APPLE__
+#ifdef FAKE_TIMERS
 static int          (*real_timer_settime)   (timer_t timerid, int flags, const struct itimerspec *new_value,
 			                            	 struct itimerspec * old_value);
 static int          (*real_timer_gettime)   (timer_t timerid, struct itimerspec *curr_value);
 #endif
+#endif
+#ifdef FAKE_SLEEP
 static int          (*real_nanosleep)       (const struct timespec *req, struct timespec *rem);
 static int          (*real_usleep)          (useconds_t usec);
 static unsigned int (*real_sleep)           (unsigned int seconds);
 static unsigned int (*real_alarm)           (unsigned int seconds);
 static int          (*real_poll)            (struct pollfd *, nfds_t, int);
 static int          (*real_ppoll)           (struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
+#endif
 #ifdef __APPLE__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
 static clock_serv_t clock_serv_real;
@@ -721,6 +725,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
  *      Contributed by Balint Reczey in v0.9.5
  */
 
+#ifdef FAKE_SLEEP
 /*
  * Faked nanosleep()
  */
@@ -913,8 +918,10 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
   DONT_FAKE_TIME(ret = (*real_poll)(fds, nfds, timeout_real));
   return ret;
 }
+#endif
 
 #ifndef __APPLE__
+#ifdef FAKE_TIMERS
 /*
  * Faked timer_settime()
  * Does not affect timer speed when stepping clock with each time() call.
@@ -1025,6 +1032,7 @@ int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
   /* return the result to the caller */
   return result;
 }
+#endif
 #endif
 
 
@@ -1237,17 +1245,21 @@ void __attribute__ ((constructor)) ftpl_init(void)
   real_ftime =            dlsym(RTLD_NEXT, "ftime");
   real_gettimeofday =     dlsym(RTLD_NEXT, "gettimeofday");
   real_clock_gettime =    dlsym(RTLD_NEXT, "clock_gettime");
+#ifdef FAKE_SLEEP
   real_nanosleep =        dlsym(RTLD_NEXT, "nanosleep");
   real_usleep =           dlsym(RTLD_NEXT, "usleep");
   real_sleep =            dlsym(RTLD_NEXT, "sleep");
   real_alarm =            dlsym(RTLD_NEXT, "alarm");
   real_poll =             dlsym(RTLD_NEXT, "poll");
   real_ppoll =            dlsym(RTLD_NEXT, "ppoll");
+#endif
 #ifdef __APPLE__
   real_clock_get_time =   dlsym(RTLD_NEXT, "clock_get_time");
 #else
+#ifdef FAKE_TIMERS
   real_timer_settime =    dlsym(RTLD_NEXT, "timer_settime");
   real_timer_gettime =    dlsym(RTLD_NEXT, "timer_gettime");
+#endif
 #endif
 
   ft_shm_init();
