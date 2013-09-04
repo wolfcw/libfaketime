@@ -1,4 +1,4 @@
-.TH FAKETIME "1" "August 2008" "faketime 0.8" W.Hommel
+.TH FAKETIME "1" "October 2013" "faketime 0.9.5" wolfcw
 .SH NAME
 faketime \- manipulate the system time for a given command
 .SH SYNOPSIS
@@ -11,7 +11,7 @@ The given command will be tricked into believing that the current system time is
 from this date and time unless specified otherwise (see advanced options). Actually, faketime is a simple wrapper for libfaketime, which uses the LD_PRELOAD
 mechanism to load a small library which intercepts system calls to functions such as
 \fItime(2)\fR and \fIfstat(2)\fR. This wrapper exposes only a subset of libfaketime's functionality; please refer to the README file that came with faketime
-for more details and advanced options.
+for more details and advanced options, or have a look at http://github.com/wolfcw/libfaketime
 .SH OPTIONS
 .TP
 \fB\-\-help\fR
@@ -40,8 +40,7 @@ In this single case all spawned processes will use the same global clock without
 .SH ADVANCED TIMESTAMP FORMAT
 The simple timestamp format used by default applies the \fB/bin/date -d\fR command to parse user-friendly specifications such as 'last friday'. When using
 the faketime option \fB\-f\fR, the timestamp specified on the command line is directly passed to libfaketime, which enables a couple of additional features
-such as speeding the clock up or slowing it down for the target program. It is strongly recommended that you have a look at the README file that came with
-faketime for the details. Summary:
+such as speeding the clock up or slowing it down for the target program. It is strongly recommended that you have a look at the libfaketime documentation. Summary:
 .TP
 Freeze clock at absolute timestamp: \fB"YYYY-MM-DD hh:mm:ss"\fR
 If you want to specify an absolute point in time, exactly this format must be used. Please note that freezing the clock is usually not what you want and may break the application. Only use if you know what you're doing!
@@ -57,17 +56,17 @@ When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP 
 .PP
 Faking times for multiple programs or even system-wide can be simplified by using ~/.faketimerc files and /etc/faketimerc. Please refer to the README that came with faketime for warnings and details.
 .SH AUTHOR
-Maintained by Wolfgang Hommel <wolf@code-wizards.com>. Please see the README and Changelog files for contributers.
+Please see the README and NEWS files for contributers.
 .SH BUGS
 Due to limitations of the LD_PRELOAD mechanism, faketime will not work with suidroot and statically linked programs.
 While timestamps and time offsets will work for child processes, speeding the clock up or slowing it down might not
 work for child processes spawned by the executed program as expected; a new instance of libfaketime is used for each
 child process, which means that the libfaketime start time, which is used in speed adjustments, will also be
-re-initialized.
+re-initialized. Some programs may dynamically load system libraries, such as librt, at run-time and therefore bypass libfaketime. You may report programs that do not work with libfaketime, but only if they are available as open source.
 .SH "REPORTING BUGS"
-Please send an e-mail to Wolfgang Hommel <wolf@code-wizards.com>
+Please use https://github.com/wolfcw/libfaketime/issues
 .SH COPYRIGHT
-Copyright \(co 2003-2008 by Wolfgang Hommel.
+Copyright \(co 2003-2013 by the libfaketime authors.
 .PP
 There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. You may redistribute copies of faketime under the
