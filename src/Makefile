@@ -24,6 +24,12 @@
 #           that make use of low-level system calls, such as Java Virtual
 #           Machines.
 #
+# 	  FAKE_SLEEP
+# 	      - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
+#
+#	  FAKE_TIMERS
+#	      - Also intercept timer_settime() and timer_gettime()
+#
 #     NO_CACHING
 #         - Disables the caching of the fake time offset. Only disable caching
 #           if you change the fake time offset during program runtime very
@@ -44,7 +50,7 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"'
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"'
 LIB_LDFLAGS += -shared
 LDFLAGS += -lrt
 LDADD += -ldl -lm -lpthread
