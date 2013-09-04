@@ -1,22 +1,36 @@
-/**
- * Faketime binary spawning commands with FTPL (faketime preload library).
+/*
+ *  libfaketime wrapper command
  *
- * TODO: fill propery formated credits and license
- * Converted from shell script with the following credits and comments:
+ *  This file is part of libfaketime, version 0.9.5
+ *
+ *  libfaketime is free software; you can redistribute it and/or modify it
+ *  under the terms of the GNU General Public License v2 as published by the
+ *  Free Software Foundation.
+ *
+ *  libfaketime is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ *  more details.
+ *
+ *  You should have received a copy of the GNU General Public License v2 along
+ *  with the libfaketime; if not, write to the Free Software Foundation,
+ *  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Converted from shell script by Balint Reczey with the following credits
+ * and comments:
  *
  * Thanks to Daniel Kahn Gillmor for improvement suggestions.
 
- * It allows you to modify the date and time a program sees when using
- * system library calls such as time() and fstat().
-
- * This wrapper exposes only a small subset of the FTPL functionality.
- * Please see FTPL's README file for more details
+ * This wrapper exposes only a small subset of the libfaketime functionality.
+ * Please see libfaketime's README file and man page for more details.
 
  * Acknowledgment: Parts of the functionality of this wrapper have been
  * inspired by Matthias Urlichs' datefudge 1.14.
 
  * Compile time configuration: Path where the libfaketime libraries can be found
- * on Linux/UNIX . */
+ * on Linux/UNIX
+ *
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -34,7 +48,7 @@
 
 #include "faketime_common.h"
 
-const char version[] = "0.8";
+const char version[] = "0.9.5";
 
 #ifdef __APPLE__
 static const char *date_cmd = "gdate";
@@ -48,7 +62,8 @@ static const char *date_cmd = "date";
 char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
 
 
-void usage(const char *name) {
+void usage(const char *name)
+{
   printf("\n");
   printf("Usage: %s [switches] <timestamp> <program with arguments>\n", name);
   printf("\n");
@@ -71,15 +86,17 @@ void usage(const char *name) {
   printf("without restaring it at the start of each process.\n\n");
   printf("(Please note that it depends on your locale settings whether . or , has to be used for fractions)\n");
   printf("\n");
-
 }
 
 /** Clean up shared objects */
-static void cleanup_shobjs () {
-  if (-1 == sem_unlink(sem_name)) {
+static void cleanup_shobjs()
+{
+  if (-1 == sem_unlink(sem_name))
+  {
     perror("sem_unlink");
   }
-  if (-1 == shm_unlink(shm_name)) {
+  if (-1 == shm_unlink(shm_name))
+  {
     perror("shm_unlink");
   }
 }
@@ -93,65 +110,83 @@ int main (int argc, char **argv)
   long offset;
 
   while(curr_opt < argc) {
-    if (0 == strcmp(argv[curr_opt], "-m")) {
+    if (0 == strcmp(argv[curr_opt], "-m"))
+    {
       use_mt = true;
       curr_opt++;
       continue;
-    } else if (0 == strcmp(argv[curr_opt], "-f")) {
+    }
+    else if (0 == strcmp(argv[curr_opt], "-f"))
+    {
       use_direct = true;
       curr_opt++;
       continue;
-    } else if ((0 == strcmp(argv[curr_opt], "-v")) ||
-	       (0 == strcmp(argv[curr_opt], "--version"))) {
+    }
+    else if ((0 == strcmp(argv[curr_opt], "-v")) ||
+	       (0 == strcmp(argv[curr_opt], "--version")))
+    {
       printf("\n%s: Version %s\n"
 	     "For usage information please use '%s --help\n'.",
 	     argv[0], version, argv[0]);
       exit(EXIT_SUCCESS);
-    } else if ((0 == strcmp(argv[curr_opt], "-h")) ||
+    }
+    else if ((0 == strcmp(argv[curr_opt], "-h")) ||
 	       (0 == strcmp(argv[curr_opt], "-?")) ||
-	       (0 == strcmp(argv[curr_opt], "--help"))) {
+	       (0 == strcmp(argv[curr_opt], "--help")))
+    {
       usage(argv[0]);
       exit(EXIT_SUCCESS);
-    } else {
+    }
+    else
+    {
       /* we parsed all options */
       break;
     }
   }
 
   /* we need at least a timestamp string and a command to run */
-  if (argc - curr_opt < 2) {
+  if (argc - curr_opt < 2)
+  {
     usage(argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  if (!use_direct) {
+  if (!use_direct)
+  {
     // TODO get seconds
     pipe(pfds);
     int ret = EXIT_SUCCESS;
 
-    if (0 == (child_pid = fork())) {
+    if (0 == (child_pid = fork()))
+    {
       close(1);       /* close normal stdout */
       dup(pfds[1]);   /* make stdout same as pfds[1] */
       close(pfds[0]); /* we don't need this */
-      if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL)) {
-	perror("Running (g)date failed");
-	exit(EXIT_FAILURE);
+      if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
+      {
+    	perror("Running (g)date failed");
+	    exit(EXIT_FAILURE);
       }
-    } else {
+    }
+    else
+    {
       char buf[256] = {0}; /* e will have way less than 256 digits */
       close(pfds[1]);   /* we won't write to this */
       read(pfds[0], buf, 256);
       waitpid(child_pid, &ret, 0);
-      if (ret != EXIT_SUCCESS) {
-	printf("Error: Timestamp to fake not recognized, please re-try with a "
-	       "different timestamp.\n");
-	exit(EXIT_FAILURE);
+      if (ret != EXIT_SUCCESS)
+      {
+    	printf("Error: Timestamp to fake not recognized, please re-try with a "
+	           "different timestamp.\n");
+	    exit(EXIT_FAILURE);
       }
       offset = atol(buf) - time(NULL);
       ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
       setenv("FAKETIME", buf, true);
     }
-  } else {
+  }
+  else
+  {
     /* simply pass format string along */
     setenv("FAKETIME", argv[curr_opt], true);
   }
@@ -169,22 +204,26 @@ int main (int argc, char **argv)
     snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%d", getpid());
     snprintf(shm_name, PATH_BUFSIZE -1 ,"/faketime_shm_%d", getpid());
 
-    if (SEM_FAILED == (sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1))) {
+    if (SEM_FAILED == (sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
+    {
       perror("sem_open");
       exit(EXIT_FAILURE);
     }
 
     /* create shm */
-    if (-1 == (shm_fd = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR))) {
+    if (-1 == (shm_fd = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
+    {
       perror("shm_open");
-      if (-1 == sem_unlink(argv[2])) {
-	perror("sem_unlink");
+      if (-1 == sem_unlink(argv[2]))
+      {
+    	perror("sem_unlink");
       }
       exit(EXIT_FAILURE);
     }
 
     /* set shm size */
-    if (-1 == ftruncate(shm_fd, sizeof(uint64_t))) {
+    if (-1 == ftruncate(shm_fd, sizeof(uint64_t)))
+    {
       perror("ftruncate");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
@@ -192,13 +231,15 @@ int main (int argc, char **argv)
 
     /* map shm */
     if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
-				    MAP_SHARED, shm_fd, 0))) {
+				    MAP_SHARED, shm_fd, 0)))
+    {
       perror("mmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
 
-    if (sem_wait(sem) == -1) {
+    if (sem_wait(sem) == -1)
+    {
       perror("sem_wait");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
@@ -214,13 +255,15 @@ int main (int argc, char **argv)
     ft_shared->start_time.mon_raw.tv_sec = 0;
     ft_shared->start_time.mon_raw.tv_nsec = -1;
 
-    if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s)))) {
+    if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s))))
+    {
       perror("munmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
 
-    if (sem_post(sem) == -1) {
+    if (sem_post(sem) == -1)
+    {
       perror("semop");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
@@ -232,7 +275,7 @@ int main (int argc, char **argv)
   }
 
   {
-    char *ftpl_path;  
+    char *ftpl_path;
 #ifdef __APPLE__
     ftpl_path = PREFIX "/libfaketime.dylib.1";
     setenv("DYLD_INSERT_LIBRARIES", ftpl_path, true);
@@ -241,15 +284,18 @@ int main (int argc, char **argv)
     {
       char *ld_preload_new, *ld_preload = getenv("LD_PRELOAD");
       size_t len;
-      if (use_mt) {
-	ftpl_path = PREFIX "/lib/faketime/libfaketimeMT.so.1";
-      } else {
-	ftpl_path = PREFIX "/lib/faketime/libfaketime.so.1";
+      if (use_mt)
+      {
+    	ftpl_path = PREFIX "/lib/faketime/libfaketimeMT.so.1";
+      }
+      else
+      {
+    	ftpl_path = PREFIX "/lib/faketime/libfaketime.so.1";
       }
       len = (ld_preload)?strlen(ld_preload):0 + 2 + strlen(ftpl_path);
       ld_preload_new = malloc(len);
       snprintf(ld_preload_new, len ,"%s%s%s", (ld_preload)?ld_preload:"",
-	       (ld_preload)?":":"", ftpl_path);
+	          (ld_preload)?":":"", ftpl_path);
       setenv("LD_PRELOAD", ld_preload_new, true);
       free(ld_preload_new);
     }
@@ -257,12 +303,16 @@ int main (int argc, char **argv)
   }
 
   /* run command and clean up shared objects */
-  if (0 == (child_pid = fork())) {
-    if (EXIT_SUCCESS != execvp(argv[curr_opt], &argv[curr_opt])) {
+  if (0 == (child_pid = fork()))
+  {
+    if (EXIT_SUCCESS != execvp(argv[curr_opt], &argv[curr_opt]))
+    {
       perror("Running specified command failed");
       exit(EXIT_FAILURE);
     }
-  } else {
+  }
+  else
+  {
     int ret;
     waitpid(child_pid, &ret, 0);
     cleanup_shobjs();
