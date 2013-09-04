@@ -615,6 +615,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
   }
 
   if (buf != NULL)
+  {
     if (!fake_stat_disabled)
     {
       buf->st_ctime = fake_time(&(buf->st_ctime));
