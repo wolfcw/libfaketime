@@ -52,7 +52,8 @@ int main (int argc, char **argv) {
 
     printf("(Intentionally sleeping 2 seconds...)\n");
     fflush(stdout);
-    sleep(2);
+    sleep(1);
+    usleep(1000000);
 
     gettimeofday(&tv, NULL);
     printf("gettimeofday() : Current date and time: %s", ctime(&tv.tv_sec));
