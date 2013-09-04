@@ -1621,7 +1621,7 @@ time_t fake_time(time_t *time_tptr)
   struct timespec tp;
 
   tp.tv_sec = *time_tptr;
-  tp.tv_nsec = 0;
+  tp.tv_nsec = ftpl_starttime.real.tv_nsec;
   (void)fake_clock_gettime(CLOCK_REALTIME, &tp);
   *time_tptr = tp.tv_sec;
   return *time_tptr;
@@ -1632,7 +1632,7 @@ int fake_ftime(struct timeb *tp)
   struct timespec ts;
   int ret;
   ts.tv_sec = tp->time;
-  ts.tv_nsec =tp->millitm * 1000000;
+  ts.tv_nsec =tp->millitm * 1000000 + ftpl_starttime.real.tv_nsec % 1000000;
 
   ret = fake_clock_gettime(CLOCK_REALTIME, &ts);
   tp->time = ts.tv_sec;
@@ -1646,7 +1646,7 @@ int fake_gettimeofday(struct timeval *tv, void *tz)
   struct timespec ts;
   int ret;
   ts.tv_sec = tv->tv_sec;
-  ts.tv_nsec =tv->tv_usec * 1000;
+  ts.tv_nsec = tv->tv_usec * 1000  + ftpl_starttime.real.tv_nsec % 1000;
 
   ret = fake_clock_gettime(CLOCK_REALTIME, &ts);
   tv->tv_sec = ts.tv_sec;
