@@ -4,3 +4,5 @@ timetest
 
 src/libfaketime.dylib.1
 src/core
+src/faketime
+
