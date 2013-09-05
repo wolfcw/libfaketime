@@ -6,4 +6,3 @@ Open issues / next steps for libfaketime development
   and available through the wrapper shell script
 - fake timer_create and friends
 - handle CLOCK_REALTIME_COARSE and CLOCK_MONOTONIC_COARSE
-- fake time(), etc. using clock_gettime() to provide more continuous faking with x10
