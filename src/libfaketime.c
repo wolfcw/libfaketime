@@ -133,12 +133,12 @@ static int          (*real_ppoll)           (struct pollfd *, nfds_t, const stru
 #endif
 #ifdef __APPLE__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
+static int          apple_clock_gettime     (clockid_t clk_id, struct timespec *tp);
 static clock_serv_t clock_serv_real;
 #endif
 
 /* prototypes */
 time_t fake_time(time_t *time_tptr);
-int    fake_ftime(struct timeb *tp);
 int    fake_gettimeofday(struct timeval *tv, void *tz);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 
@@ -1043,31 +1043,35 @@ int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
  *      =======================================================================
  */
 
+/*
+ * time() implementation using clock_gettime()
+ * @note Does not check for EFAULT, see man 2 time
+ */
 time_t time(time_t *time_tptr)
 {
+  struct timespec tp;
   time_t result;
-  time_t null_dummy;
-  if (time_tptr == NULL)
-  {
-      time_tptr = &null_dummy;
-      /* (void) fprintf(stderr, "NULL pointer caught in time().\n"); */
-  }
-  DONT_FAKE_TIME(result = (*real_time)(time_tptr));
-  if (result == ((time_t) -1)) return result;
+
+  DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_REALTIME, &tp));
+  if (result == -1) return -1;
 
   /* pass the real current time to our faking version, overwriting it */
-  result = fake_time(time_tptr);
+  (void)fake_clock_gettime(CLOCK_REALTIME, &tp);
 
-  /* return the result to the caller */
-  return result;
+  if (time_tptr != NULL)
+  {
+    *time_tptr = tp.tv_sec;
+  }
+  return tp.tv_sec;
 }
 
-int ftime(struct timeb *tp)
+int ftime(struct timeb *tb)
 {
+  struct timespec tp;
   int result;
 
   /* sanity check */
-  if (tp == NULL)
+  if (tb == NULL)
     return 0;               /* ftime() always returns 0, see manpage */
 
   /* Check whether we've got a pointer to the real ftime() function yet */
@@ -1076,15 +1080,24 @@ int ftime(struct timeb *tp)
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
 #endif
-    tp = NULL;
     return 0; /* propagate error to caller */
   }
 
-  /* initialize our result with the real current time */
-  DONT_FAKE_TIME(result = (*real_ftime)(tp));
+  /* initialize our TZ result with the real current time */
+  DONT_FAKE_TIME(result = (*real_ftime)(tb));
+  if (result == -1)
+  {
+    return result;
+  }
 
-  /* pass the real current ftime to our faking version, overwriting it */
-  result = fake_ftime(tp);
+  DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_REALTIME, &tp));
+  if (result == -1) return -1;
+
+  /* pass the real current time to our faking version, overwriting it */
+  (void)fake_clock_gettime(CLOCK_REALTIME, &tp);
+
+  tb->time = tp.tv_sec;
+  tb->millitm = tp.tv_nsec / 1000000;
 
   /* return the result to the caller */
   return result; /* will always be 0 (see manpage) */
@@ -1245,7 +1258,6 @@ void __attribute__ ((constructor)) ftpl_init(void)
   real_time =             dlsym(RTLD_NEXT, "time");
   real_ftime =            dlsym(RTLD_NEXT, "ftime");
   real_gettimeofday =     dlsym(RTLD_NEXT, "gettimeofday");
-  real_clock_gettime =    dlsym(RTLD_NEXT, "clock_gettime");
 #ifdef FAKE_SLEEP
   real_nanosleep =        dlsym(RTLD_NEXT, "nanosleep");
   real_usleep =           dlsym(RTLD_NEXT, "usleep");
@@ -1256,7 +1268,9 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 #ifdef __APPLE__
   real_clock_get_time =   dlsym(RTLD_NEXT, "clock_get_time");
+  real_clock_gettime  =   apple_clock_gettime;
 #else
+  real_clock_gettime  =   dlsym(RTLD_NEXT, "clock_gettime");
 #ifdef FAKE_TIMERS
   real_timer_settime =    dlsym(RTLD_NEXT, "timer_settime");
   real_timer_gettime =    dlsym(RTLD_NEXT, "timer_gettime");
@@ -1640,6 +1654,7 @@ time_t fake_time(time_t *time_tptr)
   return *time_tptr;
 }
 
+/* ftime() is faked otherwise since v0.9.5
 int fake_ftime(struct timeb *tp)
 {
   struct timespec ts;
@@ -1653,6 +1668,7 @@ int fake_ftime(struct timeb *tp)
 
   return ret;
 }
+*/
 
 int fake_gettimeofday(struct timeval *tv, void *tz)
 {
@@ -1676,10 +1692,15 @@ int fake_gettimeofday(struct timeval *tv, void *tz)
  */
 
 #ifdef __APPLE__
-int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
-{
+/*
+ * clock_gettime implementation for __APPLE__
+ * @note It always behave like being called with CLOCK_REALTIME.
+ */
+static int apple_clock_gettime(clockid_t clk_id, struct timespec *tp) {
   int result;
-  struct timespec ts;
+  mach_timespec_t cur_timeclockid_t;
+  (void) clk_id; /* unused */
+
   if (NULL == real_clock_get_time)
   {  /* dlsym() failed */
 #ifdef DEBUG
@@ -1688,17 +1709,26 @@ int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
     return -1; /* propagate error to caller */
   }
 
+  DONT_FAKE_TIME(result = (*real_clock_get_time)(clock_serv_real, &cur_timeclockid_t));
+  tp->tv_sec =  cur_timeclockid_t.tv_sec;
+  tp->tv_nsec = cur_timeclockid_t.tv_nsec;
+  return result;
+}
+
+int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
+{
+  int result;
+  struct timespec ts;
+
   /*
    * Initialize our result with the real current time from CALENDAR_CLOCK.
    * This is a bit of cheating, but we don't keep track of obtained clock
    * services.
    */
-  DONT_FAKE_TIME(result = (*real_clock_get_time)(clock_serv_real, cur_timeclockid_t));
+  DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_REALTIME, &ts));
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
-  ts.tv_sec = cur_timeclockid_t->tv_sec;
-  ts.tv_sec = cur_timeclockid_t->tv_nsec;
   result = fake_clock_gettime(CLOCK_REALTIME, &ts);
   cur_timeclockid_t->tv_sec = ts.tv_sec;
   cur_timeclockid_t->tv_nsec = ts.tv_nsec;
