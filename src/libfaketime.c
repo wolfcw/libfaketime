@@ -122,10 +122,15 @@ static int (*real_ftime)(struct timeb *);
 static int (*real_gettimeofday)(struct timeval *, void *);
 static int (*real_clock_gettime)(clockid_t clk_id, struct timespec *tp);
 #ifndef __APPLE__
-static int (*real_timer_settime)(timer_t timerid, int flags,
+static int (*real_timer_settime_22)(int timerid, int flags,
 				 const struct itimerspec *new_value,
 				 struct itimerspec * old_value);
-static int (*real_timer_gettime)(timer_t timerid,
+static int (*real_timer_settime_233)(timer_t timerid, int flags,
+				 const struct itimerspec *new_value,
+				 struct itimerspec * old_value);
+static int (*real_timer_gettime_22)(int timerid,
+				 struct itimerspec *curr_value);
+static int (*real_timer_gettime_233)(timer_t timerid,
 				 struct itimerspec *curr_value);
 #endif
 static int (*real_nanosleep)(const struct timespec *req, struct timespec *rem);
@@ -652,21 +657,31 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf){
 #endif
 
 #ifndef __APPLE__
+
+/* timer related functions and structures */
+
+typedef union {
+  int int_member;
+  timer_t timer_t_member;
+} timer_t_or_int;
+
+/**
+ * Faketime's function implemetation's compatibility mode
+ */
+typedef enum {FT_COMPAT_GLIBC_2_2, FT_COMPAT_GLIBC_2_3_3} ft_lib_compat;
+
 /**
  * Faked timer_settime()
  * Does not affect timer speed when stepping clock with each time() call.
  */
-int timer_settime(timer_t timerid, int flags,
-		  const struct itimerspec *new_value,
-		  struct itimerspec *old_value)
+static int
+timer_settime_common(timer_t_or_int timerid, int flags,
+		     const struct itimerspec *new_value,
+		     struct itimerspec *old_value, ft_lib_compat compat)
 {
   int result;
-  struct itimerspec new_real, old_real;
-  struct itimerspec *new_real_pt = &new_real, *old_real_pt = &old_real;
-
-  if (real_timer_settime == NULL) {
-    return -1;
-  }
+  struct itimerspec new_real;
+  struct itimerspec *new_real_pt = &new_real;
 
   if (new_value == NULL) {
     new_real_pt = NULL;
@@ -674,40 +689,62 @@ int timer_settime(timer_t timerid, int flags,
     /* cast away constness*/
     new_real_pt = (struct itimerspec *)new_value;
   } else {
-    // TODO fake
-    struct timespec tdiff, timeadj;
-    timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
-    if (user_rate_set) {
-      timespecmul(&timeadj, 1.0/user_rate, &tdiff);
+    /* set it_value */
+    if ((new_value->it_value.tv_sec != 0) ||
+	(new_value->it_value.tv_nsec != 0)) {
+      if (flags & TIMER_ABSTIME) {
+	struct timespec tdiff, timeadj;
+	timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
+	if (user_rate_set) {
+	  timespecmul(&timeadj, 1.0/user_rate, &tdiff);
+	} else {
+	  tdiff = timeadj;
+	}
+	/* only CLOCK_REALTIME is handled */
+	timespecadd(&ftpl_starttime.real, &tdiff, &new_real.it_value);
+      } else {
+	if (user_rate_set) {
+	  timespecmul(&new_value->it_value, 1.0/user_rate, &new_real.it_value);
+	} else {
+	  new_real.it_value = new_value->it_value;
+	}
+      }
     } else {
-      tdiff = timeadj;
+      new_real.it_value = new_value->it_value;
     }
-    /* only CLOCK_REALTIME is handled */
-    timespecadd(&ftpl_starttime.real, &tdiff, &new_real.it_value);
 
-    new_real.it_value = new_value->it_value;
-    if (user_rate_set) {
+    /* set it_interval */
+    if (user_rate_set && ((new_value->it_interval.tv_sec != 0) ||
+			  (new_value->it_interval.tv_nsec != 0))) {
       timespecmul(&new_value->it_interval, 1.0/user_rate, &new_real.it_interval);
+    } else {
+      new_real.it_interval = new_value->it_interval;
     }
   }
-  if (old_value == NULL) {
-    old_real_pt = NULL;
-  } else if (dont_fake) {
-    old_real_pt = old_value;
-  } else {
-    old_real = *old_value;
+
+  switch (compat) {
+  case FT_COMPAT_GLIBC_2_2:
+    DONT_FAKE_TIME(result = (*real_timer_settime_22)(timerid.int_member, flags,
+						      new_real_pt, old_value));
+  case FT_COMPAT_GLIBC_2_3_3:
+    DONT_FAKE_TIME(result = (*real_timer_settime_233)(timerid.timer_t_member,
+						      flags, new_real_pt,
+						      old_value));
   }
 
-  DONT_FAKE_TIME(result = (*real_timer_settime)(timerid, flags, new_real_pt, old_real_pt));
   if (result == -1) {
     return result;
   }
 
   /* fake returned parts */
   if ((old_value != NULL) && !dont_fake) {
-    result = fake_clock_gettime(CLOCK_REALTIME, &old_real.it_value);
-    if (user_rate_set) {
-      timespecmul(&old_real.it_interval, user_rate, &old_value->it_interval);
+    if ((old_value->it_value.tv_sec != 0) ||
+	(old_value->it_value.tv_nsec != 0)) {
+      result = fake_clock_gettime(CLOCK_REALTIME, &old_value->it_value);
+    }
+    if (user_rate_set && ((old_value->it_interval.tv_sec != 0) ||
+			  (old_value->it_interval.tv_nsec != 0))) {
+      timespecmul(&old_value->it_interval, user_rate, &old_value->it_interval);
     }
   }
   /* return the result to the caller */
@@ -715,18 +752,53 @@ int timer_settime(timer_t timerid, int flags,
 }
 
 /**
+ * Faked timer_settime() compatible with implementation in GLIBC 2.2
+ */
+int timer_settime_22(int timerid, int flags,
+		     const struct itimerspec *new_value,
+		     struct itimerspec *old_value)
+{
+  if (real_timer_settime_22 == NULL) {
+    return -1;
+  } else {
+    return (timer_settime_common((timer_t_or_int)timerid, flags, new_value, old_value,
+				 FT_COMPAT_GLIBC_2_2));
+  }
+}
+
+/**
+ * Faked timer_settime() compatible with implementation in GLIBC 2.3.3
+ */
+int timer_settime_233(timer_t timerid, int flags,
+		  const struct itimerspec *new_value,
+		  struct itimerspec *old_value)
+{
+  if (real_timer_settime_233 == NULL) {
+    return -1;
+  } else {
+    return (timer_settime_common((timer_t_or_int)timerid, flags, new_value, old_value,
+				 FT_COMPAT_GLIBC_2_3_3));
+  }
+}
+
+/**
  * Faked timer_gettime()
  * Does not affect timer speed when stepping clock with each time() call.
  */
-int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
+int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, ft_lib_compat compat)
 {
   int result;
 
-  if (real_timer_gettime == NULL) {
+  if (real_timer_gettime_233 == NULL) {
     return -1;
   }
 
-  DONT_FAKE_TIME(result = (*real_timer_gettime)(timerid, curr_value));
+  switch (compat) {
+  case FT_COMPAT_GLIBC_2_2:
+    DONT_FAKE_TIME(result = (*real_timer_gettime_22)(timerid.int_member, curr_value));
+  case FT_COMPAT_GLIBC_2_3_3:
+    DONT_FAKE_TIME(result = (*real_timer_gettime_233)(timerid.timer_t_member, curr_value));
+  }
   if (result == -1) {
     return result;
   }
@@ -741,6 +813,37 @@ int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
   /* return the result to the caller */
   return result;
 }
+
+/**
+ * Faked timer_gettime() compatible with implementation in GLIBC 2.2
+ */
+int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
+{
+  if (real_timer_gettime_22 == NULL) {
+    return -1;
+  } else {
+    return (timer_gettime_common((timer_t_or_int)timerid, curr_value,
+				 FT_COMPAT_GLIBC_2_2));
+  }
+}
+
+/**
+ * Faked timer_gettime() compatible with implementation in GLIBC 2.3.3
+ */
+int timer_gettime_233(timer_t timerid, struct itimerspec *curr_value)
+{
+  if (real_timer_gettime_233 == NULL) {
+    return -1;
+  } else {
+    return (timer_gettime_common((timer_t_or_int)timerid, curr_value,
+				 FT_COMPAT_GLIBC_2_3_3));
+  }
+}
+
+__asm__(".symver timer_gettime_22, timer_gettime@GLIBC_2.2");
+__asm__(".symver timer_gettime_233, timer_gettime@@GLIBC_2.3.3");
+__asm__(".symver timer_settime_22, timer_settime@GLIBC_2.2");
+__asm__(".symver timer_settime_233, timer_settime@@GLIBC_2.3.3");
 
 #endif
 
@@ -1106,8 +1209,10 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_clock_get_time = dlsym(RTLD_NEXT, "clock_get_time");
     real_clock_gettime = apple_clock_gettime;
 #else
-    real_timer_settime = dlsym(RTLD_NEXT, "timer_settime");
-    real_timer_gettime = dlsym(RTLD_NEXT, "timer_gettime");
+    real_timer_settime_22 = dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.2");
+    real_timer_settime_233 = dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
+    real_timer_gettime_22 = dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.2");
+    real_timer_gettime_233 = dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.3.3");
     real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
 #endif
 
