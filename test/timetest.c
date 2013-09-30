@@ -30,6 +30,20 @@
 #include <unistd.h>
 #endif
 
+#ifndef __APPLE__
+#include <signal.h>
+
+static void
+handler(int sig, siginfo_t *si, void *uc)
+{
+  /* Note: calling printf() from a signal handler is not
+     strictly correct, since printf() is not async-signal-safe;
+     see signal(7) */
+
+  printf("Caught signal %d\n", sig);
+  signal(sig, SIG_IGN);
+}
+#endif
 
 int main (int argc, char **argv) {
 
@@ -38,9 +52,76 @@ int main (int argc, char **argv) {
     struct timeval tv;
 #ifndef __APPLE__
     struct timespec ts;
+    timer_t timerid1 = 0, timerid2;
+    struct sigevent sev;
+    struct itimerspec its;
+    sigset_t mask;
+    struct sigaction sa;
 #endif
 #ifdef FAKE_STAT
     struct stat buf;
+#endif
+
+#ifndef __APPLE__
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = handler;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGRTMIN, &sa, NULL) == -1) {
+      perror("sigaction");
+      exit(EXIT_FAILURE);
+    }
+    /* Block timer signal temporarily */
+
+    printf("Blocking signal %d\n", SIGRTMIN);
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGRTMIN);
+    if (sigprocmask(SIG_SETMASK, &mask, NULL) == -1) {
+      perror("sigaction");
+      exit(EXIT_FAILURE);
+      }
+
+    /* Create the timer */
+    sev.sigev_notify = SIGEV_SIGNAL;
+    sev.sigev_signo = SIGRTMIN;
+    sev.sigev_value.sival_ptr = &timerid1;
+    if (timer_create(CLOCK_REALTIME, &sev, &timerid1) == -1) {
+      perror("timer_create");
+      exit(EXIT_FAILURE);
+    }
+
+    /* Start timer1 */
+
+    /* start timer ticking after one second */
+    its.it_value.tv_sec = 1;
+    its.it_value.tv_nsec = 0;
+    /* fire in every 0.3 seconds */
+    its.it_interval.tv_sec = 0;
+    its.it_interval.tv_nsec = 300000000;
+
+    if (timer_settime(timerid1, 0, &its, NULL) == -1) {
+      perror("timer_settime");
+      exit(EXIT_FAILURE);
+    }
+
+    sev.sigev_value.sival_ptr = &timerid2;
+    if (timer_create(CLOCK_REALTIME, &sev, &timerid2) == -1) {
+      perror("timer_create");
+      exit(EXIT_FAILURE);
+    }
+
+    /* Start timer2 */
+
+    clock_gettime(CLOCK_REALTIME, &its.it_value);
+    /* start timer ticking after one second */
+    its.it_value.tv_sec += 3;
+    /* fire once */
+    its.it_interval.tv_sec = 0;
+    its.it_interval.tv_nsec = 0;
+
+    if (timer_settime(timerid2, TIMER_ABSTIME, &its, NULL) == -1) {
+      perror("timer_settime");
+      exit(EXIT_FAILURE);
+    }
 #endif
 
     time(&now);
@@ -59,8 +140,26 @@ int main (int argc, char **argv) {
     printf("gettimeofday() : Current date and time: %s", ctime(&tv.tv_sec));
 
 #ifndef __APPLE__
+    if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1) {
+      perror("sigprocmask");
+      exit(EXIT_FAILURE);
+    }
+
     clock_gettime(CLOCK_REALTIME, &ts);
     printf("clock_gettime(): Current date and time: %s", ctime(&ts.tv_sec));
+
+    printf("timer_getoverrun(timerid1), must be 3: %d\n",
+        timer_getoverrun(timerid1));
+    timer_gettime(timerid1, &its);
+    printf("timer_gettime(timerid1, &its); its = {{%ld, %ld,}, {%ld, %ld}}}\n",
+        its.it_interval.tv_sec, its.it_interval.tv_nsec,
+        its.it_value.tv_sec, its.it_value.tv_nsec);
+    printf("timer_getoverrun(timerid2), must be 0: %d\n",
+        timer_getoverrun(timerid2));
+    timer_gettime(timerid2, &its);
+    printf("timer_gettime(timerid2, &its); its = {{%ld, %ld,}, {%ld, %ld}}}\n",
+        its.it_interval.tv_sec, its.it_interval.tv_nsec,
+        its.it_value.tv_sec, its.it_value.tv_nsec);
 #endif
 
 #ifdef FAKE_STAT
