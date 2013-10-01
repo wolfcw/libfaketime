@@ -33,6 +33,8 @@
 #ifndef __APPLE__
 #include <signal.h>
 
+#define VERBOSE 0
+
 static void
 handler(int sig, siginfo_t *si, void *uc)
 {
@@ -148,18 +150,29 @@ int main (int argc, char **argv) {
     clock_gettime(CLOCK_REALTIME, &ts);
     printf("clock_gettime(): Current date and time: %s", ctime(&ts.tv_sec));
 
-    printf("timer_getoverrun(timerid1), must be 3: %d\n",
-        timer_getoverrun(timerid1));
+    int timer_getoverrun_timerid1 = timer_getoverrun(timerid1);
+    if (timer_getoverrun_timerid1 != 3) {
+        printf("timer_getoverrun(timerid1) FAILED, must be 3 but got: %d\n", timer_getoverrun_timerid1);
+    }
+
     timer_gettime(timerid1, &its);
-    printf("timer_gettime(timerid1, &its); its = {{%ld, %ld,}, {%ld, %ld}}}\n",
-        its.it_interval.tv_sec, its.it_interval.tv_nsec,
-        its.it_value.tv_sec, its.it_value.tv_nsec);
-    printf("timer_getoverrun(timerid2), must be 0: %d\n",
-        timer_getoverrun(timerid2));
+    if (VERBOSE == 1) {
+        printf("timer_gettime(timerid1, &its); its = {{%ld, %ld}, {%ld, %ld}}}\n",
+                its.it_interval.tv_sec, its.it_interval.tv_nsec,
+                its.it_value.tv_sec, its.it_value.tv_nsec);
+    }
+
+    int timer_getoverrun_timerid2 = timer_getoverrun(timerid2);
+    if (timer_getoverrun_timerid2 != 0) {
+        printf("timer_getoverrun(timerid2) FAILED, must be 0 but got: %d\n", timer_getoverrun_timerid2);
+    }
+
     timer_gettime(timerid2, &its);
-    printf("timer_gettime(timerid2, &its); its = {{%ld, %ld,}, {%ld, %ld}}}\n",
-        its.it_interval.tv_sec, its.it_interval.tv_nsec,
-        its.it_value.tv_sec, its.it_value.tv_nsec);
+    if (VERBOSE == 1) {
+        printf("timer_gettime(timerid2, &its); its = {{%ld, %ld}, {%ld, %ld}}}\n",
+            its.it_interval.tv_sec, its.it_interval.tv_nsec,
+            its.it_value.tv_sec, its.it_value.tv_nsec);
+    }
 #endif
 
 #ifdef FAKE_STAT
