@@ -72,6 +72,9 @@ ${LIBS_OBJ}: libfaketime.c
 %.so.${SONAME}: %.o libfaketime.map
 	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
 
+${BINS}: faketime.c
+	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
+
 clean:
 	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
 
