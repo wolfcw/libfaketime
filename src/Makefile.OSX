@@ -48,7 +48,7 @@ PREFIX ?= /usr/local
 # 10.5
 #CFLAGS = -dynamiclib -arch i386 -arch ppc
 # 10.6
-CFLAGS = -dynamiclib -DFAKE_SLEEP -DFAKE_TIMERS -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"'
+CFLAGS = -dynamiclib -DFAKE_SLEEP -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"'
 LIB_SRC = libfaketime.c
 
 SONAME = 1
