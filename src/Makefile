@@ -73,7 +73,7 @@ ${LIBS_OBJ}: libfaketime.c
 	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
 
 ${BINS}: faketime.c
-	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
+	${CC} -o $@ ${CFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS}
 
 clean:
 	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
