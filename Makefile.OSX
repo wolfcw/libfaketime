@@ -1,5 +1,7 @@
 INSTALL ?= install
 
+PREFIX ?= /opt/local
+
 all:
 	$(MAKE) -f Makefile.OSX -C src all
 
