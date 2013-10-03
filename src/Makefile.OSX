@@ -74,7 +74,8 @@ install: ${LIBS} ${BINS}
 	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}/lib/faketime and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
 	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"
 	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime/"
-	$(INSTALL) -dm0755 faketime "${DESTDIR}${PREFIX}/bin/faketime"
+	$(INSTALL) -dm0755 faketime "${DESTDIR}${PREFIX}/bin"
+	$(INSTALL) -m0755 faketime "${DESTDIR}${PREFIX}/bin/faketime"
 
 uninstall:
 	for f in ${LIBS}; do rm -f "${DESTDIR}${PREFIX}/lib/faketime/$$f"; done
