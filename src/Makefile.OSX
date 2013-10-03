@@ -40,7 +40,7 @@
 CC ?= clang
 INSTALL = install
 
-PREFIX ?= /usr/local
+PREFIX ?= /opt/local
 
 # If you get an error about an unsupported architecture, remove it. Some
 # versions of XCode support different subsets of architectures, depending on

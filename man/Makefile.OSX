@@ -1,6 +1,6 @@
 INSTALL ?= install
 
-PREFIX ?= /usr/local
+PREFIX ?= /opt/local
 
 all:
 
