@@ -1311,6 +1311,9 @@ static void parse_ft_string(const char *user_faked_time)
         user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
         user_faked_time_timespec.tv_nsec = 0;
         user_faked_time_set = true;
+      } else {
+        perror("Failed to parse FAKETIME timestamp");
+        exit(EXIT_FAILURE);
       }
       break;
 
@@ -1342,6 +1345,11 @@ static void parse_ft_string(const char *user_faked_time)
 
       user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
       user_faked_time_timespec.tv_nsec = 0;
+      goto parse_modifiers;
+      break;
+
+    case 'i':
+    case 'x': /* Only modifiers are passed, don't fall back to strptime */
 parse_modifiers:
       /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
       if (strchr(user_faked_time, 'x') != NULL)
