@@ -52,8 +52,8 @@ PREFIX ?= /usr/local
 
 CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"'
 LIB_LDFLAGS += -shared
-LDFLAGS += -lrt -Wl,--version-script=libfaketime.map
-LDADD += -ldl -lm -lpthread
+LDFLAGS += -Wl,--version-script=libfaketime.map
+LDADD += -ldl -lm -lpthread -lrt
 
 SRC = libfaketime.c
 LIBS_OBJ = libfaketime.o libfaketimeMT.o
