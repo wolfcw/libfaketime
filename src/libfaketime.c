@@ -55,18 +55,15 @@
 
 #define BUFFERLEN   256
 
-/* We fix endiannes on Apple to little endian */
-#ifdef __APPLE__
-/* We fix endianness on Apple to little endian */
-#ifndef __BIG_ENDIAN
-#define __BIG_ENDIAN 4321
-#endif
-#ifndef __LITTLE_ENDIAN
-#define __LITTLE_ENDIAN 1234
-#endif
-#ifndef __BYTE_ORDER
-#define __BYTE_ORDER __LITTLE_ENDIAN
-#endif
+#ifndef __APPLE__
+#include <endian.h>
+#else
+/* endianness related macros */
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+
 /* clock_gettime() and related clock definitions are missing on __APPLE__ */
 #ifndef CLOCK_REALTIME
 /* from GNU C Library time.h */
@@ -166,25 +163,8 @@ static inline void timespec_from_saved (struct timespec *tp,
 					struct saved_timestamp *saved)
 {
   /* read as big endian */
-#if __BYTE_ORDER == __BIG_ENDIAN
-  tp->tv_sec = saved->sec;
-  tp->tv_nsec = saved->nsec;
-#else
-  if (saved->sec < 0)
-  {
-    uint64_t abs_sec = 0 - saved->sec;
-    ((uint32_t*)&(tp->tv_sec))[0] = ntohl(((uint32_t*)&abs_sec)[1]);
-    ((uint32_t*)&(tp->tv_sec))[1] = ntohl(((uint32_t*)&abs_sec)[0]);
-    tp->tv_sec = 0 - tp->tv_sec;
-  }
-  else
-  {
-    ((uint32_t*)&(tp->tv_sec))[0] = ntohl(((uint32_t*)&(saved->sec))[1]);
-    ((uint32_t*)&(tp->tv_sec))[1] = ntohl(((uint32_t*)&(saved->sec))[0]);
-  }
-  ((uint32_t*)&(tp->tv_nsec))[0] = ntohl(((uint32_t*)&(saved->nsec))[1]);
-  ((uint32_t*)&(tp->tv_nsec))[1] = ntohl(((uint32_t*)&(saved->nsec))[0]);
-#endif
+  tp->tv_sec = be64toh(saved->sec);
+  tp->tv_nsec = be64toh(saved->nsec);
 }
 
 /** Saved timestamps */
@@ -361,26 +341,9 @@ static void save_time(struct timespec *tp)
     struct saved_timestamp time_write;
     ssize_t n = 0;
 
-    // write as big endian
-#if __BYTE_ORDER == __BIG_ENDIAN
-    time_write.sec = tp->tv_sec;
-    time_write.nsec = tp->tv_nsec;
-#else
-    if (tp->tv_sec < 0)
-    {
-      uint64_t abs_sec = 0 - tp->tv_sec;
-      ((uint32_t*)&(time_write.sec))[0] = htonl(((uint32_t*)&abs_sec)[1]);
-      ((uint32_t*)&(time_write.sec))[1] = htonl(((uint32_t*)&abs_sec)[0]);
-      tp->tv_sec = 0 - tp->tv_sec;
-    }
-    else
-    {
-      ((uint32_t*)&(time_write.sec))[0] = htonl(((uint32_t*)&(tp->tv_sec))[1]);
-      ((uint32_t*)&(time_write.sec))[1] = htonl(((uint32_t*)&(tp->tv_sec))[0]);
-    }
-    ((uint32_t*)&(time_write.nsec))[0] = htonl(((uint32_t*)&(tp->tv_nsec))[1]);
-    ((uint32_t*)&(time_write.nsec))[1] = htonl(((uint32_t*)&(tp->tv_nsec))[0]);
-#endif
+    time_write.sec = htobe64(tp->tv_sec);
+    time_write.nsec = htobe64(tp->tv_nsec);
+
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
