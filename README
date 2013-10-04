@@ -102,6 +102,10 @@ of view, there is no necessity for a system-wide installation, so you can use
 libfaketime also on machines where you do not have root privileges. You may want 
 to adjust the PREFIX variable in the Makefiles accordingly.
 
+By default, the Makefile compiles/links libfaketime for your default system
+architecture. If you need to build, e.g., 32-bit files on a 64-bit platform,
+please see the notes about CFLAGS and LDFLAGS in src/Makefile.
+
 Since version 0.6, system calls to file timestamps are also intercepted,
 thanks to a contribution by Philipp Hachtmann. This is especially useful in
 combination with relative time offsets as explained in section 4d) below, if a
