@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -std=gnu99 -Wall -DFAKE_STAT
+CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra
 LDFLAGS = -lrt
 
 SRC = timetest.c

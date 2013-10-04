@@ -143,7 +143,7 @@ static clock_serv_t clock_serv_real;
 
 /* prototypes */
 time_t fake_time(time_t *time_tptr);
-int    fake_gettimeofday(struct timeval *tv, void *tz);
+int    fake_gettimeofday(struct timeval *tv);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 /** Semaphore protecting shared data */
@@ -339,7 +339,8 @@ static void save_time(struct timespec *tp)
   if ((shared_sem != NULL) && (outfile != -1))
   {
     struct saved_timestamp time_write;
-    ssize_t n = 0;
+    ssize_t written;
+    size_t n = 0;
 
     time_write.sec = htobe64(tp->tv_sec);
     time_write.nsec = htobe64(tp->tv_nsec);
@@ -352,11 +353,12 @@ static void save_time(struct timespec *tp)
     }
 
     lseek(outfile, 0, SEEK_END);
-    while ((sizeof(time_write) < (n += write(outfile, &(((char*)&time_write)[n]),
-  	       sizeof(time_write) - n))) &&
-	       (errno == EINTR));
+    do {
+      written = write(outfile, &(((char*)&time_write)[n]), sizeof(time_write) - n);
+    } while (((written == -1) && (errno == EINTR)) ||
+             (sizeof(time_write) < (n += written)));
 
-    if ((n == -1) || (n < sizeof(time_write)))
+    if ((written == -1) || (n < sizeof(time_write)))
     {
       perror("Saving timestamp to file failed");
     }
@@ -987,6 +989,9 @@ timer_settime_common(timer_t_or_int timerid, int flags,
        DONT_FAKE_TIME(result = (*real_timer_settime_233)(timerid.timer_t_member,
                     flags, new_real_pt, old_value));
        break;
+    default:
+      result = -1;
+      break;
   }
 
   if (result == -1)
@@ -1069,6 +1074,9 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
       break;
     case FT_COMPAT_GLIBC_2_3_3:
       DONT_FAKE_TIME(result = (*real_timer_gettime_233)(timerid.timer_t_member, curr_value));
+      break;
+    default:
+      result = -1;
       break;
   }
 
@@ -1221,7 +1229,7 @@ int gettimeofday(struct timeval *tv, void *tz)
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
-  result = fake_gettimeofday(tv, tz);
+  result = fake_gettimeofday(tv);
 
   /* return the result to the caller */
   return result;
@@ -1774,7 +1782,7 @@ int fake_ftime(struct timeb *tp)
 }
 */
 
-int fake_gettimeofday(struct timeval *tv, void *tz)
+int fake_gettimeofday(struct timeval *tv)
 {
   struct timespec ts;
   int ret;
