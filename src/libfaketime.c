@@ -1650,7 +1650,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         if (((tmp_ts.tv_sec == ft_spawn_secs) || (callcounter == ft_spawn_ncalls)) && (spawned == 0))
         {
           spawned = 1;
-         system(ft_spawn_target);
+          (void) (system(ft_spawn_target) + 1);
         }
       }
     }
