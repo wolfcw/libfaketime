@@ -154,13 +154,13 @@ int main (int argc, char **argv)
   if (!use_direct)
   {
     // TODO get seconds
-    pipe(pfds);
+    (void) pipe(pfds);
     int ret = EXIT_SUCCESS;
 
     if (0 == (child_pid = fork()))
     {
       close(1);       /* close normal stdout */
-      dup(pfds[1]);   /* make stdout same as pfds[1] */
+      (void) dup(pfds[1]);   /* make stdout same as pfds[1] */
       close(pfds[0]); /* we don't need this */
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {
@@ -172,7 +172,7 @@ int main (int argc, char **argv)
     {
       char buf[256] = {0}; /* e will have way less than 256 digits */
       close(pfds[1]);   /* we won't write to this */
-      read(pfds[0], buf, 256);
+      (void) read(pfds[0], buf, 256);
       waitpid(child_pid, &ret, 0);
       if (ret != EXIT_SUCCESS)
       {
