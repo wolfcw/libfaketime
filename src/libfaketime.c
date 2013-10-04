@@ -982,9 +982,11 @@ timer_settime_common(timer_t_or_int timerid, int flags,
     case FT_COMPAT_GLIBC_2_2:
       DONT_FAKE_TIME(result = (*real_timer_settime_22)(timerid.int_member, flags,
                     new_real_pt, old_value));
+      break;
      case FT_COMPAT_GLIBC_2_3_3:
        DONT_FAKE_TIME(result = (*real_timer_settime_233)(timerid.timer_t_member,
                     flags, new_real_pt, old_value));
+       break;
   }
 
   if (result == -1)
@@ -1064,8 +1066,10 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
   {
     case FT_COMPAT_GLIBC_2_2:
       DONT_FAKE_TIME(result = (*real_timer_gettime_22)(timerid.int_member, curr_value));
+      break;
     case FT_COMPAT_GLIBC_2_3_3:
       DONT_FAKE_TIME(result = (*real_timer_gettime_233)(timerid.timer_t_member, curr_value));
+      break;
   }
 
   if (result == -1)
