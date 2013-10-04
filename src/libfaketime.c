@@ -40,6 +40,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <limits.h>
 
 #include "time_ops.h"
 #include "faketime_common.h"
@@ -1607,7 +1608,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
      ((ft_start_after_ncalls != -1) || (ft_stop_after_ncalls != -1))) ||
      (spawnsupport && ft_spawn_ncalls))
   {
-    if ((callcounter + 1) >= callcounter) callcounter++;
+    if (callcounter < LONG_MAX) callcounter++;
   }
 
   if (limited_faking || spawnsupport)
