@@ -44,6 +44,9 @@
 #     which is used to activate the start-at times when specified. This also initializes
 #     the dynamic disabling of the FAKE_STAT calls.
 #
+# By default, libfaketime will be compiled for your system's default architecture.
+# To build 32-bit libraries and binaries, add -m32 to CFLAGS and LDFLAGS.
+#
 
 CC ?= gcc
 INSTALL ?= install
