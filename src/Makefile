@@ -53,13 +53,19 @@
 # By default, libfaketime will be compiled for your system's default architecture.
 # To build 32-bit libraries and binaries, add -m32 to CFLAGS and LDFLAGS.
 #
+# Change PREFIX to where you want libfaketime (libraries and wrapper binary) installed.
+# LIBDIRNAME is relative to PREFIX. The default is to install into $PREFIX/lib/faketime,
+# but you can set LIBDIRNAME to, e.g., /lib64 if you want to install it elsewhere.
+# LIBDIRNAME has been introduced to support MultiLib systems. Please do not change the 
+# default value on MultiArch systems. 
 
 CC ?= gcc
 INSTALL ?= install
 
 PREFIX ?= /usr/local
+LIBDIRNAME ?= /lib/faketime
 
-CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"'
+CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"'
 LIB_LDFLAGS += -shared
 LDFLAGS += -Wl,--version-script=libfaketime.map -lrt
 LDADD += -ldl -lm -lpthread -lrt
@@ -82,7 +88,7 @@ ${LIBS_OBJ}: libfaketime.c
 	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
 
 ${BINS}: faketime.c
-	${CC} -o $@ ${CFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS}
+	${CC} -o $@ ${CFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS} ${LDADD}
 
 clean:
 	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
@@ -92,14 +98,14 @@ distclean: clean
 
 install: ${LIBS} ${BINS}
 	@echo
-	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}/lib/faketime and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
-	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/lib/faketime/"
-	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}/lib/faketime/"
+	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}${LIBDIRNAME} and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}${LIBDIRNAME}/"
+	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}${LIBDIRNAME}/"
 	$(INSTALL) -Dm0755 faketime "${DESTDIR}${PREFIX}/bin/faketime"
 
 uninstall:
-	for f in ${LIBS}; do rm -f "${DESTDIR}${PREFIX}/lib/faketime/$$f"; done
-	rmdir "${DESTDIR}${PREFIX}/lib/faketime"
+	for f in ${LIBS}; do rm -f "${DESTDIR}${PREFIX}${LIBDIRNAME}/$$f"; done
+	rmdir "${DESTDIR}${PREFIX}${LIBDIRNAME}"
 	rm -f "${DESTDIR}${PREFIX}/bin/faketime"
 
 .PHONY: all clean distclean install uninstall

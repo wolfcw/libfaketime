@@ -298,7 +298,7 @@ int main (int argc, char **argv)
          * on MultiArch platforms, such as Debian, we put a literal $LIB into LD_PRELOAD.
          */
 #ifndef MULTI_ARCH
-    	ftpl_path = PREFIX "/lib/faketime/libfaketimeMT.so.1";
+    	ftpl_path = PREFIX LIBDIRNAME "/libfaketimeMT.so.1";
 #else
         ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so.1";
 #endif
@@ -306,7 +306,7 @@ int main (int argc, char **argv)
       else
       {
 #ifndef MULTI_ARCH
-    	ftpl_path = PREFIX "/lib/faketime/libfaketime.so.1";
+    	ftpl_path = PREFIX LIBDIRNAME "/libfaketime.so.1";
 #else
         ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so.1";
 #endif
