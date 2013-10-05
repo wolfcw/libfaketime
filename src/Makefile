@@ -58,6 +58,8 @@
 # but you can set LIBDIRNAME to, e.g., /lib64 if you want to install it elsewhere.
 # LIBDIRNAME has been introduced to support MultiLib systems. Please do not change the 
 # default value on MultiArch systems. 
+#
+# For testing in the current directory without installation, try make PREFIX= LIBDIRNAME='.'
 
 CC ?= gcc
 INSTALL ?= install
