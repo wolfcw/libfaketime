@@ -36,6 +36,12 @@
 #           frequently. Disabling the cache may negatively influence the
 #           performance.
 #
+#	  MULTI_ARCH
+#	  	  - If MULTI_ARCH is set, the faketime wrapper program will put a literal
+#	  	    $LIB into the LD_PRELOAD environment variable it creates, which makes
+#	  	    ld automatically choose the correct library version to use for the
+#	  	    target binary. Use for Linux platforms with Multi-Arch support only!
+#
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
 #

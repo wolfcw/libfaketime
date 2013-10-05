@@ -123,16 +123,16 @@ int main (int argc, char **argv)
       continue;
     }
     else if ((0 == strcmp(argv[curr_opt], "-v")) ||
-	       (0 == strcmp(argv[curr_opt], "--version")))
+             (0 == strcmp(argv[curr_opt], "--version")))
     {
       printf("\n%s: Version %s\n"
-	     "For usage information please use '%s --help\n'.",
-	     argv[0], version, argv[0]);
+         "For usage information please use '%s --help\n'.",
+         argv[0], version, argv[0]);
       exit(EXIT_SUCCESS);
     }
     else if ((0 == strcmp(argv[curr_opt], "-h")) ||
-	       (0 == strcmp(argv[curr_opt], "-?")) ||
-	       (0 == strcmp(argv[curr_opt], "--help")))
+             (0 == strcmp(argv[curr_opt], "-?")) ||
+             (0 == strcmp(argv[curr_opt], "--help")))
     {
       usage(argv[0]);
       exit(EXIT_SUCCESS);
@@ -165,7 +165,7 @@ int main (int argc, char **argv)
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {
     	perror("Running (g)date failed");
-	    exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
       }
     }
     else
@@ -177,8 +177,8 @@ int main (int argc, char **argv)
       if (ret != EXIT_SUCCESS)
       {
     	printf("Error: Timestamp to fake not recognized, please re-try with a "
-	           "different timestamp.\n");
-	    exit(EXIT_FAILURE);
+               "different timestamp.\n");
+        exit(EXIT_FAILURE);
       }
       offset = atol(buf) - time(NULL);
       ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
@@ -231,7 +231,7 @@ int main (int argc, char **argv)
 
     /* map shm */
     if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
-				    MAP_SHARED, shm_fd, 0)))
+                        MAP_SHARED, shm_fd, 0)))
     {
       perror("mmap");
       cleanup_shobjs();
@@ -294,16 +294,27 @@ int main (int argc, char **argv)
       size_t len;
       if (use_mt)
       {
+        /*
+         * on MultiArch platforms, such as Debian, we put a literal $LIB into LD_PRELOAD.
+         */
+#ifndef MULTI_ARCH
     	ftpl_path = PREFIX "/lib/faketime/libfaketimeMT.so.1";
+#else
+        ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so.1";
+#endif
       }
       else
       {
+#ifndef MULTI_ARCH
     	ftpl_path = PREFIX "/lib/faketime/libfaketime.so.1";
+#else
+        ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so.1";
+#endif
       }
       len = (ld_preload)?strlen(ld_preload):0 + 2 + strlen(ftpl_path);
       ld_preload_new = malloc(len);
       snprintf(ld_preload_new, len ,"%s%s%s", (ld_preload)?ld_preload:"",
-	          (ld_preload)?":":"", ftpl_path);
+              (ld_preload)?":":"", ftpl_path);
       setenv("LD_PRELOAD", ld_preload_new, true);
       free(ld_preload_new);
     }
