@@ -42,7 +42,10 @@ handler(int sig, siginfo_t *si, void *uc)
      strictly correct, since printf() is not async-signal-safe;
      see signal(7) */
 
-  printf("Caught signal %d\n", sig);
+  if ((si == NULL) || (si != uc))
+  {
+    printf("Caught signal %d\n", sig);
+  }
   signal(sig, SIG_IGN);
 }
 #endif
@@ -135,8 +138,11 @@ int main (int argc, char **argv) {
 
     printf("(Intentionally sleeping 2 seconds...)\n");
     fflush(stdout);
-    sleep(1);
-    usleep(1000000);
+    if (argc < 3)
+    {
+        sleep(1);
+        usleep(1000000);
+    }
 
     gettimeofday(&tv, NULL);
     printf("gettimeofday() : Current date and time: %s", ctime(&tv.tv_sec));
