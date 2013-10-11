@@ -1,4 +1,6 @@
 Since 0.9:
+    - ryandesign at MacPorts provided a Portfile for MacPorts and
+      fixed various build issues on OSX.
     - Balint Reczey added support for nanosecond resolution, saving
       timestamps to files, speeding up and slowing down per-process
       timers, CLOCK_MONOTONIC and CLOCK_MONOTONIC_RAW, faketime
