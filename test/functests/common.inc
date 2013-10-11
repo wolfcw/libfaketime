@@ -18,7 +18,7 @@ platform()
 mac_fakecmd()
 {
 	typeset timestring="$1"; shift
-	typeset fakelib=../src/libfaketime.dylib.1
+	typeset fakelib=../src/libfaketime.1.dylib
 	export DYLD_INSERT_LIBRARIES=$fakelib
 	export DYLD_FORCE_FLAT_NAMESPACE=1
 	FAKETIME="$timestring" \

@@ -25,7 +25,7 @@ Use the OSX-specific Makefiles that are provided, e.g.:
 cd src/
 make -f Makefile.MacOS
 
-The resulting library will be named libfaketime.dylib.1
+The resulting library will be named libfaketime.1.dylib
 
 
 2) Using libfaketime from the command line on OS X
@@ -35,7 +35,7 @@ You will need to set three environment variables. In a Terminal.app
 or iTerm session, the following commands can be used:
 
 export DYLD_FORCE_FLAT_NAMESPACE=1
-export DYLD_INSERT_LIBRARIES=/path/to/libfaketime.dylib.1
+export DYLD_INSERT_LIBRARIES=/path/to/libfaketime.1.dylib
 export FAKETIME="your favorite faketime-spec here"
 
 Please refer to the general README file concerning the format
@@ -77,7 +77,7 @@ with the three keys like this:
         <key>DYLD_FORCE_FLAT_NAMESPACE</key>
         <string>1</string>
         <key>DYLD_INSERT_LIBRARIES</key>
-        <string>/path/to/libfaketime.dylib.1</string>
+        <string>/path/to/libfaketime.1.dylib</string>
         <key>FAKETIME</key>
         <string>value of FAKETIME here</string>
     </dict>

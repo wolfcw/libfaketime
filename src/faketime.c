@@ -277,11 +277,11 @@ int main (int argc, char **argv)
   {
     char *ftpl_path;
 #ifdef __APPLE__
-    ftpl_path = PREFIX "/libfaketime.dylib.1";
+    ftpl_path = PREFIX "/libfaketime.1.dylib";
     FILE *check;
     check = fopen(ftpl_path, "ro");
     if (check == NULL) {
-      ftpl_path = PREFIX "/lib/faketime/libfaketime.dylib.1";
+      ftpl_path = PREFIX "/lib/faketime/libfaketime.1.dylib";
     }
     else {
       fclose(check);

@@ -116,9 +116,9 @@ calls will be passed through unaltered.
 
 On OS X, it is necessary to compile differently, due to the different
 behavior dyld has. Use the Makefile.MacOS provided to compile
-libfaketime.dylib.1. Additionally, instead of using LD_PRELOAD,
+libfaketime.1.dylib. Additionally, instead of using LD_PRELOAD,
 the variable DYLD_INSERT_LIBRARIES should be set to the path to
-libfaketime.dylib.1, and the variable DYLD_FORCE_FLAT_NAMESPACE should be
+libfaketime.1.dylib, and the variable DYLD_FORCE_FLAT_NAMESPACE should be
 set (to anything). Mac OS X users should read README.OSX for additional
 details.
 
