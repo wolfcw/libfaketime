@@ -35,33 +35,29 @@
 #     which is used to activate the start-at times when specified. This also initializes
 #     the dynamic disabling of the FAKE_STAT calls.
 #
-
+# By default, libfaketime will be compiled for your system's default architecture.
+# To build for a different architecture, add -arch flags to CFLAGS and LDFLAGS.
+#
 # default to clang to support thread local variables
 CC ?= clang
-INSTALL = install
+INSTALL ?= install
 
-PREFIX ?= /opt/local
+PREFIX ?= /usr/local
 
-# If you get an error about an unsupported architecture, remove it. Some
-# versions of XCode support different subsets of architectures, depending on
-# age.
-# 10.5
-#CFLAGS = -dynamiclib -arch i386 -arch ppc
-# 10.6
-CFLAGS = -dynamiclib -DFAKE_SLEEP -arch i386 -arch x86_64 -DPREFIX='"'$(PREFIX)'"'
-LIB_SRC = libfaketime.c
+CFLAGS += -DFAKE_SLEEP -DPREFIX='"'${PREFIX}'"'
+LIB_LDFLAGS += -dynamiclib
 
 SONAME = 1
-LIBS = libfaketime.dylib.${SONAME}
+LIBS = libfaketime.${SONAME}.dylib
 BINS = faketime
 
 all: ${LIBS} ${BINS}
 
-libfaketime.dylib.${SONAME}: ${LIB_SRC}
-	${CC} -o $@ ${CFLAGS} $<
+libfaketime.${SONAME}.dylib: libfaketime.c
+	${CC} -o $@ ${CFLAGS} ${LDFLAGS} ${LIB_LDFLAGS} -install_name ${PREFIX}/lib/faketime/$@ $<
 
-faketime:
-	${CC} -o faketime faketime.c -DPREFIX='"'$(PREFIX)'"'
+faketime: faketime.c
+	${CC} -o $@ ${CFLAGS} ${LDFLAGS} $<
 
 clean:
 	@rm -f ${OBJ} ${LIBS} ${BINS}
