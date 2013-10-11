@@ -45,7 +45,7 @@ INSTALL ?= install
 PREFIX ?= /usr/local
 
 CFLAGS += -DFAKE_SLEEP -DPREFIX='"'${PREFIX}'"'
-LIB_LDFLAGS += -dynamiclib
+LIB_LDFLAGS += -dynamiclib -current_version 0.9.5 -compatibility_version 0.7
 
 SONAME = 1
 LIBS = libfaketime.${SONAME}.dylib
