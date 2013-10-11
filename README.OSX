@@ -7,32 +7,45 @@ command line and GUI applications will run stable.
 Developments and tests are done on OSX 10.8+ currently, although the
 current version will also work with OSX 10.7.
 
-Version 0.9.5 no longer works with OSX < 10.6 due to changes in the
-underlying system libraries. If you need libfaketime on OSX < 10.6,
+Version 0.9.5 no longer works with OSX <= 10.6 due to changes in the
+underlying system libraries. If you need libfaketime on OSX <= 10.6,
 please use libfaketime version 0.9.
 
 
-Compiling and using libfaketime on OS X is slightly different than
+Installing and using libfaketime on OS X is slightly different than
 on Linux. Please make sure to read the README file for general
 setup and usage, and refer to this file only about OS X specifics.
 
 
-1) Compiling libfaketime on OS X
---------------------------------
+1) Installing libfaketime on OS X
+---------------------------------
 
-Use the OSX-specific Makefiles that are provided, e.g.:
+If you use MacPorts, libfaketime can be installed on the command line
+as follows:
 
-cd src/
-make -f Makefile.MacOS
+    sudo port install libfaketime
 
-The resulting library will be named libfaketime.1.dylib
+Otherwise, you have to compile and install libfaketime manually; this 
+will require a working installation of Xcode and its command line tools
+on your machine.
+
+Use the OSX-specific Makefile that is provided:
+
+    make -f Makefile.OSX
+
+The resulting library will be named libfaketime.1.dylib ; to check
+whether it works properly, run the test suite and verify whether its
+output is correct:
+
+    cd test
+    make -f Makefile.OSX
 
 
 2) Using libfaketime from the command line on OS X
 --------------------------------------------------
 
 You will need to set three environment variables. In a Terminal.app
-or iTerm session, the following commands can be used:
+or iTerm2 session, the following commands can be used:
 
 export DYLD_FORCE_FLAT_NAMESPACE=1
 export DYLD_INSERT_LIBRARIES=/path/to/libfaketime.1.dylib
@@ -45,7 +58,8 @@ variables that are related to it.
 The "faketime" wrapper application has been adapted to OS X;
 it offers the same limited libfaketime functionality as on Linux
 in a simple-to-use manner without the need to manually set
-those environment variables.
+those environment variables. Run "faketime" without parameters
+for help and use "man faketime" for details.
 
 
 3) Integrating libfaketime with applications
@@ -89,7 +103,7 @@ use appropriate editing or conversion tools.)
 
 Afterwards, you will probably need to run
 
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -v -f /Applications/ApplicationName.app
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -v -f /Applications/ApplicationName.app
 
 to make sure the change to Info.plist does not go unnoticed.
 
@@ -99,7 +113,7 @@ such updates, including own new builds when using Xcode.
 
 Please feel free to report non-working applications on the Github
 libfaketime issues website. This may help us to identify further
-time-related system calls that need to be intercepted on OSX.
+time-related system calls that need to be intercepted on OS X.
 
     https://github.com/wolfcw/libfaketime/issues
 
