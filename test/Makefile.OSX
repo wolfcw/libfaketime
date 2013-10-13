@@ -1,7 +1,6 @@
-CC = gcc
+CC ?= clang
 
-CFLAGS = -std=gnu99 -Wall -DFAKE_STAT
-LDFLAGS =
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT 
 
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
