@@ -5,7 +5,7 @@ PREFIX ?= /usr/local
 all:
 
 install:
-	$(INSTALL) -dm0644 "${DESTDIR}${PREFIX}/share/man/man1"
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/share/man/man1"
 	$(INSTALL) -m0644 faketime.1 "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
 	gzip -f "${DESTDIR}${PREFIX}/share/man/man1/faketime.1"
 
