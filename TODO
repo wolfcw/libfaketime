@@ -6,3 +6,6 @@ Open issues / next steps for libfaketime development
   and available through the wrapper shell script
 - fake timer_create and friends
 - handle CLOCK_REALTIME_COARSE and CLOCK_MONOTONIC_COARSE
+- work around thread local storage issue, e.g., by using pthreads
+- add autoconf/automake support to get rid of separate Makefile.OSX
+
