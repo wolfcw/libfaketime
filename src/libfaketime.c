@@ -1670,8 +1670,16 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       fprintf(stderr, "***************++ Cache expired ++**************\n");
     */
 
-    /* initialize with default */
-    snprintf(user_faked_time, BUFFERLEN, "+0");
+    /* initialize with default or env. variable */
+    char *tmp_env;
+    if (NULL != (tmp_env = getenv("FAKETIME")))
+    {
+      strncpy(user_faked_time, tmp_env, BUFFERLEN);
+    }
+    else
+    {
+      snprintf(user_faked_time, BUFFERLEN, "+0");
+    }
 
     /* fake time supplied as environment variable? */
     if (parse_config_file)
