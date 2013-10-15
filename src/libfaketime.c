@@ -471,6 +471,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
        buf->st_ctime = fake_time(&(buf->st_ctime));
        buf->st_atime = fake_time(&(buf->st_atime));
        buf->st_mtime = fake_time(&(buf->st_mtime));
+       buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
      }
    }
 
@@ -502,6 +503,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -532,6 +534,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -563,6 +566,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -593,6 +597,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -623,6 +628,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -654,6 +660,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -685,6 +692,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
