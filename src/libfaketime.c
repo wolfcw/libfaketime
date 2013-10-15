@@ -1659,6 +1659,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   cache_expired = 1;
 #endif
 
+  if (ft_mode == FT_FREEZE)
+  {
+    /* in FT_FREEZE mode, there is no reason to let the cache expire. */
+    cache_expired = 0;
+  }
+
   if (cache_expired == 1)
   {
     static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
