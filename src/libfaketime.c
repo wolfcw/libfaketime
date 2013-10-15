@@ -1397,6 +1397,26 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 #endif
 
+  /* fake time fmt supplied as environment variable? - must be done before
+     initializing the semaphone in ft_shm_init otherwise the fake time
+     specification will not be correct for early calls to the library. */
+  tmp_env = getenv("FAKETIME_FMT");
+  if (tmp_env == NULL)
+  {
+    strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
+  }
+  else
+  {
+    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
+  }
+
+  /* fake time supplied as environment variable? */
+  if (NULL != (tmp_env = getenv("FAKETIME")))
+  {
+    parse_config_file = false;
+    parse_ft_string(tmp_env);
+  }
+
   ft_shm_init();
 #ifdef FAKE_STAT
   if (getenv("NO_FAKE_STAT")!=NULL)
@@ -1486,16 +1506,6 @@ void __attribute__ ((constructor)) ftpl_init(void)
     infile_set = true;
   }
 
-  tmp_env = getenv("FAKETIME_FMT");
-  if (tmp_env == NULL)
-  {
-    strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
-  }
-  else
-  {
-    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
-  }
-
   if (shared_sem != 0)
   {
     if (sem_wait(shared_sem) == -1)
@@ -1523,12 +1533,6 @@ void __attribute__ ((constructor)) ftpl_init(void)
   else
   {
     system_time_from_system(&ftpl_starttime);
-  }
-  /* fake time supplied as environment variable? */
-  if (NULL != (tmp_env = getenv("FAKETIME")))
-  {
-    parse_config_file = false;
-    parse_ft_string(tmp_env);
   }
 }
 
