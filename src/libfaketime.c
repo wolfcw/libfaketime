@@ -1675,29 +1675,29 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
   if (cache_expired == 1)
   {
-    static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
-    char filename[BUFSIZ], line[BUFFERLEN];
-	FILE *faketimerc;
 
     last_data_fetch = tp->tv_sec;
     /* Can be enabled for testing ...
       fprintf(stderr, "***************++ Cache expired ++**************\n");
     */
 
-    /* initialize with default or env. variable */
-    char *tmp_env;
-    if (NULL != (tmp_env = getenv("FAKETIME")))
-    {
-      strncpy(user_faked_time, tmp_env, BUFFERLEN);
-    }
-    else
-    {
-      snprintf(user_faked_time, BUFFERLEN, "+0");
-    }
-
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
+      static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+      char filename[BUFSIZ];
+      FILE *faketimerc;
+      /* initialize with default or env. variable */
+      char *tmp_env;
+      if (NULL != (tmp_env = getenv("FAKETIME")))
+      {
+        strncpy(user_faked_time, tmp_env, BUFFERLEN);
+      }
+      else
+      {
+        snprintf(user_faked_time, BUFFERLEN, "+0");
+      }
+
       /* check whether there's a .faketimerc in the user's home directory, or
        * a system-wide /etc/faketimerc present.
        * The /etc/faketimerc handling has been contributed by David Burley,
@@ -1706,6 +1706,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       if ((faketimerc = fopen(filename, "rt")) != NULL ||
           (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
       {
+        char line[BUFFERLEN];
         while(fgets(line, BUFFERLEN, faketimerc) != NULL)
         {
           if ((strlen(line) > 1) && (line[0] != ' ') &&
