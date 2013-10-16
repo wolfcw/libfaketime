@@ -115,9 +115,11 @@ static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
 static int          (*real_clock_gettime)   (clockid_t clk_id, struct timespec *tp);
 #ifndef __APPLE__
+#ifdef FAKE_INTERNAL_CALLS
 static int          (*real___ftime)           (struct timeb *);
 static int          (*real___gettimeofday)    (struct timeval *, void *);
 static int          (*real___clock_gettime)   (clockid_t clk_id, struct timespec *tp);
+#endif
 #ifdef FAKE_TIMERS
 static int          (*real_timer_settime_22)   (int timerid, int flags, const struct itimerspec *new_value,
 			                            	            struct itimerspec * old_value);
@@ -1389,6 +1391,11 @@ void __attribute__ ((constructor)) ftpl_init(void)
   real_timer_settime_233 =  dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
   real_timer_gettime_22 =   dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.2");
   real_timer_gettime_233 =  dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.3.3");
+#endif
+#ifdef FAKE_INTERNAL_CALLS
+  real___ftime =              dlsym(RTLD_NEXT, "__ftime");
+  real___gettimeofday =       dlsym(RTLD_NEXT, "__gettimeofday");
+  real___clock_gettime  =     dlsym(RTLD_NEXT, "__clock_gettime");
 #endif
 #endif
 
