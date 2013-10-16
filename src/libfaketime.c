@@ -451,6 +451,38 @@ static bool load_time(struct timespec *tp)
 
 static int fake_stat_disabled = 0;
 
+#define FAKE_STRUCT_STAT_TIME(which) {                \
+    struct timespec t = {buf->st_##which##time,       \
+                         buf->st_##which##timensec};  \
+    fake_clock_gettime(CLOCK_REALTIME, &t);           \
+    buf->st_##which##time = t.tv_sec;                 \
+    buf->st_##which##timensec = t.tv_nsec;            \
+  } while (0)
+
+static inline void fake_statbuf (struct stat *buf) {
+#ifndef st_atime
+  FAKE_STRUCT_STAT_TIME(c);
+  FAKE_STRUCT_STAT_TIME(a);
+  FAKE_STRUCT_STAT_TIME(m);
+#else
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+#endif
+}
+
+static inline void fake_stat64buf (struct stat64 *buf) {
+#ifndef st_atime
+  FAKE_STRUCT_STAT_TIME(c);
+  FAKE_STRUCT_STAT_TIME(a);
+  FAKE_STRUCT_STAT_TIME(m);
+#else
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+#endif
+}
+
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf)
 {
@@ -473,9 +505,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
    {
      if (!fake_stat_disabled)
      {
-       buf->st_ctime = fake_time(&(buf->st_ctime));
-       buf->st_atime = fake_time(&(buf->st_atime));
-       buf->st_mtime = fake_time(&(buf->st_mtime));
+       fake_statbuf(buf);
      }
    }
 
@@ -504,9 +534,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
   {
     if (!fake_stat_disabled)
     {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_statbuf(buf);
     }
   }
   return result;
@@ -534,9 +562,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
   if (buf != NULL)
   {
     if (!fake_stat_disabled) {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_statbuf(buf);
     }
   }
   return result;
@@ -565,9 +591,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
   {
     if (!fake_stat_disabled)
     {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_statbuf(buf);
     }
   }
   return result;
@@ -595,9 +619,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
   {
     if (!fake_stat_disabled)
     {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_stat64buf(buf);
     }
   }
   return result;
@@ -625,9 +647,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
   {
     if (!fake_stat_disabled)
     {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_stat64buf(buf);
     }
   }
   return result;
@@ -656,9 +676,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   {
     if (!fake_stat_disabled)
     {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_stat64buf(buf);
     }
   }
   return result;
@@ -687,9 +705,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
   {
     if (!fake_stat_disabled)
     {
-      buf->st_ctime = fake_time(&(buf->st_ctime));
-      buf->st_atime = fake_time(&(buf->st_atime));
-      buf->st_mtime = fake_time(&(buf->st_mtime));
+      fake_stat64buf(buf);
     }
   }
   return result;
