@@ -476,6 +476,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
        buf->st_ctime = fake_time(&(buf->st_ctime));
        buf->st_atime = fake_time(&(buf->st_atime));
        buf->st_mtime = fake_time(&(buf->st_mtime));
+       buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
      }
    }
 
@@ -507,6 +508,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -537,6 +539,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -568,6 +571,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -598,6 +602,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -628,6 +633,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -659,6 +665,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -690,6 +697,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
       buf->st_ctime = fake_time(&(buf->st_ctime));
       buf->st_atime = fake_time(&(buf->st_atime));
       buf->st_mtime = fake_time(&(buf->st_mtime));
+      buf->st_ctim.tv_nsec = buf->st_atim.tv_nsec = buf->st_mtim.tv_nsec = 0;
     }
   }
   return result;
@@ -1399,6 +1407,26 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 #endif
 
+  /* fake time fmt supplied as environment variable? - must be done before
+     initializing the semaphone in ft_shm_init otherwise the fake time
+     specification will not be correct for early calls to the library. */
+  tmp_env = getenv("FAKETIME_FMT");
+  if (tmp_env == NULL)
+  {
+    strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
+  }
+  else
+  {
+    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
+  }
+
+  /* fake time supplied as environment variable? */
+  if (NULL != (tmp_env = getenv("FAKETIME")))
+  {
+    parse_config_file = false;
+    parse_ft_string(tmp_env);
+  }
+
   ft_shm_init();
 #ifdef FAKE_STAT
   if (getenv("NO_FAKE_STAT")!=NULL)
@@ -1488,16 +1516,6 @@ void __attribute__ ((constructor)) ftpl_init(void)
     infile_set = true;
   }
 
-  tmp_env = getenv("FAKETIME_FMT");
-  if (tmp_env == NULL)
-  {
-    strcpy(user_faked_time_fmt, "%Y-%m-%d %T");
-  }
-  else
-  {
-    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
-  }
-
   if (shared_sem != 0)
   {
     if (sem_wait(shared_sem) == -1)
@@ -1525,12 +1543,6 @@ void __attribute__ ((constructor)) ftpl_init(void)
   else
   {
     system_time_from_system(&ftpl_starttime);
-  }
-  /* fake time supplied as environment variable? */
-  if (NULL != (tmp_env = getenv("FAKETIME")))
-  {
-    parse_config_file = false;
-    parse_ft_string(tmp_env);
   }
 }
 
@@ -1657,6 +1669,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   cache_expired = 1;
 #endif
 
+  if (ft_mode == FT_FREEZE)
+  {
+    /* in FT_FREEZE mode, there is no reason to let the cache expire. */
+    cache_expired = 0;
+  }
+
   if (cache_expired == 1)
   {
     static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
@@ -1668,8 +1686,16 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       fprintf(stderr, "***************++ Cache expired ++**************\n");
     */
 
-    /* initialize with default */
-    snprintf(user_faked_time, BUFFERLEN, "+0");
+    /* initialize with default or env. variable */
+    char *tmp_env;
+    if (NULL != (tmp_env = getenv("FAKETIME")))
+    {
+      strncpy(user_faked_time, tmp_env, BUFFERLEN);
+    }
+    else
+    {
+      snprintf(user_faked_time, BUFFERLEN, "+0");
+    }
 
     /* fake time supplied as environment variable? */
     if (parse_config_file)
