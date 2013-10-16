@@ -69,7 +69,7 @@ LIBDIRNAME ?= /lib/faketime
 
 CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"'
 LIB_LDFLAGS += -shared
-LDFLAGS += -Wl,--version-script=libfaketime.map -lrt
+LDFLAGS += -Wl,--version-script=libfaketime.map
 LDADD += -ldl -lm -lpthread -lrt
 
 SRC = libfaketime.c
