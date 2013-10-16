@@ -69,8 +69,8 @@ LIBDIRNAME ?= /lib/faketime
 
 CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"'
 LIB_LDFLAGS += -shared
-LDFLAGS += -Wl,--version-script=libfaketime.map
-LDADD += -ldl -lm -lpthread -lrt
+LDFLAGS += -Wl,--version-script=libfaketime.map -lpthread -lrt
+LDADD += -ldl -lm
 
 SRC = libfaketime.c
 LIBS_OBJ = libfaketime.o libfaketimeMT.o
@@ -90,7 +90,7 @@ ${LIBS_OBJ}: libfaketime.c
 	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
 
 ${BINS}: faketime.c
-	${CC} -o $@ ${CFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS} ${LDADD}
+	${CC} -o $@ ${CFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS}
 
 clean:
 	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
