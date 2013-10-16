@@ -44,7 +44,7 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 
-CFLAGS += -DFAKE_SLEEP -DPREFIX='"'${PREFIX}'"'
+CFLAGS += -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -DPREFIX='"'${PREFIX}'"'
 LIB_LDFLAGS += -dynamiclib -current_version 0.9.5 -compatibility_version 0.7
 
 SONAME = 1
