@@ -83,6 +83,12 @@ typedef int clockid_t;
 #endif
 #endif
 
+/* some systems lack raw clock */
+#ifndef CLOCK_MONOTONIC_RAW
+#define CLOCK_MONOTONIC_RAW 4
+#endif
+
+
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times
