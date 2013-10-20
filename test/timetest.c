@@ -46,7 +46,6 @@ handler(int sig, siginfo_t *si, void *uc)
   {
     printf("Caught signal %d\n", sig);
   }
-  signal(sig, SIG_IGN);
 }
 #endif
 
