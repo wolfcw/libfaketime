@@ -1410,8 +1410,14 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #ifdef FAKE_TIMERS
   real_timer_settime_22 =   dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.2");
   real_timer_settime_233 =  dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
+  if (NULL == real_timer_settime_233) {
+    real_timer_settime_233 =  dlsym(RTLD_NEXT, "timer_settime");
+  }
   real_timer_gettime_22 =   dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.2");
   real_timer_gettime_233 =  dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.3.3");
+  if (NULL == real_timer_gettime_233) {
+    real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
+  }
 #endif
 #endif
 
