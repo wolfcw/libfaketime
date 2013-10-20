@@ -35,6 +35,8 @@
 
 #define VERBOSE 0
 
+#define SIG SIGUSR1
+
 static void
 handler(int sig, siginfo_t *si, void *uc)
 {
@@ -70,15 +72,15 @@ int main (int argc, char **argv) {
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGRTMIN, &sa, NULL) == -1) {
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
       perror("sigaction");
       exit(EXIT_FAILURE);
     }
     /* Block timer signal temporarily */
 
-    printf("Blocking signal %d\n", SIGRTMIN);
+    printf("Blocking signal %d\n", SIGUSR1);
     sigemptyset(&mask);
-    sigaddset(&mask, SIGRTMIN);
+    sigaddset(&mask, SIGUSR1);
     if (sigprocmask(SIG_SETMASK, &mask, NULL) == -1) {
       perror("sigaction");
       exit(EXIT_FAILURE);
@@ -86,7 +88,7 @@ int main (int argc, char **argv) {
 
     /* Create the timer */
     sev.sigev_notify = SIGEV_SIGNAL;
-    sev.sigev_signo = SIGRTMIN;
+    sev.sigev_signo = SIGUSR1;
     sev.sigev_value.sival_ptr = &timerid1;
     if (timer_create(CLOCK_REALTIME, &sev, &timerid1) == -1) {
       perror("timer_create");
