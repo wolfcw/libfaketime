@@ -85,7 +85,7 @@ typedef int clockid_t;
 
 /* some systems lack raw clock */
 #ifndef CLOCK_MONOTONIC_RAW
-#define CLOCK_MONOTONIC_RAW 4
+#define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1) 
 #endif
 
 
