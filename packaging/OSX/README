@@ -43,15 +43,10 @@ Some libfaketime formula caveats:
 
 ## Fink
 
-A libfaketime.info file has been submitted to the Fink project in October, 2013,
-via https://sourceforge.net/p/fink/package-submissions/ and awaits approval.
-Fink users can use libfaketime.info, place it, e.g., into
-/sw/fink/10.7/stable/main/finkinfo/libs and run the commands
+A libfaketime.info file is included in the Fink 10.7 tree since October, 
+2013, and installed using
 
-    fink -m --build-as-nobody rebuild libfaketime
     fink install libfaketime
-
-meanwhile.
 
 Some libfaketime fink info file caveats:
 
@@ -62,4 +57,6 @@ Some libfaketime fink info file caveats:
 - When compiling, PREFIX=%{p} needs to be used because this path is hardcoded
   into the wrapper. However, "make install" needs to deploy into PREFIX=%{i} to
   make packaging work.
+
+Submission is via via https://sourceforge.net/p/fink/package-submissions/
 

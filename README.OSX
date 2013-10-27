@@ -25,6 +25,10 @@ as follows:
 
     sudo port install libfaketime
 
+If you use Fink, install using:
+
+    fink install libfaketime
+
 Otherwise, you have to compile and install libfaketime manually; this 
 will require a working installation of Xcode and its command line tools
 on your machine.
