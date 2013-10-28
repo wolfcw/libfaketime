@@ -1382,7 +1382,13 @@ parse_modifiers:
 
 void __attribute__ ((constructor)) ftpl_init(void)
 {
-  char *tmp_env, *progname;
+  char *tmp_env;
+
+#ifdef __APPLE__
+  const char *progname = getprogname();
+#else
+  const char *progname = __progname;
+#endif
 
   /* Look up all real_* functions. NULL will mark missing ones. */
   real_stat =               dlsym(RTLD_NEXT, "__xstat");
@@ -1437,12 +1443,6 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 
   /* Check whether we actually should be faking the returned timestamp. */
-
-#ifdef __APPLE__
-  progname = getprogname();
-#else
-  progname = __progname;
-#endif
 
   /* We can prevent faking time for specified commands */
   if ((tmp_env = getenv("FAKETIME_SKIP_CMDS")) != NULL) {
