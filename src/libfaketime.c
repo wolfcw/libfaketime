@@ -56,6 +56,7 @@
 #define BUFFERLEN   256
 
 #ifndef __APPLE__
+extern char *__progname;
 #include <endian.h>
 #else
 /* endianness related macros */
@@ -91,7 +92,7 @@ typedef int clockid_t;
 
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
- * time multiple times
+ * time multiple times of for the whole process to prevent faking time
  */
 __thread bool dont_fake = false;
 
@@ -219,7 +220,7 @@ static bool user_rate_set = false;
 static struct timespec user_per_tick_inc = {0, -1};
 static bool user_per_tick_inc_set = false;
 
-enum ft_mode_t {FT_FREEZE, FT_START_AT} ft_mode = FT_FREEZE;
+enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
 /* Time to fake is not provided through FAKETIME env. var. */
 static bool parse_config_file = true;
@@ -1307,7 +1308,7 @@ static void parse_ft_string(const char *user_faked_time)
   {
 
     default:  /* Try and interpret this as a specified time */
-      ft_mode = FT_FREEZE;
+      if (ft_mode != FT_NOOP) ft_mode = FT_FREEZE;
       user_faked_time_tm.tm_isdst = -1;
       if (NULL != strptime(user_faked_time, user_faked_time_fmt, &user_faked_time_tm))
       {
@@ -1322,7 +1323,7 @@ static void parse_ft_string(const char *user_faked_time)
 
     case '+':
     case '-': /* User-specified offset */
-      ft_mode = FT_START_AT;
+      if (ft_mode != FT_NOOP) ft_mode = FT_START_AT;
       /* fractional time offsets contributed by Karl Chen in v0.8 */
       double frac_offset = atof(user_faked_time);
 
@@ -1381,7 +1382,7 @@ parse_modifiers:
 
 void __attribute__ ((constructor)) ftpl_init(void)
 {
-  char *tmp_env;
+  char *tmp_env, *progname;
 
   /* Look up all real_* functions. NULL will mark missing ones. */
   real_stat =               dlsym(RTLD_NEXT, "__xstat");
@@ -1436,6 +1437,52 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #endif
 
   /* Check whether we actually should be faking the returned timestamp. */
+
+#ifdef __APPLE__
+  progname = getprogname();
+#else
+  progname = __progname;
+#endif
+
+  /* We can prevent faking time for specified commands */
+  if ((tmp_env = getenv("FAKETIME_SKIP_CMDS")) != NULL) {
+    char *skip_cmd, *saveptr;
+    skip_cmd = strtok_r(tmp_env, ",", &saveptr);
+    while (skip_cmd != NULL) {
+      if (0 == strcmp(progname, skip_cmd)) {
+        ft_mode = FT_NOOP;
+        dont_fake = true;
+        break;
+      }
+      skip_cmd = strtok_r(NULL, ",", &saveptr);
+    }
+  }
+
+  /* We can limit faking time to specified commands */
+  if ((tmp_env = getenv("FAKETIME_ONLY_CMDS")) != NULL) {
+    char *only_cmd, *saveptr;
+    bool cmd_matched = false;
+
+    if (getenv("FAKETIME_SKIP_CMDS") != NULL) {
+      fprintf(stderr, "Error: Both FAKETIME_SKIP_CMDS and FAKETIME_ONLY_CMDS can't be set.");
+      exit(EXIT_FAILURE);
+    }
+
+    only_cmd = strtok_r(tmp_env, ",", &saveptr);
+    printf("%s\n", only_cmd);
+    while (only_cmd != NULL) {
+      if (0 == strcmp(progname, only_cmd)) {
+        cmd_matched = true;
+        break;
+      }
+      only_cmd = strtok_r(NULL, ",", &saveptr);
+    }
+
+    if (!cmd_matched) {
+      ft_mode = FT_NOOP;
+      dont_fake = true;
+    }
+  }
 
   if ((tmp_env = getenv("FAKETIME_START_AFTER_SECONDS")) != NULL)
   {
