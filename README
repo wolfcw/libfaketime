@@ -18,9 +18,10 @@ Content of this file:
    e) Advanced features and caveats
    f) Faking the date and time system-wide
    g) Using the "faketime" wrapper script
-   h) "Limiting" libfaketime
-   i) Spawning an external process
-   j) Saving timestamps to file, loading them from file
+   h) "Limiting" libfaketime based on elapsed time or number of calls
+   i) "Limiting" libfaketime per process
+   j) Spawning an external process
+   k) Saving timestamps to file, loading them from file
 5. License
 6. Contact
 
@@ -365,7 +366,7 @@ Balint Reczey has rewritten the wrapper in 0.9.5 from a simple shell script
 to an efficient wrapper application.
 
 
-4h) "Limiting" libfaketime
+4h) "Limiting" libfaketime based on elapsed time or number of calls
 --------------------------
 
 Starting with version 0.9, libfaketime can be configured to not be continuously
@@ -430,7 +431,17 @@ functionality unless you are sure you really need it and know what you are
 doing.
 
 
-4i) Spawning an external process
+4i) "Limiting" libfaketime per process
+--------------------------------------
+
+Faketime can be instructed to fake time related calls for only a subset
+of commands or to fake time for every command but for a subset of comands.
+The environment variables are FAKETIME_ONLY_CMDS and FAKETIME_SKIP_CMDS
+respectively.
+The comands are separated by commas:
+FAKETIME_ONLY_CMDS=javadoc faketime '2008-12-24 08:15:42' make
+
+4j) Spawning an external process
 --------------------------------
 
 From version 0.9 on, libfaketime can execute a shell command once after an
@@ -463,7 +474,7 @@ time-related system function call that "myprogram" performs after running for 5
 seconds.
 
 
-4j) Saving timestamps to file, loading them from file
+4k) Saving timestamps to file, loading them from file
 -----------------------------------------------------
 
 Faketime can save faked timestamps to a file specified by FAKETIME_SAVE_FILE
