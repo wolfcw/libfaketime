@@ -1,3 +1,8 @@
+Since 0.9.5:
+    - rbalint added Filter commands: FAKETIME_ONLY_CMDS and
+      FAKETIME_SKIP_CMDS control which (sub-)processes libfaketime
+      is applied to.
+
 Since 0.9:
     - ryandesign at MacPorts provided a Portfile for MacPorts and
       fixed various build issues on OSX.

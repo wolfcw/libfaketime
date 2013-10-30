@@ -86,7 +86,7 @@ typedef int clockid_t;
 
 /* some systems lack raw clock */
 #ifndef CLOCK_MONOTONIC_RAW
-#define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1) 
+#define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1)
 #endif
 
 
@@ -129,7 +129,7 @@ static int          (*real___clock_gettime)   (clockid_t clk_id, struct timespec
 #ifndef __APPLE__
 #ifdef FAKE_TIMERS
 static int          (*real_timer_settime_22)   (int timerid, int flags, const struct itimerspec *new_value,
-			                            	            struct itimerspec * old_value);
+                                                struct itimerspec * old_value);
 static int          (*real_timer_settime_233)  (timer_t timerid, int flags,
                                                 const struct itimerspec *new_value,
                                                 struct itimerspec * old_value);
@@ -172,7 +172,7 @@ struct saved_timestamp
 };
 
 static inline void timespec_from_saved (struct timespec *tp,
-					struct saved_timestamp *saved)
+  struct saved_timestamp *saved)
 {
   /* read as big endian */
   tp->tv_sec = be64toh(saved->sec);
@@ -408,14 +408,14 @@ static bool load_time(struct timespec *tp)
 
       if (ft_shared->ticks == 0)
       {
- 	    /* we set shared memory to stop using infile */
-	    ft_shared->ticks = 1;
-    	system_time_from_system(&ftpl_starttime);
-	    ft_shared->start_time = ftpl_starttime;
+        /* we set shared memory to stop using infile */
+        ft_shared->ticks = 1;
+        system_time_from_system(&ftpl_starttime);
+        ft_shared->start_time = ftpl_starttime;
       }
       else
       {
-    	ftpl_starttime = ft_shared->start_time;
+        ftpl_starttime = ft_shared->start_time;
       }
 
       munmap(stss, infile_size);
@@ -813,11 +813,11 @@ unsigned int sleep(unsigned int seconds)
 {
   if (user_rate_set && !dont_fake)
   {
-    if (real_nanosleep == NULL) 
+    if (real_nanosleep == NULL)
     {
       /* fall back to sleep */
       unsigned int ret;
-      if (real_sleep == NULL) 
+      if (real_sleep == NULL)
       {
         return 0;
       }
@@ -875,7 +875,7 @@ unsigned int alarm(unsigned int seconds)
  * Faked ppoll()
  */
 int ppoll(struct pollfd *fds, nfds_t nfds,
-	  const struct timespec *timeout_ts, const sigset_t *sigmask)
+    const struct timespec *timeout_ts, const sigset_t *sigmask)
 {
   struct timespec real_timeout, *real_timeout_pt;
   int ret;
@@ -962,13 +962,13 @@ timer_settime_common(timer_t_or_int timerid, int flags,
   {
     /* set it_value */
     if ((new_value->it_value.tv_sec != 0) ||
-        (new_value->it_value.tv_nsec != 0)) 
+        (new_value->it_value.tv_nsec != 0))
     {
-      if (flags & TIMER_ABSTIME) 
+      if (flags & TIMER_ABSTIME)
       {
         struct timespec tdiff, timeadj;
         timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
-        if (user_rate_set) 
+        if (user_rate_set)
         {
           timespecmul(&timeadj, 1.0/user_rate, &tdiff);
         }
@@ -981,7 +981,7 @@ timer_settime_common(timer_t_or_int timerid, int flags,
       }
       else
       {
-        if (user_rate_set) 
+        if (user_rate_set)
         {
           timespecmul(&new_value->it_value, 1.0/user_rate, &new_real.it_value);
         }
@@ -1464,12 +1464,11 @@ void __attribute__ ((constructor)) ftpl_init(void)
     bool cmd_matched = false;
 
     if (getenv("FAKETIME_SKIP_CMDS") != NULL) {
-      fprintf(stderr, "Error: Both FAKETIME_SKIP_CMDS and FAKETIME_ONLY_CMDS can't be set.");
+      fprintf(stderr, "Error: Both FAKETIME_SKIP_CMDS and FAKETIME_ONLY_CMDS can't be set.\n");
       exit(EXIT_FAILURE);
     }
 
     only_cmd = strtok_r(tmp_env, ",", &saveptr);
-    printf("%s\n", only_cmd);
     while (only_cmd != NULL) {
       if (0 == strcmp(progname, only_cmd)) {
         cmd_matched = true;
@@ -1516,17 +1515,17 @@ void __attribute__ ((constructor)) ftpl_init(void)
     }
     if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL)
     {
-  	  ft_spawn_ncalls = atol(tmp_env);
+      ft_spawn_ncalls = atol(tmp_env);
     }
   }
 
   if ((tmp_env = getenv("FAKETIME_SAVE_FILE")) != NULL)
   {
     if (-1 == (outfile = open(tmp_env, O_RDWR | O_APPEND | O_CLOEXEC | O_CREAT,
-			                  S_IWUSR | S_IRUSR)))
+                              S_IWUSR | S_IRUSR)))
     {
-  	  perror("Opening file for saving timestamps failed");
-	  exit(EXIT_FAILURE);
+      perror("Opening file for saving timestamps failed");
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -1545,7 +1544,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
     if (sizeof(stss[0]) > (infile_size = sb.st_size))
     {
       printf("There are no timestamps in the provided file to load timestamps from");
-	  exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
     }
 
     if ((infile_size % sizeof(stss[0])) != 0)
@@ -1558,7 +1557,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
     if (stss == MAP_FAILED)
     {
       perror("Mapping file for loading timestamps failed");
-	  exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
     }
     infile_set = true;
   }
@@ -1577,13 +1576,13 @@ void __attribute__ ((constructor)) ftpl_init(void)
   {
     if (sem_wait(shared_sem) == -1)
     {
-  	  perror("sem_wait");
+      perror("sem_wait");
       exit(1);
     }
     if (ft_shared->start_time.real.tv_nsec == -1)
     {
       /* set up global start time */
-	  system_time_from_system(&ftpl_starttime);
+      system_time_from_system(&ftpl_starttime);
       ft_shared->start_time = ftpl_starttime;
     }
     else
@@ -1593,7 +1592,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
     }
     if (sem_post(shared_sem) == -1)
     {
-	  perror("sem_post");
+      perror("sem_post");
       exit(1);
     }
   }
@@ -1627,7 +1626,9 @@ static void remove_trailing_eols(char *line)
    */
 # define is_eolchar(c) ((c) == '\n' || (c) == '\r')
   while (endp > line && is_eolchar(endp[-1]))
-	*--endp = '\0';
+  {
+    *--endp = '\0';
+  }
 }
 
 
@@ -1814,26 +1815,26 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         switch (clk_id)
         {
           case CLOCK_REALTIME:
-   	        timespecsub(tp, &ftpl_starttime.real, &tdiff);
-       	    break;
-       	  case CLOCK_MONOTONIC:
-            timespecsub(tp, &ftpl_starttime.mon, &tdiff);
-      	    break;
-          case CLOCK_MONOTONIC_RAW:
-      	    timespecsub(tp, &ftpl_starttime.mon_raw, &tdiff);
+            timespecsub(tp, &ftpl_starttime.real, &tdiff);
             break;
-      	  default:
-      	    printf("Invalid clock_id for clock_gettime: %d", clk_id);
-      	    exit(EXIT_FAILURE);
+          case CLOCK_MONOTONIC:
+            timespecsub(tp, &ftpl_starttime.mon, &tdiff);
+            break;
+          case CLOCK_MONOTONIC_RAW:
+            timespecsub(tp, &ftpl_starttime.mon_raw, &tdiff);
+            break;
+          default:
+            printf("Invalid clock_id for clock_gettime: %d", clk_id);
+            exit(EXIT_FAILURE);
         } // end of switch (clk_id)
         if (user_rate_set)
         {
-  	      timespecmul(&tdiff, user_rate, &timeadj);
+          timespecmul(&tdiff, user_rate, &timeadj);
         }
         else
         {
           timeadj = tdiff;
-	    }
+        }
         timespecadd(&user_faked_time_timespec, &timeadj, tp);
       }
       break;

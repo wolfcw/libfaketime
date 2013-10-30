@@ -100,7 +100,7 @@ Running "make install" will attempt to place them in /usr/local/lib/faketime
 and will install the wrapper shell script "faketime" in /usr/local/bin, both of
 which most likely will require root privileges; however, from a technical point
 of view, there is no necessity for a system-wide installation, so you can use
-libfaketime also on machines where you do not have root privileges. You may want 
+libfaketime also on machines where you do not have root privileges. You may want
 to adjust the PREFIX variable in the Makefiles accordingly.
 
 By default, the Makefile compiles/links libfaketime for your default system
@@ -434,12 +434,29 @@ doing.
 4i) "Limiting" libfaketime per process
 --------------------------------------
 
-Faketime can be instructed to fake time related calls for only a subset
-of commands or to fake time for every command but for a subset of comands.
+Faketime can be instructed to fake time related calls only for selected
+commands or to fake time for each command except for a certain subset of
+commands.
+
 The environment variables are FAKETIME_ONLY_CMDS and FAKETIME_SKIP_CMDS
 respectively.
-The comands are separated by commas:
-FAKETIME_ONLY_CMDS=javadoc faketime '2008-12-24 08:15:42' make
+
+Example:
+    FAKETIME_ONLY_CMDS=javadoc faketime '2008-12-24 08:15:42' make
+will run the "make" command but the time faking will only be applied
+to javadoc processes.
+
+Multiple commands are separated by commas.
+
+Example:
+    FAKETIME_SKIP_CMDS="javadoc,ctags" faketime '2008-12-24 08:15:42' make
+will run the "make" command and apply time faking for everything "make"
+does except for javadoc and ctags processes.
+
+FAKETIME_ONLY_CMDS and FAKETIME_SKIP_CMDS are mutually exclusive, i.e.,
+you cannot set them both at the same time. Faketime will terminate with
+an error message if both environment variables are set.
+
 
 4j) Spawning an external process
 --------------------------------
