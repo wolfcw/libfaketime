@@ -51,8 +51,8 @@ handler(int sig, siginfo_t *si, void *uc)
 }
 #endif
 
-int main (int argc, char **argv) {
-
+int main (int argc, char **argv)
+{
     time_t now;
     struct timeb tb;
     struct timeval tv;
@@ -72,25 +72,28 @@ int main (int argc, char **argv) {
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+    if (sigaction(SIGUSR1, &sa, NULL) == -1)
+    {
       perror("sigaction");
       exit(EXIT_FAILURE);
     }
-    /* Block timer signal temporarily */
 
+    /* Block timer signal temporarily */
     printf("Blocking signal %d\n", SIGUSR1);
     sigemptyset(&mask);
     sigaddset(&mask, SIGUSR1);
-    if (sigprocmask(SIG_SETMASK, &mask, NULL) == -1) {
+    if (sigprocmask(SIG_SETMASK, &mask, NULL) == -1)
+    {
       perror("sigaction");
       exit(EXIT_FAILURE);
-      }
+    }
 
     /* Create the timer */
     sev.sigev_notify = SIGEV_SIGNAL;
     sev.sigev_signo = SIGUSR1;
     sev.sigev_value.sival_ptr = &timerid1;
-    if (timer_create(CLOCK_REALTIME, &sev, &timerid1) == -1) {
+    if (timer_create(CLOCK_REALTIME, &sev, &timerid1) == -1)
+    {
       perror("timer_create");
       exit(EXIT_FAILURE);
     }
@@ -104,13 +107,15 @@ int main (int argc, char **argv) {
     its.it_interval.tv_sec = 0;
     its.it_interval.tv_nsec = 300000000;
 
-    if (timer_settime(timerid1, 0, &its, NULL) == -1) {
+    if (timer_settime(timerid1, 0, &its, NULL) == -1)
+    {
       perror("timer_settime");
       exit(EXIT_FAILURE);
     }
 
     sev.sigev_value.sival_ptr = &timerid2;
-    if (timer_create(CLOCK_REALTIME, &sev, &timerid2) == -1) {
+    if (timer_create(CLOCK_REALTIME, &sev, &timerid2) == -1)
+    {
       perror("timer_create");
       exit(EXIT_FAILURE);
     }
@@ -124,7 +129,8 @@ int main (int argc, char **argv) {
     its.it_interval.tv_sec = 0;
     its.it_interval.tv_nsec = 0;
 
-    if (timer_settime(timerid2, TIMER_ABSTIME, &its, NULL) == -1) {
+    if (timer_settime(timerid2, TIMER_ABSTIME, &its, NULL) == -1)
+    {
       perror("timer_settime");
       exit(EXIT_FAILURE);
     }
@@ -149,7 +155,8 @@ int main (int argc, char **argv) {
     printf("gettimeofday() : Current date and time: %s", ctime(&tv.tv_sec));
 
 #ifndef __APPLE__
-    if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1) {
+    if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1)
+    {
       perror("sigprocmask");
       exit(EXIT_FAILURE);
     }
@@ -158,24 +165,28 @@ int main (int argc, char **argv) {
     printf("clock_gettime(): Current date and time: %s", ctime(&ts.tv_sec));
 
     int timer_getoverrun_timerid1 = timer_getoverrun(timerid1);
-    if (timer_getoverrun_timerid1 != 3) {
+    if (timer_getoverrun_timerid1 != 3)
+    {
         printf("timer_getoverrun(timerid1) FAILED, must be 3 but got: %d\n", timer_getoverrun_timerid1);
     }
 
     timer_gettime(timerid1, &its);
-    if (VERBOSE == 1) {
+    if (VERBOSE == 1)
+    {
         printf("timer_gettime(timerid1, &its); its = {{%ld, %ld}, {%ld, %ld}}}\n",
                 its.it_interval.tv_sec, its.it_interval.tv_nsec,
                 its.it_value.tv_sec, its.it_value.tv_nsec);
     }
 
     int timer_getoverrun_timerid2 = timer_getoverrun(timerid2);
-    if (timer_getoverrun_timerid2 != 0) {
+    if (timer_getoverrun_timerid2 != 0)
+    {
         printf("timer_getoverrun(timerid2) FAILED, must be 0 but got: %d\n", timer_getoverrun_timerid2);
     }
 
     timer_gettime(timerid2, &its);
-    if (VERBOSE == 1) {
+    if (VERBOSE == 1)
+    {
         printf("timer_gettime(timerid2, &its); its = {{%ld, %ld}, {%ld, %ld}}}\n",
             its.it_interval.tv_sec, its.it_interval.tv_nsec,
             its.it_value.tv_sec, its.it_value.tv_nsec);
@@ -189,3 +200,18 @@ int main (int argc, char **argv) {
 
     return 0;
 }
+
+/*
+ * Editor modelines
+ *
+ * Local variables:
+ * c-basic-offset: 2
+ * tab-width: 2
+ * indent-tabs-mode: nil
+ * End:
+ *
+ * vi: set shiftwidth=2 tabstop=2 expandtab:
+ * :indentSize=2:tabSize=2:noTabs=true:
+ */
+
+/* eof */

@@ -29,43 +29,48 @@
    NOTE: `timercmp' does not work for >= or <=.  */
 #define timerisset2(tvp, prefix) ((tvp)->tv_sec || (tvp)->tv_##prefix##sec)
 #define timerclear2(tvp, prefix) ((tvp)->tv_sec = (tvp)->tv_##prefix##sec = 0)
-#define timercmp2(a, b, CMP, prefix)			                    \
-  (((a)->tv_sec == (b)->tv_sec) ?		                    	    \
-   ((a)->tv_##prefix##sec CMP (b)->tv_##prefix##sec) :      	    \
+#define timercmp2(a, b, CMP, prefix)                                \
+  (((a)->tv_sec == (b)->tv_sec) ?                                   \
+   ((a)->tv_##prefix##sec CMP (b)->tv_##prefix##sec) :              \
    ((a)->tv_sec CMP (b)->tv_sec))
-#define timeradd2(a, b, result, prefix)			            	    \
-  do {							                            	    \
-    (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;	        	    \
-    (result)->tv_##prefix##sec = (a)->tv_##prefix##sec +    	    \
-      (b)->tv_##prefix##sec;				                	    \
-    if ((result)->tv_##prefix##sec >= SEC_TO_##prefix##SEC) 	    \
-      {							                            	    \
-        ++(result)->tv_sec;				                    	    \
-        (result)->tv_##prefix##sec -= SEC_TO_##prefix##SEC; 	    \
-      }								                                \
+#define timeradd2(a, b, result, prefix)                             \
+  do                                                                \
+  {                                                                 \
+    (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;                   \
+    (result)->tv_##prefix##sec = (a)->tv_##prefix##sec +            \
+      (b)->tv_##prefix##sec;                                        \
+    if ((result)->tv_##prefix##sec >= SEC_TO_##prefix##SEC)         \
+      {                                                             \
+        ++(result)->tv_sec;                                         \
+        (result)->tv_##prefix##sec -= SEC_TO_##prefix##SEC;         \
+      }                                                             \
   } while (0)
-#define timersub2(a, b, result, prefix)			            	    \
-  do {							                            	    \
-    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;	        	    \
-    (result)->tv_##prefix##sec = (a)->tv_##prefix##sec -    	    \
-      (b)->tv_##prefix##sec;				                	    \
-    if ((result)->tv_##prefix##sec < 0) {		            	    \
-      --(result)->tv_sec;				                           	\
-      (result)->tv_##prefix##sec += SEC_TO_##prefix##SEC;	        \
-    }								                                \
+#define timersub2(a, b, result, prefix)                             \
+  do                                                                \
+  {                                                                 \
+    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;                   \
+    (result)->tv_##prefix##sec = (a)->tv_##prefix##sec -            \
+      (b)->tv_##prefix##sec;                                        \
+    if ((result)->tv_##prefix##sec < 0)                             \
+    {                                                               \
+      --(result)->tv_sec;                                           \
+      (result)->tv_##prefix##sec += SEC_TO_##prefix##SEC;           \
+    }                                                               \
   } while (0)
-#define timermul2(tvp, c, result, prefix)				            \
-  do {									                            \
-    long long tmp_time;							                    \
-    tmp_time = (c) * ((tvp)->tv_sec * SEC_TO_##prefix##SEC +		\
-		      (tvp)->tv_##prefix##sec);				                \
-    (result)->tv_##prefix##sec = tmp_time % SEC_TO_##prefix##SEC;	\
-    (result)->tv_sec = (tmp_time - (result)->tv_##prefix##sec) /	\
-      SEC_TO_##prefix##SEC;						                    \
-    if ((result)->tv_##prefix##sec < 0)	{				            \
-      (result)->tv_##prefix##sec +=  SEC_TO_##prefix##SEC;	    	\
-      (result)->tv_sec -= 1;						                \
-    }									                            \
+#define timermul2(tvp, c, result, prefix)                           \
+  do                                                                \
+  {                                                                 \
+    long long tmp_time;                                             \
+    tmp_time = (c) * ((tvp)->tv_sec * SEC_TO_##prefix##SEC +        \
+               (tvp)->tv_##prefix##sec);                            \
+    (result)->tv_##prefix##sec = tmp_time % SEC_TO_##prefix##SEC;   \
+    (result)->tv_sec = (tmp_time - (result)->tv_##prefix##sec) /    \
+      SEC_TO_##prefix##SEC;                                         \
+    if ((result)->tv_##prefix##sec < 0)                             \
+    {                                                               \
+      (result)->tv_##prefix##sec +=  SEC_TO_##prefix##SEC;          \
+      (result)->tv_sec -= 1;                                        \
+    }                                                               \
   } while (0)
 
 /* ops for microsecs */

@@ -89,7 +89,6 @@ typedef int clockid_t;
 #define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1)
 #endif
 
-
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
@@ -97,15 +96,15 @@ typedef int clockid_t;
 __thread bool dont_fake = false;
 
 /* Wrapper for function calls, which we want to return system time */
-#define DONT_FAKE_TIME(call)			\
-  {						                \
-    bool dont_fake_orig = dont_fake;	\
-    if (!dont_fake)                     \
-    {				                    \
-      dont_fake = true;				    \
-    }						            \
-    call;					            \
-    dont_fake = dont_fake_orig;			\
+#define DONT_FAKE_TIME(call)          \
+  {                                   \
+    bool dont_fake_orig = dont_fake;  \
+    if (!dont_fake)                   \
+    {                                 \
+      dont_fake = true;               \
+    }                                 \
+    call;                             \
+    dont_fake = dont_fake_orig;       \
   } while (0)
 
 /* pointers to real (not faked) functions */
@@ -257,6 +256,7 @@ static void ft_shm_init (void)
       perror("shm_open");
       exit(1);
     }
+
     if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
             MAP_SHARED, ticks_shm_fd, 0)))
     {
@@ -365,10 +365,12 @@ static void save_time(struct timespec *tp)
     }
 
     lseek(outfile, 0, SEEK_END);
-    do {
+    do
+    {
       written = write(outfile, &(((char*)&time_write)[n]), sizeof(time_write) - n);
-    } while (((written == -1) && (errno == EINTR)) ||
-             (sizeof(time_write) < (n += written)));
+    }
+    while (((written == -1) && (errno == EINTR)) ||
+            (sizeof(time_write) < (n += written)));
 
     if ((written == -1) || (n < sizeof(time_write)))
     {
@@ -494,7 +496,7 @@ static inline void fake_stat64buf (struct stat64 *buf) {
 int __xstat (int ver, const char *path, struct stat *buf)
 {
   if (NULL == real_stat)
-  {  /* dlsym() failed */
+  { /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
 #endif
@@ -552,7 +554,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
 int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int flag)
 {
   if (NULL == real_fstatat)
-  {  /* dlsym() failed */
+  { /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat() not found.\n");
 #endif
@@ -568,7 +570,8 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
 
   if (buf != NULL)
   {
-    if (!fake_stat_disabled) {
+    if (!fake_stat_disabled)
+    {
       fake_statbuf(buf);
     }
   }
@@ -608,7 +611,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
 int __xstat64 (int ver, const char *path, struct stat64 *buf)
 {
   if (NULL == real_stat64)
-  {  /* dlsym() failed */
+  { /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
 #endif
@@ -896,7 +899,8 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
       /* cast away constness */
       real_timeout_pt = (struct timespec *)timeout_ts;
     }
-  } else
+  }
+  else
   {
     real_timeout_pt = NULL;
   }
@@ -1013,7 +1017,7 @@ timer_settime_common(timer_t_or_int timerid, int flags,
       DONT_FAKE_TIME(result = (*real_timer_settime_22)(timerid.int_member, flags,
                     new_real_pt, old_value));
       break;
-     case FT_COMPAT_GLIBC_2_3_3:
+    case FT_COMPAT_GLIBC_2_3_3:
        DONT_FAKE_TIME(result = (*real_timer_settime_233)(timerid.timer_t_member,
                     flags, new_real_pt, old_value));
        break;
@@ -1315,7 +1319,9 @@ static void parse_ft_string(const char *user_faked_time)
         user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
         user_faked_time_timespec.tv_nsec = 0;
         user_faked_time_set = true;
-      } else {
+      }
+      else
+      {
         perror("Failed to parse FAKETIME timestamp");
         exit(EXIT_FAILURE);
       }
@@ -1423,12 +1429,14 @@ void __attribute__ ((constructor)) ftpl_init(void)
 #ifdef FAKE_TIMERS
   real_timer_settime_22 =   dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.2");
   real_timer_settime_233 =  dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
-  if (NULL == real_timer_settime_233) {
+  if (NULL == real_timer_settime_233)
+  {
     real_timer_settime_233 =  dlsym(RTLD_NEXT, "timer_settime");
   }
   real_timer_gettime_22 =   dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.2");
   real_timer_gettime_233 =  dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.3.3");
-  if (NULL == real_timer_gettime_233) {
+  if (NULL == real_timer_gettime_233)
+  {
     real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
   }
 #endif
@@ -1445,11 +1453,14 @@ void __attribute__ ((constructor)) ftpl_init(void)
   /* Check whether we actually should be faking the returned timestamp. */
 
   /* We can prevent faking time for specified commands */
-  if ((tmp_env = getenv("FAKETIME_SKIP_CMDS")) != NULL) {
+  if ((tmp_env = getenv("FAKETIME_SKIP_CMDS")) != NULL)
+  {
     char *skip_cmd, *saveptr;
     skip_cmd = strtok_r(tmp_env, ",", &saveptr);
-    while (skip_cmd != NULL) {
-      if (0 == strcmp(progname, skip_cmd)) {
+    while (skip_cmd != NULL)
+    {
+      if (0 == strcmp(progname, skip_cmd))
+      {
         ft_mode = FT_NOOP;
         dont_fake = true;
         break;
@@ -1459,25 +1470,30 @@ void __attribute__ ((constructor)) ftpl_init(void)
   }
 
   /* We can limit faking time to specified commands */
-  if ((tmp_env = getenv("FAKETIME_ONLY_CMDS")) != NULL) {
+  if ((tmp_env = getenv("FAKETIME_ONLY_CMDS")) != NULL)
+  {
     char *only_cmd, *saveptr;
     bool cmd_matched = false;
 
-    if (getenv("FAKETIME_SKIP_CMDS") != NULL) {
+    if (getenv("FAKETIME_SKIP_CMDS") != NULL)
+    {
       fprintf(stderr, "Error: Both FAKETIME_SKIP_CMDS and FAKETIME_ONLY_CMDS can't be set.\n");
       exit(EXIT_FAILURE);
     }
 
     only_cmd = strtok_r(tmp_env, ",", &saveptr);
-    while (only_cmd != NULL) {
-      if (0 == strcmp(progname, only_cmd)) {
+    while (only_cmd != NULL)
+    {
+      if (0 == strcmp(progname, only_cmd))
+      {
         cmd_matched = true;
         break;
       }
       only_cmd = strtok_r(NULL, ",", &saveptr);
     }
 
-    if (!cmd_matched) {
+    if (!cmd_matched)
+    {
       ft_mode = FT_NOOP;
       dont_fake = true;
     }
@@ -1680,12 +1696,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     {
       case CLOCK_REALTIME:
         timespecsub(tp, &ftpl_starttime.real, &tmp_ts);
-    	break;
+        break;
       case CLOCK_MONOTONIC:
         timespecsub(tp, &ftpl_starttime.mon, &tmp_ts);
         break;
       case CLOCK_MONOTONIC_RAW:
-    	timespecsub(tp, &ftpl_starttime.mon_raw, &tmp_ts);
+        timespecsub(tp, &ftpl_starttime.mon_raw, &tmp_ts);
         break;
       default:
         printf("Invalid clock_id for clock_gettime: %d", clk_id);
@@ -1695,12 +1711,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     if (limited_faking)
     {
       /* Check whether we actually should be faking the returned timestamp. */
-  	  /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
+      /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
       if ((ft_start_after_secs != -1)   && (tmp_ts.tv_sec < ft_start_after_secs)) return 0;
-  	  if ((ft_stop_after_secs != -1)    && (tmp_ts.tv_sec >= ft_stop_after_secs)) return 0;
+      if ((ft_stop_after_secs != -1)    && (tmp_ts.tv_sec >= ft_stop_after_secs)) return 0;
       if ((ft_start_after_ncalls != -1) && (callcounter < ft_start_after_ncalls)) return 0;
-  	  if ((ft_stop_after_ncalls != -1)  && (callcounter >= ft_stop_after_ncalls)) return 0;
-   	  /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
+      if ((ft_stop_after_ncalls != -1)  && (callcounter >= ft_stop_after_ncalls)) return 0;
+      /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
     }
 
     if (spawnsupport)
@@ -1735,7 +1751,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
   if (cache_expired == 1)
   {
-
     last_data_fetch = tp->tv_sec;
     /* Can be enabled for testing ...
       fprintf(stderr, "***************++ Cache expired ++**************\n");
@@ -1788,7 +1803,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   {
     if (load_time(tp))
     {
-  	return 0;
+      return 0;
     }
   }
 
@@ -1805,13 +1820,13 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     case FT_START_AT: /* User-specified offset */
       if (user_per_tick_inc_set)
       {
-    	/* increment time with every time() call*/
+        /* increment time with every time() call*/
         next_time(tp, &user_per_tick_inc);
       }
       else
       {
         /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-   	    struct timespec tdiff, timeadj;
+        struct timespec tdiff, timeadj;
         switch (clk_id)
         {
           case CLOCK_REALTIME:
@@ -1887,7 +1902,8 @@ int fake_gettimeofday(struct timeval *tv)
  * clock_gettime implementation for __APPLE__
  * @note It always behave like being called with CLOCK_REALTIME.
  */
-static int apple_clock_gettime(clockid_t clk_id, struct timespec *tp) {
+static int apple_clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
   int result;
   mach_timespec_t cur_timeclockid_t;
   (void) clk_id; /* unused */
@@ -2051,7 +2067,6 @@ int __ftime(struct timeb *tb)
   /* return the result to the caller */
   return result; /* will always be 0 (see manpage) */
 }
-
 
 #endif
 

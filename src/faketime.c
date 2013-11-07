@@ -61,7 +61,6 @@ static const char *date_cmd = "date";
 /* semaphore and shared memory names */
 char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
 
-
 void usage(const char *name)
 {
   printf("\n");
@@ -109,7 +108,8 @@ int main (int argc, char **argv)
   int pfds[2];
   long offset;
 
-  while(curr_opt < argc) {
+  while(curr_opt < argc)
+  {
     if (0 == strcmp(argv[curr_opt], "-m"))
     {
       use_mt = true;
@@ -164,7 +164,7 @@ int main (int argc, char **argv)
       close(pfds[0]); /* we don't need this */
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {
-    	perror("Running (g)date failed");
+        perror("Running (g)date failed");
         exit(EXIT_FAILURE);
       }
     }
@@ -176,7 +176,7 @@ int main (int argc, char **argv)
       waitpid(child_pid, &ret, 0);
       if (ret != EXIT_SUCCESS)
       {
-    	printf("Error: Timestamp to fake not recognized, please re-try with a "
+        printf("Error: Timestamp to fake not recognized, please re-try with a "
                "different timestamp.\n");
         exit(EXIT_FAILURE);
       }
@@ -216,7 +216,7 @@ int main (int argc, char **argv)
       perror("shm_open");
       if (-1 == sem_unlink(argv[2]))
       {
-    	perror("sem_unlink");
+        perror("sem_unlink");
       }
       exit(EXIT_FAILURE);
     }
@@ -271,7 +271,6 @@ int main (int argc, char **argv)
 
     snprintf(shared_objs, PATH_BUFSIZE, "%s %s", sem_name, shm_name);
     setenv("FAKETIME_SHARED", shared_objs, true);
-
   }
 
   {
@@ -280,10 +279,12 @@ int main (int argc, char **argv)
     ftpl_path = PREFIX "/libfaketime.1.dylib";
     FILE *check;
     check = fopen(ftpl_path, "ro");
-    if (check == NULL) {
+    if (check == NULL)
+    {
       ftpl_path = PREFIX "/lib/faketime/libfaketime.1.dylib";
     }
-    else {
+    else
+    {
       fclose(check);
     }
     setenv("DYLD_INSERT_LIBRARIES", ftpl_path, true);
@@ -298,7 +299,7 @@ int main (int argc, char **argv)
          * on MultiArch platforms, such as Debian, we put a literal $LIB into LD_PRELOAD.
          */
 #ifndef MULTI_ARCH
-    	ftpl_path = PREFIX LIBDIRNAME "/libfaketimeMT.so.1";
+        ftpl_path = PREFIX LIBDIRNAME "/libfaketimeMT.so.1";
 #else
         ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so.1";
 #endif
@@ -306,7 +307,7 @@ int main (int argc, char **argv)
       else
       {
 #ifndef MULTI_ARCH
-    	ftpl_path = PREFIX LIBDIRNAME "/libfaketime.so.1";
+        ftpl_path = PREFIX LIBDIRNAME "/libfaketime.so.1";
 #else
         ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so.1";
 #endif
@@ -338,3 +339,18 @@ int main (int argc, char **argv)
     exit(ret);
   }
 }
+
+/*
+ * Editor modelines
+ *
+ * Local variables:
+ * c-basic-offset: 2
+ * tab-width: 2
+ * indent-tabs-mode: nil
+ * End:
+ *
+ * vi: set shiftwidth=2 tabstop=2 expandtab:
+ * :indentSize=2:tabSize=2:noTabs=true:
+ */
+
+/* eof */
