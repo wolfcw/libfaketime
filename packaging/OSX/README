@@ -29,10 +29,8 @@ and handled via a ticketing system:
 
 ## Homebrew
 
-The libfaketime 'formula' for Homebrew has been submitted via an pull request
-to https://github.com/mxcl/homebrew in October, 2013, and awaits approval.
-Homebrew users can use the 'brew install' command on the provided formula
-file meanwhile.
+The libfaketime 'formula' for Homebrew is available since November, 2013.
+Homebrew users can use 'brew install libfaketime' as installation command.
 
 Some libfaketime formula caveats:
 
@@ -40,10 +38,17 @@ Some libfaketime formula caveats:
 - :llvm builds <= 2336 must be blacklisted because libfaketime =0.9.5
   requires a compiler with thread local storage support.
 
+Formula submission is handled via pull request on Github following the
+"one formula per commit, one commit per formula" rule, which necessitates
+squashing commits and forced pushes when applying fixes. Style issues
+complementary to the documentation have been discussed in
+
+    https://github.com/mxcl/homebrew/pull/23245
+
 
 ## Fink
 
-A libfaketime.info file is included in the Fink 10.7 tree since October, 
+A libfaketime.info file is included in the Fink 10.7 tree since October,
 2013, and installed using
 
     fink install libfaketime
@@ -58,5 +63,5 @@ Some libfaketime fink info file caveats:
   into the wrapper. However, "make install" needs to deploy into PREFIX=%{i} to
   make packaging work.
 
-Submission is via via https://sourceforge.net/p/fink/package-submissions/
+Submission is via https://sourceforge.net/p/fink/package-submissions/
 

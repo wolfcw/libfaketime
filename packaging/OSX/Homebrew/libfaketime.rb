@@ -9,13 +9,11 @@ class Libfaketime < Formula
 
   fails_with :llvm do
     build 2336
-    cause <<-EOS.undent
-    No thread local storage support.
-    EOS
+    cause 'No thread local storage support'
   end
 
   def install
-    system "make -C src -f Makefile.OSX PREFIX=#{prefix}"
+    system "make", "-C", "src", "-f", "Makefile.OSX", "PREFIX=#{prefix}"
     bin.install 'src/faketime'
     (lib/'faketime').install 'src/libfaketime.1.dylib'
     man1.install 'man/faketime.1'
