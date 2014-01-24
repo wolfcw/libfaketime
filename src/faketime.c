@@ -126,7 +126,7 @@ int main (int argc, char **argv)
              (0 == strcmp(argv[curr_opt], "--version")))
     {
       printf("\n%s: Version %s\n"
-         "For usage information please use '%s --help\n'.",
+         "For usage information please use '%s --help'.\n",
          argv[0], version, argv[0]);
       exit(EXIT_SUCCESS);
     }
