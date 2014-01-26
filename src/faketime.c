@@ -271,6 +271,7 @@ int main (int argc, char **argv)
 
     snprintf(shared_objs, PATH_BUFSIZE, "%s %s", sem_name, shm_name);
     setenv("FAKETIME_SHARED", shared_objs, true);
+    sem_close(sem);
   }
 
   {
