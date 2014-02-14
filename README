@@ -1,5 +1,5 @@
       =======================================================
-             libfaketime, version 0.9.5 (October 2013)
+             libfaketime, version 0.9.6 (March 2014)
         (previously also know as FakeTime Preload Library)
       =======================================================
 
@@ -116,7 +116,7 @@ with, define the environment variable NO_FAKE_STAT, and the intercepted stat
 calls will be passed through unaltered.
 
 On OS X, it is necessary to compile differently, due to the different
-behavior dyld has. Use the Makefile.MacOS provided to compile
+behavior dyld has. Use the Makefile provided to compile
 libfaketime.1.dylib. Additionally, instead of using LD_PRELOAD,
 the variable DYLD_INSERT_LIBRARIES should be set to the path to
 libfaketime.1.dylib, and the variable DYLD_FORCE_FLAT_NAMESPACE should be

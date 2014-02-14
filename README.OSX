@@ -1,15 +1,15 @@
 README file for libfaketime on Mac OS X
 =======================================
 
-Support for Mac OS X is still considered preliminary, although many
-command line and GUI applications will run stable.
+Support for Mac OS X has meanwhile matured and many command line and
+GUI applications will run stable.
 
 Developments and tests are done on OSX 10.8+ currently, although the
 current version will also work with OSX 10.7.
 
-Version 0.9.5 no longer works with OSX <= 10.6 due to changes in the
-underlying system libraries. If you need libfaketime on OSX <= 10.6,
-please use libfaketime version 0.9.
+Version 0.9.5 and higher no longer works with OSX <= 10.6 due to
+changes in the underlying system libraries. If you need libfaketime
+on OSX <= 10.6, please use libfaketime version 0.9.
 
 
 Installing and using libfaketime on OS X is slightly different than
@@ -25,17 +25,23 @@ as follows:
 
     sudo port install libfaketime
 
-If you use Fink, install using:
+Or, if you use Fink, install using:
 
     fink install libfaketime
 
-Otherwise, you have to compile and install libfaketime manually; this 
+Or, if you use Homebrew, install using:
+
+    brew install libfaketime
+
+Otherwise, you have to compile and install libfaketime manually; this
 will require a working installation of Xcode and its command line tools
 on your machine.
 
-Use the OSX-specific Makefile that is provided:
+You can compile libfaketime by running the command
 
-    make -f Makefile.OSX
+    make
+
+in libfaketime's top-level directory.
 
 The resulting library will be named libfaketime.1.dylib ; to check
 whether it works properly, run the test suite and verify whether its
