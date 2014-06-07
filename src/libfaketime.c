@@ -1,5 +1,5 @@
 /*
- *  This file is part of libfaketime, version 0.9.5
+ *  This file is part of libfaketime, version 0.9.6
  *
  *  libfaketime is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License v2 as published by the

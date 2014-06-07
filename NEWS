@@ -1,4 +1,7 @@
 Since 0.9.5:
+    - fixed crashes that happened when other LD_PRELOAD libraries were used
+    - fixed passing through of return values when using the faketime wrapper
+    - fixed compile-time issues with CLOCK_MONOTONIC_RAW on some platforms
     - rbalint added Filter commands: FAKETIME_ONLY_CMDS and
       FAKETIME_SKIP_CMDS control which (sub-)processes libfaketime
       is applied to.
