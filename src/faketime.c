@@ -313,7 +313,7 @@ int main (int argc, char **argv)
         ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so.1";
 #endif
       }
-      len = (ld_preload)?strlen(ld_preload):0 + 2 + strlen(ftpl_path);
+      len = ((ld_preload)?strlen(ld_preload) + 1: 0) + 1 + strlen(ftpl_path);
       ld_preload_new = malloc(len);
       snprintf(ld_preload_new, len ,"%s%s%s", (ld_preload)?ld_preload:"",
               (ld_preload)?":":"", ftpl_path);
