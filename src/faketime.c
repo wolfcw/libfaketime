@@ -337,7 +337,12 @@ int main (int argc, char **argv)
     int ret;
     waitpid(child_pid, &ret, 0);
     cleanup_shobjs();
-    exit(ret);
+    if (WIFSIGNALED(ret))
+    {
+      fprintf(stderr, "Caught %s\n", strsignal(WTERMSIG(ret)));
+      exit(EXIT_FAILURE);
+    }
+    exit(WEXITSTATUS(ret));
   }
 }
 
