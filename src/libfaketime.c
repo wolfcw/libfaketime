@@ -199,6 +199,8 @@ static char ft_spawn_target[1024];
 static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
+static int fake_monotonic_clock = 1;
+
 /*
  * Static timespec to store our startup time, followed by a load-time library
  * initialization declaration.
@@ -237,6 +239,7 @@ static void ft_shm_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+
   if (ft_shared_env != NULL)
   {
     if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
@@ -1290,7 +1293,10 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
-  result = fake_clock_gettime(clk_id, tp);
+  if (fake_monotonic_clock || clk_id != CLOCK_MONOTONIC)
+  {
+    result = fake_clock_gettime(clk_id, tp);
+  }
 
   /* return the result to the caller */
   return result;
@@ -1454,6 +1460,13 @@ void __attribute__ ((constructor)) ftpl_init(void)
   }
 #endif
 
+  if ((tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
+  {
+    if (0 == strcmp(tmp_env, "1"))
+    {
+      fake_monotonic_clock = 0;
+    }
+  }
   /* Check whether we actually should be faking the returned timestamp. */
 
   /* We can prevent faking time for specified commands */
@@ -2010,7 +2023,10 @@ int __clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
-  result = fake_clock_gettime(clk_id, tp);
+  if (fake_monotonic_clock || clk_id != CLOCK_MONOTONIC)
+  {
+    result = fake_clock_gettime(clk_id, tp);
+  }
 
   /* return the result to the caller */
   return result;

@@ -72,8 +72,9 @@ void usage(const char *name)
   printf("for advanced options, such as stopping the wall clock and make it run faster or slower.\n");
   printf("\n");
   printf("The optional switches are:\n");
-  printf("  -m        : Use the multi-threaded version of libfaketime\n");
-  printf("  -f        : Use the advanced timestamp specification format (see manpage)\n");
+  printf("  -m                  : Use the multi-threaded version of libfaketime\n");
+  printf("  -f                  : Use the advanced timestamp specification format (see manpage)\n");
+  printf("  --exclude-monotonic : Prevent monotonic clock from drifting (not the raw monotonic one)\n");
   printf("\n");
   printf("Examples:\n");
   printf("%s 'last friday 5 pm' /bin/date\n", name);
@@ -119,6 +120,12 @@ int main (int argc, char **argv)
     else if (0 == strcmp(argv[curr_opt], "-f"))
     {
       use_direct = true;
+      curr_opt++;
+      continue;
+    }
+    else if (0 == strcmp(argv[curr_opt], "--exclude-monotonic"))
+    {
+      setenv("DONT_FAKE_MONOTONIC", "1", true);
       curr_opt++;
       continue;
     }
