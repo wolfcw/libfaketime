@@ -1,3 +1,6 @@
+Since 0.9.6:
+    - Julien Gilli added an option to disable monotonic time faking
+
 Since 0.9.5:
     - fixed crashes that happened when other LD_PRELOAD libraries were used
     - fixed passing through of return values when using the faketime wrapper
