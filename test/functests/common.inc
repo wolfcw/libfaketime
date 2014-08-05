@@ -9,6 +9,7 @@ platform()
 	*Darwin*) echo "mac" ;;
 	*Linux*) echo "linuxlike" ;;
     GNU|GNU/kFreeBSD) echo "linuxlike" ;;
+        *SunOS*) echo "sunos" ;;
 	*) echo 1>&2 unsupported platform, uname=\"$out\" ;;
 	esac
 }
@@ -23,6 +24,15 @@ mac_fakecmd()
 	export DYLD_FORCE_FLAT_NAMESPACE=1
 	FAKETIME="$timestring" \
 	"$@"
+}
+
+sunos_fakecmd()
+{
+        typeset timestring="$1"; shift
+        typeset fakelib=../src/libfaketime.so.1
+        export LD_PRELOAD=$fakelib
+        FAKETIME="$timestring" \
+        "$@"
 }
 
 # run faked command on linuxlike OS

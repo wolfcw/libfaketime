@@ -22,7 +22,6 @@
  */
 
 #define _GNU_SOURCE             /* required to get RTLD_NEXT defined */
-#define _XOPEN_SOURCE           /* required to get strptime() defined */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +56,11 @@
 
 #ifndef __APPLE__
 extern char *__progname;
+#ifdef __sun
+#include "sunos_endian.h"
+#else
 #include <endian.h>
+#endif
 #else
 /* endianness related macros */
 #define htobe64(x) OSSwapHostToBigInt64(x)
@@ -1437,6 +1440,10 @@ void __attribute__ ((constructor)) ftpl_init(void)
     real_clock_gettime  =   dlsym(RTLD_NEXT, "clock_gettime");
   }
 #ifdef FAKE_TIMERS
+#if defined(__sun)
+    real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
+    real_timer_settime_233 =  dlsym(RTLD_NEXT, "timer_settime");
+#else
   real_timer_settime_22 =   dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.2");
   real_timer_settime_233 =  dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
   if (NULL == real_timer_settime_233)
@@ -1449,6 +1456,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
   {
     real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
   }
+#endif
 #endif
 #endif
 
