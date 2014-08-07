@@ -66,10 +66,20 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 LIBDIRNAME ?= /lib/faketime
+PLATFORM ?=$(shell uname)
 
 CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"'
+ifeq ($(PLATFORM),SunOS)
+CFLAGS += -D__EXTENSIONS__ -D_XOPEN_SOURCE=600
+endif
+
 LIB_LDFLAGS += -shared
-LDFLAGS += -Wl,--version-script=libfaketime.map -lpthread
+
+LDFLAGS += -lpthread
+ifneq ($(PLATFORM),SunOS)
+LDFLAGS += -Wl,--version-script=libfaketime.map
+endif
+
 LDADD += -ldl -lm -lrt
 BIN_LDFLAGS += -lrt
 
