@@ -25,6 +25,9 @@ use the multi-threading variant of libfaketime.
 .TP
 \fB\-f\fR
 use the advanced timestamp specification format.
+.TP
+\fB\--exclude-monotonic\fR
+Do not fake time when the program makes a call to clock_gettime with a CLOCK_MONOTONIC clock.
 
 .SH EXAMPLES
 .nf
