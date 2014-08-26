@@ -216,6 +216,8 @@ static char user_faked_time_fmt[BUFSIZ] = {0};
 static struct timespec user_faked_time_timespec = {0, -1};
 /* User supplied base time is set */
 static bool user_faked_time_set = false;
+static char user_faked_time_saved[BUFFERLEN] = {0};
+
 /* Fractional user offset provided through FAKETIME env. var.*/
 static struct timespec user_offset = {0, -1};
 /* Speed up or slow down clock */
@@ -1316,6 +1318,13 @@ static void parse_ft_string(const char *user_faked_time)
 {
   struct tm user_faked_time_tm;
   char * tmp_time_fmt;
+
+  if (!strncmp(user_faked_time, user_faked_time_saved, BUFFERLEN))
+  {
+      /* No change */
+      return;
+  }
+
   /* check whether the user gave us an absolute time to fake */
   switch (user_faked_time[0])
   {
@@ -1386,6 +1395,9 @@ parse_modifiers:
       }
       break;
   } // end of switch
+
+  strncpy(user_faked_time_saved, user_faked_time, BUFFERLEN-1);
+  user_faked_time_saved[BUFFERLEN-1] = 0;
 }
 
 
