@@ -148,6 +148,7 @@ static unsigned int (*real_sleep)           (unsigned int seconds);
 static unsigned int (*real_alarm)           (unsigned int seconds);
 static int          (*real_poll)            (struct pollfd *, nfds_t, int);
 static int          (*real_ppoll)           (struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
+static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 #endif
 #ifdef __APPLE__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
@@ -929,6 +930,52 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
   DONT_FAKE_TIME(ret = (*real_poll)(fds, nfds, timeout_real));
   return ret;
 }
+
+int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
+{
+  int result;
+  struct timespec real_abs_timeout, *real_abs_timeout_pt;
+
+  /* sanity check */
+  if (abs_timeout == NULL)
+  {
+    return -1;
+  }
+
+  if (NULL == real_sem_timedwait)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original sem_timedwait() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
+
+  if (!dont_fake)
+  {
+    struct timespec tdiff, timeadj;
+
+    timespecsub(abs_timeout, &ftpl_starttime.real, &tdiff);
+
+    if (user_rate_set)
+    {
+      timespecmul(&tdiff, user_rate, &timeadj);
+    }
+    else
+    {
+        timeadj = tdiff;
+    }
+    timespecadd(&user_faked_time_timespec, &timeadj, &real_abs_timeout);
+    real_abs_timeout_pt = &real_abs_timeout;
+  }
+  else
+  {
+    /* cast away constness */
+    real_abs_timeout_pt = (struct timespec *)abs_timeout;
+  }
+
+  DONT_FAKE_TIME(result = (*real_sem_timedwait)(sem, real_abs_timeout_pt));
+  return result;
+}
 #endif
 
 #ifndef __APPLE__
@@ -1424,6 +1471,7 @@ void __attribute__ ((constructor)) ftpl_init(void)
   real_alarm =              dlsym(RTLD_NEXT, "alarm");
   real_poll =               dlsym(RTLD_NEXT, "poll");
   real_ppoll =              dlsym(RTLD_NEXT, "ppoll");
+  real_sem_timedwait =      dlsym(RTLD_NEXT, "sem_timedwait");
 #endif
 #ifdef FAKE_INTERNAL_CALLS
   real___ftime =              dlsym(RTLD_NEXT, "__ftime");
