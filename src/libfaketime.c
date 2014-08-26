@@ -217,6 +217,8 @@ static char user_faked_time_fmt[BUFSIZ] = {0};
 static struct timespec user_faked_time_timespec = {0, -1};
 /* User supplied base time is set */
 static bool user_faked_time_set = false;
+static char user_faked_time_saved[BUFFERLEN] = {0};
+
 /* Fractional user offset provided through FAKETIME env. var.*/
 static struct timespec user_offset = {0, -1};
 /* Speed up or slow down clock */
@@ -1363,6 +1365,13 @@ static void parse_ft_string(const char *user_faked_time)
 {
   struct tm user_faked_time_tm;
   char * tmp_time_fmt;
+
+  if (!strncmp(user_faked_time, user_faked_time_saved, BUFFERLEN))
+  {
+      /* No change */
+      return;
+  }
+
   /* check whether the user gave us an absolute time to fake */
   switch (user_faked_time[0])
   {
@@ -1411,6 +1420,9 @@ static void parse_ft_string(const char *user_faked_time)
 
       user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
       user_faked_time_timespec.tv_nsec = 0;
+
+      /* Reset starttime */
+      system_time_from_system(&ftpl_starttime);
       goto parse_modifiers;
       break;
 
@@ -1433,6 +1445,12 @@ parse_modifiers:
       }
       break;
   } // end of switch
+
+  strncpy(user_faked_time_saved, user_faked_time, BUFFERLEN-1);
+  user_faked_time_saved[BUFFERLEN-1] = 0;
+#ifdef DEBUG
+  fprintf(stderr, "new FAKETIME: %s\n", user_faked_time_saved);
+#endif
 }
 
 
@@ -1824,28 +1842,29 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
   if (cache_expired == 1)
   {
-    last_data_fetch = tp->tv_sec;
+    static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+    /* initialize with default or env. variable */
+    char *tmp_env;
+
     /* Can be enabled for testing ...
       fprintf(stderr, "***************++ Cache expired ++**************\n");
     */
 
+    if (NULL != (tmp_env = getenv("FAKETIME")))
+    {
+      strncpy(user_faked_time, tmp_env, BUFFERLEN);
+    }
+    else
+    {
+      snprintf(user_faked_time, BUFFERLEN, "+0");
+    }
+
+    last_data_fetch = tp->tv_sec;
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
-      static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
       char filename[BUFSIZ];
       FILE *faketimerc;
-      /* initialize with default or env. variable */
-      char *tmp_env;
-      if (NULL != (tmp_env = getenv("FAKETIME")))
-      {
-        strncpy(user_faked_time, tmp_env, BUFFERLEN);
-      }
-      else
-      {
-        snprintf(user_faked_time, BUFFERLEN, "+0");
-      }
-
       /* check whether there's a .faketimerc in the user's home directory, or
        * a system-wide /etc/faketimerc present.
        * The /etc/faketimerc handling has been contributed by David Burley,
@@ -1868,8 +1887,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         }
         fclose(faketimerc);
       }
-      parse_ft_string(user_faked_time);
     } /* read fake time from file */
+    parse_ft_string(user_faked_time);
   } /* cache had expired */
 
   if (infile_set)
