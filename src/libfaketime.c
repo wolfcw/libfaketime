@@ -1373,6 +1373,9 @@ static void parse_ft_string(const char *user_faked_time)
 
       user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
       user_faked_time_timespec.tv_nsec = 0;
+
+      /* Reset starttime */
+      system_time_from_system(&ftpl_starttime);
       goto parse_modifiers;
       break;
 
@@ -1398,6 +1401,9 @@ parse_modifiers:
 
   strncpy(user_faked_time_saved, user_faked_time, BUFFERLEN-1);
   user_faked_time_saved[BUFFERLEN-1] = 0;
+#ifdef DEBUG
+  fprintf(stderr, "new FAKETIME: %s\n", user_faked_time_saved);
+#endif
 }
 
 
