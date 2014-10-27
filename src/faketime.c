@@ -106,7 +106,6 @@ int main (int argc, char **argv)
   pid_t child_pid;
   int curr_opt = 1;
   bool use_mt = false, use_direct = false;
-  int pfds[2];
   long offset;
 
   while(curr_opt < argc)
@@ -161,6 +160,7 @@ int main (int argc, char **argv)
   if (!use_direct)
   {
     // TODO get seconds
+    int pfds[2];
     (void) (pipe(pfds) + 1);
     int ret = EXIT_SUCCESS;
 
@@ -190,6 +190,7 @@ int main (int argc, char **argv)
       offset = atol(buf) - time(NULL);
       ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
       setenv("FAKETIME", buf, true);
+      close(pfds[0]); /* finished reading */
     }
   }
   else
