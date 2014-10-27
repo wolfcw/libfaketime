@@ -106,7 +106,6 @@ int main (int argc, char **argv)
   pid_t child_pid;
   int curr_opt = 1;
   bool use_mt = false, use_direct = false;
-  int pfds[2];
   long offset;
 
   while(curr_opt < argc)
@@ -161,6 +160,7 @@ int main (int argc, char **argv)
   if (!use_direct)
   {
     // TODO get seconds
+    int pfds[2];
     (void) (pipe(pfds) + 1);
     int ret = EXIT_SUCCESS;
 
@@ -190,6 +190,7 @@ int main (int argc, char **argv)
       offset = atol(buf) - time(NULL);
       ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
       setenv("FAKETIME", buf, true);
+      close(pfds[0]); /* finished reading */
     }
   }
   else
@@ -197,6 +198,8 @@ int main (int argc, char **argv)
     /* simply pass format string along */
     setenv("FAKETIME", argv[curr_opt], true);
   }
+  int keepalive_fds[2];
+  (void) (pipe(keepalive_fds) + 1);
 
   /* we just consumed the timestamp option */
   curr_opt++;
@@ -333,6 +336,7 @@ int main (int argc, char **argv)
   /* run command and clean up shared objects */
   if (0 == (child_pid = fork()))
   {
+    close(keepalive_fds[0]); /* only parent needs to read this */
     if (EXIT_SUCCESS != execvp(argv[curr_opt], &argv[curr_opt]))
     {
       perror("Running specified command failed");
@@ -342,7 +346,10 @@ int main (int argc, char **argv)
   else
   {
     int ret;
+    char buf;
+    close(keepalive_fds[1]); /* only children need keep this open */
     waitpid(child_pid, &ret, 0);
+    (void) (read(keepalive_fds[0], &buf, 1) + 1); /* reads 0B when all children exit */
     cleanup_shobjs();
     if (WIFSIGNALED(ret))
     {
