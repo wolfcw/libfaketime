@@ -169,14 +169,15 @@ will be loaded, but just report the real system time. There are three
 ways to specify the faked time:
 
 a) By setting the environment variable FAKETIME.
-b) By using the file .faketimerc in your home directory.
-c) By using the file /etc/faketimerc for a system-wide default.
+b) By using the file given in the environment variable FAKETIME_TIMESTAMP_FILE
+c) By using the file .faketimerc in your home directory.
+d) By using the file /etc/faketimerc for a system-wide default.
 
-If you want to use b) or c), $HOME/.faketimerc or /etc/faketimerc consist of
+If you want to use b) c) or d), $HOME/.faketimerc or /etc/faketimerc consist of
 only one line of text with exactly the same content as the FAKETIME environment
 variable, which is described below. Note that /etc/faketimerc will only be used
-if there is no $HOME/.faketimerc, and the FAKETIME environment variable always
-has priority over the files.
+if there is no $HOME/.faketimerc nor FAKETIME_TIMESTAMP_FILE file exists, and
+the FAKETIME environment variable always has priority over the files.
 
 
 4b) Using absolute dates

@@ -1777,6 +1777,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     if (parse_config_file)
     {
       static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+      char custom_filename[BUFSIZ];
       char filename[BUFSIZ];
       FILE *faketimerc;
       /* initialize with default or env. variable */
@@ -1794,8 +1795,10 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
        * a system-wide /etc/faketimerc present.
        * The /etc/faketimerc handling has been contributed by David Burley,
        * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
+      (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
       (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
-      if ((faketimerc = fopen(filename, "rt")) != NULL ||
+      if ((faketimerc = fopen(custom_filename, "rt")) != NULL ||
+          (faketimerc = fopen(filename, "rt")) != NULL ||
           (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
       {
         char line[BUFFERLEN];
