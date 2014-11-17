@@ -30,12 +30,6 @@
 #	  FAKE_TIMERS
 #	      - Also intercept timer_settime() and timer_gettime()
 #
-#     NO_CACHING
-#         - Disables the caching of the fake time offset. Only disable caching
-#           if you change the fake time offset during program runtime very
-#           frequently. Disabling the cache may negatively influence the
-#           performance.
-#
 #	  MULTI_ARCH
 #	  	  - If MULTI_ARCH is set, the faketime wrapper program will put a literal
 #	  	    $LIB into the LD_PRELOAD environment variable it creates, which makes

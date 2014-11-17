@@ -21,12 +21,6 @@
 # 	  FAKE_SLEEP
 # 	      - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
 #
-#     NO_CACHING
-#         - Disables the caching of the fake time offset. Only disable caching
-#           if you change the fake time offset during program runtime very
-#           frequently. Disabling the cache may negatively influence the
-#           performance.
-#
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
 #

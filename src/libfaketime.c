@@ -200,6 +200,8 @@ static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
 static int fake_monotonic_clock = 1;
+static int cache_enabled = 1;
+static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
 /*
  * Static timespec to store our startup time, followed by a load-time library
@@ -1460,6 +1462,17 @@ void __attribute__ ((constructor)) ftpl_init(void)
   }
 #endif
 
+  if ((tmp_env = getenv("FAKETIME_CACHE_DURATION")) != NULL)
+  {
+    cache_duration = atoi(tmp_env);
+  }
+  if ((tmp_env = getenv("FAKETIME_NO_CACHE")) != NULL)
+  {
+    if (0 == strcmp(tmp_env, "1"))
+    {
+      cache_enabled = 0;
+    }
+  }
   if ((tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
   {
     if (0 == strcmp(tmp_env, "1"))
@@ -1676,7 +1689,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   /* variables used for caching, introduced in version 0.6 */
   static time_t last_data_fetch = 0;  /* not fetched previously at first call */
   static int cache_expired = 1;       /* considered expired at first call */
-  static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
   if (dont_fake) return 0;
   /* Per process timers are only sped up or slowed down */
@@ -1762,9 +1774,10 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     }
   }
 
-#ifdef NO_CACHING
-  cache_expired = 1;
-#endif
+  if (cache_enabled == 0)
+  {
+    cache_expired = 1;
+  }
 
   if (cache_expired == 1)
   {
