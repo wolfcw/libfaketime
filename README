@@ -169,14 +169,15 @@ will be loaded, but just report the real system time. There are three
 ways to specify the faked time:
 
 a) By setting the environment variable FAKETIME.
-b) By using the file .faketimerc in your home directory.
-c) By using the file /etc/faketimerc for a system-wide default.
+b) By using the file given in the environment variable FAKETIME_TIMESTAMP_FILE
+c) By using the file .faketimerc in your home directory.
+d) By using the file /etc/faketimerc for a system-wide default.
 
-If you want to use b) or c), $HOME/.faketimerc or /etc/faketimerc consist of
+If you want to use b) c) or d), $HOME/.faketimerc or /etc/faketimerc consist of
 only one line of text with exactly the same content as the FAKETIME environment
 variable, which is described below. Note that /etc/faketimerc will only be used
-if there is no $HOME/.faketimerc, and the FAKETIME environment variable always
-has priority over the files.
+if there is no $HOME/.faketimerc nor FAKETIME_TIMESTAMP_FILE file exists, and
+the FAKETIME environment variable always has priority over the files.
 
 
 4b) Using absolute dates
@@ -314,12 +315,14 @@ Using relative offsets or 'start at' dates solves this problem.
 libfaketime then will always report the faked time based on the real
 current time and the offset you've specified.
 
-Please also note that your specification of the fake time is cached for 10
-seconds in order to enhance the library's performance. Thus, if you change the
+Please also note that your default specification of the fake time is cached for
+10 seconds in order to enhance the library's performance. Thus, if you change the
 content of $HOME/.faketimerc or /etc/faketimerc while a program is running, it
 may take up to 10 seconds before the new fake time is applied. If this is a
-problem in your scenario, you can disable caching at compile time by adding the
-command line option -DNO_CACHING to this library's Makefile.
+problem in your scenario, you can change number of seconds before the file is read
+again with environment variable FAKETIME_CACHE_DURATION, or disable caching at all
+with FAKETIME_NO_CACHE=1. Remember that disabling the cache may negatively
+influence the performance.
 
 
 4f) Faking the date and time system-wide
