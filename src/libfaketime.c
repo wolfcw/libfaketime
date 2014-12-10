@@ -152,7 +152,10 @@ static int          apple_clock_gettime     (clockid_t clk_id, struct timespec *
 static clock_serv_t clock_serv_real;
 #endif
 
+static int initialized = 0;
+
 /* prototypes */
+void   ftpl_init(void);
 time_t fake_time(time_t *time_tptr);
 int    fake_gettimeofday(struct timeval *tv);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
@@ -500,6 +503,10 @@ static inline void fake_stat64buf (struct stat64 *buf) {
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_stat)
   { /* dlsym() failed */
 #ifdef DEBUG
@@ -529,6 +536,10 @@ int __xstat (int ver, const char *path, struct stat *buf)
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat (int ver, int fildes, struct stat *buf)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_fstat)
   {  /* dlsym() failed */
 #ifdef DEBUG
@@ -558,6 +569,10 @@ int __fxstat (int ver, int fildes, struct stat *buf)
 #ifndef NO_ATFILE
 int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int flag)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_fstatat)
   { /* dlsym() failed */
 #ifdef DEBUG
@@ -587,6 +602,10 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat (int ver, const char *path, struct stat *buf)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_lstat)
   {  /* dlsym() failed */
 #ifdef DEBUG
@@ -615,6 +634,10 @@ int __lxstat (int ver, const char *path, struct stat *buf)
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat64 (int ver, const char *path, struct stat64 *buf)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_stat64)
   { /* dlsym() failed */
 #ifdef DEBUG
@@ -643,6 +666,10 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat64 (int ver, int fildes, struct stat64 *buf)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_fstat64)
   {  /* dlsym() failed */
 #ifdef DEBUG
@@ -672,6 +699,10 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
 #ifndef NO_ATFILE
 int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf, int flag)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_fstatat64)
   {  /* dlsym() failed */
 #ifdef DEBUG
@@ -701,6 +732,10 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat64 (int ver, const char *path, struct stat64 *buf)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (NULL == real_lstat64)
   {  /* dlsym() failed */
 #ifdef DEBUG
@@ -743,6 +778,10 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
   int result;
   struct timespec real_req;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_nanosleep == NULL)
   {
     return -1;
@@ -787,6 +826,11 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 int usleep(useconds_t usec)
 {
   int result;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (user_rate_set && !dont_fake)
   {
     struct timespec real_req;
@@ -819,6 +863,10 @@ int usleep(useconds_t usec)
  */
 unsigned int sleep(unsigned int seconds)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (user_rate_set && !dont_fake)
   {
     if (real_nanosleep == NULL)
@@ -870,6 +918,11 @@ unsigned int alarm(unsigned int seconds)
 {
   unsigned int ret;
   unsigned int seconds_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * seconds):seconds;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_alarm == NULL)
   {
     return -1;
@@ -888,6 +941,10 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
   struct timespec real_timeout, *real_timeout_pt;
   int ret;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_ppoll == NULL)
   {
     return -1;
@@ -920,6 +977,11 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
   int ret, timeout_real = (user_rate_set && !dont_fake && (timeout > 0))?(timeout / user_rate):timeout;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_poll == NULL)
   {
     return -1;
@@ -958,6 +1020,10 @@ timer_settime_common(timer_t_or_int timerid, int flags,
   struct itimerspec new_real;
   struct itimerspec *new_real_pt = &new_real;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (new_value == NULL)
   {
     new_real_pt = NULL;
@@ -1062,6 +1128,10 @@ int timer_settime_22(int timerid, int flags,
          const struct itimerspec *new_value,
          struct itimerspec *old_value)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_timer_settime_22 == NULL)
   {
     return -1;
@@ -1080,6 +1150,10 @@ int timer_settime_233(timer_t timerid, int flags,
       const struct itimerspec *new_value,
       struct itimerspec *old_value)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_timer_settime_233 == NULL)
   {
     return -1;
@@ -1099,6 +1173,10 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
 {
   int result;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_timer_gettime_233 == NULL)
   {
     return -1;
@@ -1140,6 +1218,10 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
  */
 int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_timer_gettime_22 == NULL)
   {
     return -1;
@@ -1156,6 +1238,10 @@ int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
  */
 int timer_gettime_233(timer_t timerid, struct itimerspec *curr_value)
 {
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   if (real_timer_gettime_233 == NULL)
   {
     return -1;
@@ -1191,6 +1277,10 @@ time_t time(time_t *time_tptr)
   struct timespec tp;
   time_t result;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_REALTIME, &tp));
   if (result == -1) return -1;
 
@@ -1209,6 +1299,10 @@ int ftime(struct timeb *tb)
   struct timespec tp;
   int result;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   /* sanity check */
   if (tb == NULL)
     return 0;               /* ftime() always returns 0, see manpage */
@@ -1246,6 +1340,10 @@ int gettimeofday(struct timeval *tv, void *tz)
 {
   int result;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   /* sanity check */
   if (tv == NULL)
   {
@@ -1276,6 +1374,10 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   int result;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
   /* sanity check */
   if (tp == NULL)
   {
@@ -1652,6 +1754,8 @@ void __attribute__ ((constructor)) ftpl_init(void)
     parse_config_file = false;
     parse_ft_string(tmp_env);
   }
+
+  initialized = 1;
 }
 
 
