@@ -93,7 +93,7 @@ typedef int clockid_t;
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
  */
-__thread bool dont_fake = false;
+static __thread bool dont_fake = false;
 
 /* Wrapper for function calls, which we want to return system time */
 #define DONT_FAKE_TIME(call)          \
@@ -155,9 +155,8 @@ static clock_serv_t clock_serv_real;
 static int initialized = 0;
 
 /* prototypes */
-time_t fake_time(time_t *time_tptr);
-int    fake_gettimeofday(struct timeval *tv);
-int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
+static int    fake_gettimeofday(struct timeval *tv);
+static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 /** Semaphore protecting shared data */
 static sem_t *shared_sem = NULL;
@@ -2000,17 +1999,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 #endif
   save_time(tp);
   return 0;
-}
-
-time_t fake_time(time_t *time_tptr)
-{
-  struct timespec tp;
-
-  tp.tv_sec = *time_tptr;
-  tp.tv_nsec = ftpl_starttime.real.tv_nsec;
-  (void)fake_clock_gettime(CLOCK_REALTIME, &tp);
-  *time_tptr = tp.tv_sec;
-  return *time_tptr;
 }
 
 int fake_gettimeofday(struct timeval *tv)
