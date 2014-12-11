@@ -155,7 +155,6 @@ static clock_serv_t clock_serv_real;
 static int initialized = 0;
 
 /* prototypes */
-void   ftpl_init(void);
 time_t fake_time(time_t *time_tptr);
 int    fake_gettimeofday(struct timeval *tv);
 int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
@@ -232,6 +231,7 @@ enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 static bool parse_config_file = true;
 
 void ft_cleanup (void) __attribute__ ((destructor));
+void ftpl_init (void) __attribute__ ((constructor));
 
 
 /*
@@ -1496,7 +1496,7 @@ parse_modifiers:
  *      =======================================================================
  */
 
-void __attribute__ ((constructor)) ftpl_init(void)
+void ftpl_init(void)
 {
   char *tmp_env;
 
