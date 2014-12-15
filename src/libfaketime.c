@@ -1554,6 +1554,7 @@ void ftpl_init(void)
   }
 #endif
 #endif
+  initialized = 1;
 
   ft_shm_init();
 #ifdef FAKE_STAT
@@ -1753,8 +1754,6 @@ void ftpl_init(void)
     parse_config_file = false;
     parse_ft_string(tmp_env);
   }
-
-  initialized = 1;
 }
 
 
