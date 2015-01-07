@@ -76,7 +76,7 @@ LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
 all: ${LIBS} ${BINS}
 
-faketimeMT.o: EXTRA_FLAGS := -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME
+libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME
 
 ${LIBS_OBJ}: libfaketime.c
 	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
