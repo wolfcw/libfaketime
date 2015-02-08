@@ -22,7 +22,6 @@
  */
 
 #define _GNU_SOURCE             /* required to get RTLD_NEXT defined */
-#define _XOPEN_SOURCE           /* required to get strptime() defined */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +56,11 @@
 
 #ifndef __APPLE__
 extern char *__progname;
+#ifdef __sun
+#include "sunos_endian.h"
+#else
 #include <endian.h>
+#endif
 #else
 /* endianness related macros */
 #define htobe64(x) OSSwapHostToBigInt64(x)
@@ -145,6 +148,7 @@ static unsigned int (*real_sleep)           (unsigned int seconds);
 static unsigned int (*real_alarm)           (unsigned int seconds);
 static int          (*real_poll)            (struct pollfd *, nfds_t, int);
 static int          (*real_ppoll)           (struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
+static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 #endif
 #ifdef __APPLE__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
@@ -216,6 +220,8 @@ static char user_faked_time_fmt[BUFSIZ] = {0};
 static struct timespec user_faked_time_timespec = {0, -1};
 /* User supplied base time is set */
 static bool user_faked_time_set = false;
+static char user_faked_time_saved[BUFFERLEN] = {0};
+
 /* Fractional user offset provided through FAKETIME env. var.*/
 static struct timespec user_offset = {0, -1};
 /* Speed up or slow down clock */
@@ -989,6 +995,52 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
   DONT_FAKE_TIME(ret = (*real_poll)(fds, nfds, timeout_real));
   return ret;
 }
+
+int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
+{
+  int result;
+  struct timespec real_abs_timeout, *real_abs_timeout_pt;
+
+  /* sanity check */
+  if (abs_timeout == NULL)
+  {
+    return -1;
+  }
+
+  if (NULL == real_sem_timedwait)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original sem_timedwait() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
+
+  if (!dont_fake)
+  {
+    struct timespec tdiff, timeadj;
+
+    timespecsub(abs_timeout, &ftpl_starttime.real, &tdiff);
+
+    if (user_rate_set)
+    {
+      timespecmul(&tdiff, user_rate, &timeadj);
+    }
+    else
+    {
+        timeadj = tdiff;
+    }
+    timespecadd(&user_faked_time_timespec, &timeadj, &real_abs_timeout);
+    real_abs_timeout_pt = &real_abs_timeout;
+  }
+  else
+  {
+    /* cast away constness */
+    real_abs_timeout_pt = (struct timespec *)abs_timeout;
+  }
+
+  DONT_FAKE_TIME(result = (*real_sem_timedwait)(sem, real_abs_timeout_pt));
+  return result;
+}
 #endif
 
 #ifndef __APPLE__
@@ -1416,6 +1468,13 @@ static void parse_ft_string(const char *user_faked_time)
 {
   struct tm user_faked_time_tm;
   char * tmp_time_fmt;
+
+  if (!strncmp(user_faked_time, user_faked_time_saved, BUFFERLEN))
+  {
+      /* No change */
+      return;
+  }
+
   /* check whether the user gave us an absolute time to fake */
   switch (user_faked_time[0])
   {
@@ -1464,6 +1523,9 @@ static void parse_ft_string(const char *user_faked_time)
 
       user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
       user_faked_time_timespec.tv_nsec = 0;
+
+      /* Reset starttime */
+      system_time_from_system(&ftpl_starttime);
       goto parse_modifiers;
       break;
 
@@ -1486,6 +1548,12 @@ parse_modifiers:
       }
       break;
   } // end of switch
+
+  strncpy(user_faked_time_saved, user_faked_time, BUFFERLEN-1);
+  user_faked_time_saved[BUFFERLEN-1] = 0;
+#ifdef DEBUG
+  fprintf(stderr, "new FAKETIME: %s\n", user_faked_time_saved);
+#endif
 }
 
 
@@ -1524,6 +1592,7 @@ void ftpl_init(void)
   real_alarm =              dlsym(RTLD_NEXT, "alarm");
   real_poll =               dlsym(RTLD_NEXT, "poll");
   real_ppoll =              dlsym(RTLD_NEXT, "ppoll");
+  real_sem_timedwait =      dlsym(RTLD_NEXT, "sem_timedwait");
 #endif
 #ifdef FAKE_INTERNAL_CALLS
   real___ftime =              dlsym(RTLD_NEXT, "__ftime");
@@ -1540,6 +1609,10 @@ void ftpl_init(void)
     real_clock_gettime  =   dlsym(RTLD_NEXT, "clock_gettime");
   }
 #ifdef FAKE_TIMERS
+#if defined(__sun)
+    real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
+    real_timer_settime_233 =  dlsym(RTLD_NEXT, "timer_settime");
+#else
   real_timer_settime_22 =   dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.2");
   real_timer_settime_233 =  dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
   if (NULL == real_timer_settime_233)
@@ -1554,6 +1627,8 @@ void ftpl_init(void)
   }
 #endif
 #endif
+#endif
+
   initialized = 1;
 
   ft_shm_init();
@@ -1883,29 +1958,30 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
   if (cache_expired == 1)
   {
-    last_data_fetch = tp->tv_sec;
+    static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+    /* initialize with default or env. variable */
+    char *tmp_env;
+
     /* Can be enabled for testing ...
       fprintf(stderr, "***************++ Cache expired ++**************\n");
     */
 
+    if (NULL != (tmp_env = getenv("FAKETIME")))
+    {
+      strncpy(user_faked_time, tmp_env, BUFFERLEN);
+    }
+    else
+    {
+      snprintf(user_faked_time, BUFFERLEN, "+0");
+    }
+
+    last_data_fetch = tp->tv_sec;
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
-      static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
       char custom_filename[BUFSIZ];
       char filename[BUFSIZ];
       FILE *faketimerc;
-      /* initialize with default or env. variable */
-      char *tmp_env;
-      if (NULL != (tmp_env = getenv("FAKETIME")))
-      {
-        strncpy(user_faked_time, tmp_env, BUFFERLEN);
-      }
-      else
-      {
-        snprintf(user_faked_time, BUFFERLEN, "+0");
-      }
-
       /* check whether there's a .faketimerc in the user's home directory, or
        * a system-wide /etc/faketimerc present.
        * The /etc/faketimerc handling has been contributed by David Burley,
@@ -1930,8 +2006,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         }
         fclose(faketimerc);
       }
-      parse_ft_string(user_faked_time);
     } /* read fake time from file */
+    parse_ft_string(user_faked_time);
   } /* cache had expired */
 
   if (infile_set)

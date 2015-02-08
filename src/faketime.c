@@ -211,8 +211,15 @@ int main (int argc, char **argv)
     struct ft_shared_s *ft_shared;
     char shared_objs[PATH_BUFSIZE];
 
-    snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%d", getpid());
-    snprintf(shm_name, PATH_BUFSIZE -1 ,"/faketime_shm_%d", getpid());
+    /*
+     * Casting of getpid() return value to long needed to make GCC on SmartOS
+     * happy, since getpid's return value's type on SmartOS is long. Since
+     * getpid's return value's type is int on most other systems, and that
+     * sizeof(long) always >= sizeof(int), this works on all platforms without
+     * the need for crazy #ifdefs.
+     */
+    snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%ld", (long)getpid());
+    snprintf(shm_name, PATH_BUFSIZE -1 ,"/faketime_shm_%ld", (long)getpid());
 
     if (SEM_FAILED == (sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
     {
@@ -358,6 +365,8 @@ int main (int argc, char **argv)
     }
     exit(WEXITSTATUS(ret));
   }
+
+  return EXIT_SUCCESS;
 }
 
 /*
