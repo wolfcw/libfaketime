@@ -45,7 +45,8 @@ libfaketime might be used for various purposes, for example
 - debugging time-related issues, such as expired SSL certificates
 - running software which ceases to run outside a certain timeframe
 - using different system-wide date and time settings, e.g., on OpenVZ-
-  based virtual machines running on the same host.
+  based virtual machines running on the same host
+- deterministic build processes.
 
 
 
@@ -148,7 +149,7 @@ Mon Nov  8 12:01:12 CEST 2007
 
 
 The basic way of running any command/program with libfaketime enabled is to
-make sure the environment variable LD_PRELOAD contains the full path and
+make sure the environment variable LD_PRELOAD contains the path and
 filename of the libfaketime library. This can either be done by setting it once
 beforehand:
 
@@ -163,6 +164,11 @@ LD_PRELOAD=/path/to/libfaketime.so.1 your_command_here
 (These examples are for the bash shell; how environment variables are set may
 vary on your system.)
 
+On Linux, library search paths can be set as part of the linker configuration.
+LD_PRELOAD then also works with relative paths. For example, when libfaketime.so.1
+is installed as /path/to/libfaketime.so.1, you can add /path/to to an appropriate
+linker configuration file, e.g., /etc/ld.so.conf.d/local.conf and then run
+the "ldconfig" command. Afterwards, using LD_PRELOAD=libfaketime.so.1 suffices.
 
 However, also the faked time should be specified; otherwise, libfaketime
 will be loaded, but just report the real system time. There are three
