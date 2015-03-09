@@ -174,8 +174,8 @@ int main (int argc, char **argv)
     if (VERBOSE == 1)
     {
         printf("timer_gettime(timerid1, &its); its = {{%ld, %ld}, {%ld, %ld}}}\n",
-                its.it_interval.tv_sec, its.it_interval.tv_nsec,
-                its.it_value.tv_sec, its.it_value.tv_nsec);
+                (long)its.it_interval.tv_sec, (long)its.it_interval.tv_nsec,
+                (long)its.it_value.tv_sec, (long)its.it_value.tv_nsec);
     }
 
     int timer_getoverrun_timerid2 = timer_getoverrun(timerid2);
@@ -188,8 +188,8 @@ int main (int argc, char **argv)
     if (VERBOSE == 1)
     {
         printf("timer_gettime(timerid2, &its); its = {{%ld, %ld}, {%ld, %ld}}}\n",
-            its.it_interval.tv_sec, its.it_interval.tv_nsec,
-            its.it_value.tv_sec, its.it_value.tv_nsec);
+            (long)its.it_interval.tv_sec, (long)its.it_interval.tv_nsec,
+            (long)its.it_value.tv_sec, (long)its.it_value.tv_nsec);
     }
 #endif
 
