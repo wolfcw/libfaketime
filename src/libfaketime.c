@@ -1662,17 +1662,29 @@ void ftpl_init(void)
   /* We can prevent faking time for specified commands */
   if ((tmp_env = getenv("FAKETIME_SKIP_CMDS")) != NULL)
   {
-    char *skip_cmd, *saveptr;
-    skip_cmd = strtok_r(tmp_env, ",", &saveptr);
-    while (skip_cmd != NULL)
+    char *skip_cmd, *saveptr, *tmpvar;
+    /* Don't mess with the env variable directly. */
+    tmpvar = strdup(tmp_env);
+    if (tmpvar != NULL)
     {
-      if (0 == strcmp(progname, skip_cmd))
+      skip_cmd = strtok_r(tmpvar, ",", &saveptr);
+      while (skip_cmd != NULL)
       {
-        ft_mode = FT_NOOP;
-        dont_fake = true;
-        break;
+        if (0 == strcmp(progname, skip_cmd))
+        {
+          ft_mode = FT_NOOP;
+          dont_fake = true;
+          break;
+        }
+        skip_cmd = strtok_r(NULL, ",", &saveptr);
       }
-      skip_cmd = strtok_r(NULL, ",", &saveptr);
+      free(tmpvar);
+      tmpvar = NULL;
+    }
+    else
+    {
+      fprintf(stderr, "Error: Could not copy the environment variable value.\n");
+      exit(EXIT_FAILURE);
     }
   }
 
