@@ -87,13 +87,6 @@ typedef int clockid_t;
 #endif
 #endif
 
-#ifndef CLOCK_REALTIME_COARSE
-#define CLOCK_REALTIME_COARSE CLOCK_REALTIME
-#endif
-#ifndef CLOCK_MONOTONIC_COARSE
-#define CLOCK_MONOTONIC_COARSE CLOCK_MONOTONIC
-#endif
-
 /* some systems lack raw clock */
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1)
@@ -1920,11 +1913,15 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     switch (clk_id)
     {
       case CLOCK_REALTIME:
+#ifdef CLOCK_REALTIME_COARSE
       case CLOCK_REALTIME_COARSE:
+#endif
         timespecsub(tp, &ftpl_starttime.real, &tmp_ts);
         break;
       case CLOCK_MONOTONIC:
+#ifdef CLOCK_MONOTONIC_COARSE
       case CLOCK_MONOTONIC_COARSE:
+#endif
         timespecsub(tp, &ftpl_starttime.mon, &tmp_ts);
         break;
       case CLOCK_MONOTONIC_RAW:
@@ -2062,11 +2059,15 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         switch (clk_id)
         {
           case CLOCK_REALTIME:
+#ifdef CLOCK_REALTIME_COARSE
           case CLOCK_REALTIME_COARSE:
+#endif
             timespecsub(tp, &ftpl_starttime.real, &tdiff);
             break;
           case CLOCK_MONOTONIC:
+#ifdef CLOCK_MONOTONIC_COARSE
           case CLOCK_MONOTONIC_COARSE:
+#endif
             timespecsub(tp, &ftpl_starttime.mon, &tdiff);
             break;
           case CLOCK_MONOTONIC_RAW:
