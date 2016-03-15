@@ -1566,6 +1566,7 @@ parse_modifiers:
 void ftpl_init(void)
 {
   char *tmp_env;
+  bool dont_fake_final;
 
 #ifdef __APPLE__
   const char *progname = getprogname();
@@ -1629,6 +1630,8 @@ void ftpl_init(void)
 #endif
 #endif
 
+  dont_fake = true; // Do not fake times during initialization
+  dont_fake_final = false;
   initialized = 1;
 
   ft_shm_init();
@@ -1673,7 +1676,7 @@ void ftpl_init(void)
         if (0 == strcmp(progname, skip_cmd))
         {
           ft_mode = FT_NOOP;
-          dont_fake = true;
+          dont_fake_final = true;
           break;
         }
         skip_cmd = strtok_r(NULL, ",", &saveptr);
@@ -1714,7 +1717,7 @@ void ftpl_init(void)
     if (!cmd_matched)
     {
       ft_mode = FT_NOOP;
-      dont_fake = true;
+      dont_fake_final = true;
     }
   }
 
@@ -1841,6 +1844,8 @@ void ftpl_init(void)
     parse_config_file = false;
     parse_ft_string(tmp_env);
   }
+
+  dont_fake = dont_fake_final;
 }
 
 
