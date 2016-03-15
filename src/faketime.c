@@ -63,29 +63,29 @@ char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
 
 void usage(const char *name)
 {
-  printf("\n");
-  printf("Usage: %s [switches] <timestamp> <program with arguments>\n", name);
-  printf("\n");
-  printf("This will run the specified 'program' with the given 'arguments'.\n");
-  printf("The program will be tricked into seeing the given 'timestamp' as its starting date and time.\n");
-  printf("The clock will continue to run from this timestamp. Please see the manpage (man faketime)\n");
-  printf("for advanced options, such as stopping the wall clock and make it run faster or slower.\n");
-  printf("\n");
-  printf("The optional switches are:\n");
-  printf("  -m                  : Use the multi-threaded version of libfaketime\n");
-  printf("  -f                  : Use the advanced timestamp specification format (see manpage)\n");
-  printf("  --exclude-monotonic : Prevent monotonic clock from drifting (not the raw monotonic one)\n");
-  printf("\n");
-  printf("Examples:\n");
-  printf("%s 'last friday 5 pm' /bin/date\n", name);
-  printf("%s '2008-12-24 08:15:42' /bin/date\n", name);
-  printf("%s -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n", name);
-  printf("%s -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n", name);
-  printf("%s -f '+2,5y i2,0' /bin/bash -c 'date; while true; do date; sleep 1 ; done'\n", name);
-  printf("In this single case all spawned processes will use the same global clock\n");
-  printf("without restaring it at the start of each process.\n\n");
-  printf("(Please note that it depends on your locale settings whether . or , has to be used for fractions)\n");
-  printf("\n");
+  printf("\n"
+  "Usage: %s [switches] <timestamp> <program with arguments>\n"
+  "\n"
+  "This will run the specified 'program' with the given 'arguments'.\n"
+  "The program will be tricked into seeing the given 'timestamp' as its starting date and time.\n"
+  "The clock will continue to run from this timestamp. Please see the manpage (man faketime)\n"
+  "for advanced options, such as stopping the wall clock and make it run faster or slower.\n"
+  "\n"
+  "The optional switches are:\n"
+  "  -m                  : Use the multi-threaded version of libfaketime\n"
+  "  -f                  : Use the advanced timestamp specification format (see manpage)\n"
+  "  --exclude-monotonic : Prevent monotonic clock from drifting (not the raw monotonic one)\n"
+  "\n"
+  "Examples:\n"
+  "%s 'last friday 5 pm' /bin/date\n"
+  "%s '2008-12-24 08:15:42' /bin/date\n"
+  "%s -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n"
+  "%s -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n"
+  "%s -f '+2,5y i2,0' /bin/bash -c 'date; while true; do date; sleep 1 ; done'\n"
+  "In this single case all spawned processes will use the same global clock\n"
+  "without restaring it at the start of each process.\n\n"
+  "(Please note that it depends on your locale settings whether . or , has to be used for fractions)\n"
+  "\n", name, name, name, name, name, name);
 }
 
 /** Clean up shared objects */
