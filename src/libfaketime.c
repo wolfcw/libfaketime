@@ -43,7 +43,7 @@
 
 #include "time_ops.h"
 #include "faketime_common.h"
-#include "atof_nolocal.h"
+#include "atof_nolocale.h"
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
@@ -1476,17 +1476,14 @@ static void parse_ft_string(const char *user_faked_time)
       return;
   }
 
-  strncpy(user_faked_time_saved, user_faked_time, BUFFERLEN-1);
-  user_faked_time_saved[BUFFERLEN-1] = 0;
-
   /* check whether the user gave us an absolute time to fake */
-  switch (user_faked_time_saved[0])
+  switch (user_faked_time[0])
   {
 
     default:  /* Try and interpret this as a specified time */
       if (ft_mode != FT_NOOP) ft_mode = FT_FREEZE;
       user_faked_time_tm.tm_isdst = -1;
-      if (NULL != strptime(user_faked_time_saved, user_faked_time_fmt, &user_faked_time_tm))
+      if (NULL != strptime(user_faked_time, user_faked_time_fmt, &user_faked_time_tm))
       {
         user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
         user_faked_time_timespec.tv_nsec = 0;
@@ -1503,15 +1500,15 @@ static void parse_ft_string(const char *user_faked_time)
     case '-': /* User-specified offset */
       if (ft_mode != FT_NOOP) ft_mode = FT_START_AT;
       /* fractional time offsets contributed by Karl Chen in v0.8 */
-      double frac_offset = atof_nolocale(user_faked_time_saved);
+      double frac_offset = atof_nolocale(user_faked_time);
 
       /* offset is in seconds by default, but the string may contain
        * multipliers...
        */
-      if (strchr(user_faked_time_saved, 'm') != NULL) frac_offset *= 60;
-      else if (strchr(user_faked_time_saved, 'h') != NULL) frac_offset *= 60 * 60;
-      else if (strchr(user_faked_time_saved, 'd') != NULL) frac_offset *= 60 * 60 * 24;
-      else if (strchr(user_faked_time_saved, 'y') != NULL) frac_offset *= 60 * 60 * 24 * 365;
+      if (strchr(user_faked_time, 'm') != NULL) frac_offset *= 60;
+      else if (strchr(user_faked_time, 'h') != NULL) frac_offset *= 60 * 60;
+      else if (strchr(user_faked_time, 'd') != NULL) frac_offset *= 60 * 60 * 24;
+      else if (strchr(user_faked_time, 'y') != NULL) frac_offset *= 60 * 60 * 24 * 365;
 
       user_offset.tv_sec = floor(frac_offset);
       user_offset.tv_nsec = (frac_offset - user_offset.tv_sec) * SEC_TO_nSEC;
@@ -1523,7 +1520,7 @@ static void parse_ft_string(const char *user_faked_time)
     case '@': /* Specific time, but clock along relative to that starttime */
       ft_mode = FT_START_AT;
       user_faked_time_tm.tm_isdst = -1;
-      (void) strptime(&user_faked_time_saved[1], user_faked_time_fmt, &user_faked_time_tm);
+      (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
 
       user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
       user_faked_time_timespec.tv_nsec = 0;
@@ -1537,12 +1534,12 @@ static void parse_ft_string(const char *user_faked_time)
     case 'x': /* Only modifiers are passed, don't fall back to strptime */
 parse_modifiers:
       /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
-      if (strchr(user_faked_time_saved, 'x') != NULL)
+      if (strchr(user_faked_time, 'x') != NULL)
       {
-        user_rate = atof_nolocale(strchr(user_faked_time_saved, 'x')+1);
+        user_rate = atof_nolocale(strchr(user_faked_time, 'x')+1);
         user_rate_set = true;
       }
-      else if (NULL != (tmp_time_fmt = strchr(user_faked_time_saved, 'i')))
+      else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
         double tick_inc = atof_nolocale(tmp_time_fmt + 1);
         /* increment time with every time() call*/
@@ -1553,6 +1550,8 @@ parse_modifiers:
       break;
   } // end of switch
 
+  strncpy(user_faked_time_saved, user_faked_time, BUFFERLEN-1);
+  user_faked_time_saved[BUFFERLEN-1] = 0;
 #ifdef DEBUG
   fprintf(stderr, "new FAKETIME: %s\n", user_faked_time_saved);
 #endif
