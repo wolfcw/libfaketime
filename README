@@ -236,7 +236,7 @@ This command line makes sure FTPL gets loaded and sets the faked time to
 15 days in the past.
 
 Moreno Baricevic has contributed support for the FAKETIME_FMT environment
-variable, which allows to optionally set the strptime() format:
+variable, which allows you to optionally set the strptime() format:
 
 Some simple examples:
 LD_PRELOAD=./libfaketime.so.1 FAKETIME_FMT=%s FAKETIME="`date +%s -d'1 year ago'`" date
