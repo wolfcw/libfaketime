@@ -36,7 +36,7 @@ faketime '2008-12-24 08:15:42' /bin/date
 faketime -f '+2,5y x10,0' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 faketime -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 faketime -f '+2,5y i2,0' /bin/bash -c 'while true; do date ; sleep 1 ; done'
-In this single case all spawned processes will use the same global clock without restaring it at the start of each process.
+In this single case all spawned processes will use the same global clock without restarting it at the start of each process.
 
 (Please note that it depends on your locale settings whether . or , has to be used for fractional offsets)
 .fi
@@ -59,7 +59,7 @@ When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP 
 .PP
 Faking times for multiple programs or even system-wide can be simplified by using ~/.faketimerc files and /etc/faketimerc. Please refer to the README that came with faketime for warnings and details.
 .SH AUTHOR
-Please see the README and NEWS files for contributers.
+Please see the README and NEWS files for contributors.
 .SH BUGS
 Due to limitations of the LD_PRELOAD mechanism, faketime will not work with suidroot and statically linked programs.
 While timestamps and time offsets will work for child processes, speeding the clock up or slowing it down might not

@@ -1,6 +1,6 @@
       =======================================================
              libfaketime, version 0.9.6 (June 2014)
-        (previously also know as FakeTime Preload Library)
+        (previously also known as FakeTime Preload Library)
       =======================================================
 
 
@@ -236,7 +236,7 @@ This command line makes sure FTPL gets loaded and sets the faked time to
 15 days in the past.
 
 Moreno Baricevic has contributed support for the FAKETIME_FMT environment
-variable, which allows to optionally set the strptime() format:
+variable, which allows you to optionally set the strptime() format:
 
 Some simple examples:
 LD_PRELOAD=./libfaketime.so.1 FAKETIME_FMT=%s FAKETIME="`date +%s -d'1 year ago'`" date
@@ -283,7 +283,7 @@ FAKETIME="+1y i2,0"
 will make the clock step two seconds per each time(), etc. call, running
 completely independently of the system clock. It helps running programs
 with some determinism. In this single case all spawned processes will use
-the same global clock without restaring it at the start of each process.
+the same global clock without restarting it at the start of each process.
 
 For testing, your should run a command like
 
@@ -525,8 +525,8 @@ functionality has been added by Balint Reczey in v0.9.5.
 5. License
 ----------
 
-libfaketime has been released under the GNU Public License, GPL. Please see the
-included COPYING file.
+libfaketime has been released under the GNU General Public License, GPL.
+Please see the included COPYING file.
 
 
 6. Contact

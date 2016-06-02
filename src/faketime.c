@@ -83,7 +83,7 @@ void usage(const char *name)
   "%s -f '+2,5y x0,50' /bin/bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n"
   "%s -f '+2,5y i2,0' /bin/bash -c 'date; while true; do date; sleep 1 ; done'\n"
   "In this single case all spawned processes will use the same global clock\n"
-  "without restaring it at the start of each process.\n\n"
+  "without restarting it at the start of each process.\n\n"
   "(Please note that it depends on your locale settings whether . or , has to be used for fractions)\n"
   "\n", name, name, name, name, name, name);
 }

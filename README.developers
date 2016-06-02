@@ -16,7 +16,7 @@ completely done via Github:
 - The "master" branch is updated with tested code only; it is ensured that
   it compiles and works cleanly at least on current Linux and OS X systems.
 
-Code contributions are highly welcome, preferrably via pull requests on Github.
+Code contributions are highly welcome, preferably via pull requests on Github.
 
 
 CODE STYLE
