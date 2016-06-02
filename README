@@ -1,6 +1,6 @@
       =======================================================
              libfaketime, version 0.9.6 (June 2014)
-        (previously also know as FakeTime Preload Library)
+        (previously also known as FakeTime Preload Library)
       =======================================================
 
 
@@ -283,7 +283,7 @@ FAKETIME="+1y i2,0"
 will make the clock step two seconds per each time(), etc. call, running
 completely independently of the system clock. It helps running programs
 with some determinism. In this single case all spawned processes will use
-the same global clock without restaring it at the start of each process.
+the same global clock without restarting it at the start of each process.
 
 For testing, your should run a command like
 
