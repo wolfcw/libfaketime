@@ -1694,7 +1694,7 @@ void ftpl_init(void)
   /* We can limit faking time to specified commands */
   if ((tmp_env = getenv("FAKETIME_ONLY_CMDS")) != NULL)
   {
-    char *only_cmd, *saveptr;
+    char *only_cmd, *saveptr, *tmpvar;
     bool cmd_matched = false;
 
     if (getenv("FAKETIME_SKIP_CMDS") != NULL)
@@ -1703,21 +1703,29 @@ void ftpl_init(void)
       exit(EXIT_FAILURE);
     }
 
-    only_cmd = strtok_r(tmp_env, ",", &saveptr);
-    while (only_cmd != NULL)
-    {
-      if (0 == strcmp(progname, only_cmd))
+    /* Don't mess with the env variable directly. */
+    tmpvar = strdup(tmp_env);
+    if (tmpvar != NULL) {
+      only_cmd = strtok_r(tmpvar, ",", &saveptr);
+      while (only_cmd != NULL)
       {
-        cmd_matched = true;
-        break;
+        if (0 == strcmp(progname, only_cmd))
+        {
+          cmd_matched = true;
+          break;
+        }
+        only_cmd = strtok_r(NULL, ",", &saveptr);
       }
-      only_cmd = strtok_r(NULL, ",", &saveptr);
-    }
 
-    if (!cmd_matched)
-    {
-      ft_mode = FT_NOOP;
-      dont_fake_final = true;
+      if (!cmd_matched)
+      {
+        ft_mode = FT_NOOP;
+        dont_fake_final = true;
+      }
+      free(tmpvar);
+    } else {
+      fprintf(stderr, "Error: Could not copy the environment variable value.\n");
+      exit(EXIT_FAILURE);
     }
   }
 
