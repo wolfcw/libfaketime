@@ -63,9 +63,13 @@ extern char *__progname;
 #endif
 #else
 /* endianness related macros */
+#define OSSwapHostToBigInt64(x) ((uint64_t)(x))
 #define htobe64(x) OSSwapHostToBigInt64(x)
+#define OSSwapHostToLittleInt64(x) OSSwapInt64(x)
 #define htole64(x) OSSwapHostToLittleInt64(x)
+#define OSSwapBigToHostInt64(x) ((uint64_t)(x))
 #define be64toh(x) OSSwapBigToHostInt64(x)
+#define OSSwapLittleToHostInt64(x) OSSwapInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 
 /* clock_gettime() and related clock definitions are missing on __APPLE__ */
@@ -128,7 +132,7 @@ static int          (*real___ftime)           (struct timeb *);
 static int          (*real___gettimeofday)    (struct timeval *, void *);
 static int          (*real___clock_gettime)   (clockid_t clk_id, struct timespec *tp);
 #endif
-#ifndef __APPLE__
+#ifndef __APPLEOSX__
 #ifdef FAKE_TIMERS
 static int          (*real_timer_settime_22)   (int timerid, int flags, const struct itimerspec *new_value,
                                                 struct itimerspec * old_value);
@@ -150,7 +154,7 @@ static int          (*real_poll)            (struct pollfd *, nfds_t, int);
 static int          (*real_ppoll)           (struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
 static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 #endif
-#ifdef __APPLE__
+#ifdef __APPLEOSX__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
 static int          apple_clock_gettime     (clockid_t clk_id, struct timespec *tp);
 static clock_serv_t clock_serv_real;
@@ -306,7 +310,7 @@ void ft_cleanup (void)
 /* Get system time from system for all clocks */
 static void system_time_from_system (struct system_time_s * systime)
 {
-#ifdef __APPLE__
+#ifdef __APPLEOSX__
   /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
   clock_serv_t cclock;
   mach_timespec_t mts;
@@ -1600,7 +1604,7 @@ void ftpl_init(void)
   real___gettimeofday =       dlsym(RTLD_NEXT, "__gettimeofday");
   real___clock_gettime  =     dlsym(RTLD_NEXT, "__clock_gettime");
 #endif
-#ifdef __APPLE__
+#ifdef __APPLEOSX__
   real_clock_get_time =     dlsym(RTLD_NEXT, "clock_get_time");
   real_clock_gettime  =     apple_clock_gettime;
 #else
@@ -2134,7 +2138,7 @@ int fake_gettimeofday(struct timeval *tv)
  *      =======================================================================
  */
 
-#ifdef __APPLE__
+#ifdef __APPLEOSX__
 /*
  * clock_gettime implementation for __APPLE__
  * @note It always behave like being called with CLOCK_REALTIME.
