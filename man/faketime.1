@@ -7,11 +7,11 @@ faketime \- manipulate the system time for a given command
 .SH DESCRIPTION
 .\" \fIfaketime\fR will trick the given program into seeing the specified timestamp as its starting date and time.
 .PP
-The given command will be tricked into believing that the current system time is the one specified in the timestamp. The wall clock will continue to run
-from this date and time unless specified otherwise (see advanced options). Actually, faketime is a simple wrapper for libfaketime, which uses the LD_PRELOAD
-mechanism to load a small library which intercepts system calls to functions such as
-\fItime(2)\fR and \fIfstat(2)\fR. This wrapper exposes only a subset of libfaketime's functionality; please refer to the README file that came with faketime
-for more details and advanced options, or have a look at http://github.com/wolfcw/libfaketime
+The given command will be tricked into believing that the current system time is the one specified in the timestamp. Filesystem timestamps will also be
+reported relative to this timestamp. The wall clock will continue to run from this date and time unless specified otherwise (see advanced options).
+Actually, faketime is a simple wrapper for libfaketime, which uses the LD_PRELOAD mechanism to load a small library which intercepts system calls to
+functions such as \fItime(2)\fR and \fIfstat(2)\fR. This wrapper exposes only a subset of libfaketime's functionality; please refer to the README file
+that came with faketime for more details and advanced options, or have a look at http://github.com/wolfcw/libfaketime
 .SH OPTIONS
 .TP
 \fB\-\-help\fR
@@ -58,6 +58,8 @@ When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP 
 \fB"i"\fR is followed by the increase interval in seconds.
 .PP
 Faking times for multiple programs or even system-wide can be simplified by using ~/.faketimerc files and /etc/faketimerc. Please refer to the README that came with faketime for warnings and details.
+.PP
+Faking of filesystem timestamps may be disabled by setting the NO_FAKE_STAT environment variable to a non-empty value.
 .SH AUTHOR
 Please see the README and NEWS files for contributors.
 .SH BUGS
