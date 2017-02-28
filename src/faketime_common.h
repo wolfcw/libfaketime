@@ -47,4 +47,11 @@ struct ft_shared_s
   struct system_time_s start_time;
 };
 
+/* These are all needed in order to properly build on OSX */
+#ifdef __APPLE__
+#include <mach/clock.h>
+#include <mach/mach_host.h>
+#include <mach/mach_port.h>
+#endif
+
 #endif
