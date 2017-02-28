@@ -390,7 +390,7 @@ Dynamic changes to the faked time are alternatively possible by
 - changing the FAKETIME environment variable at run-time; this is the preferred
   way if you use libfaketime for debugging and testing as a programmer, as it
   gives you the most direct control of libfaketime without any performance
-  penalities.
+  penalties.
 
 - not using the FAKETIME environment variable, but specifying the fake time in a
   file (such as ~/.faketimerc). You can change the content of this file at
