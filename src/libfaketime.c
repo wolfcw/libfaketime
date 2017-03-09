@@ -87,11 +87,6 @@ typedef int clockid_t;
 #endif
 #endif
 
-/* some systems lack raw clock */
-#ifndef CLOCK_MONOTONIC_RAW
-#define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1)
-#endif
-
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
@@ -324,7 +319,9 @@ static void system_time_from_system (struct system_time_s * systime)
 #else
   DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &systime->real));
   DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC, &systime->mon));
+#ifdef CLOCK_MONOTONIC_RAW
   DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &systime->mon_raw));
+#endif
 #endif
 }
 
@@ -1937,9 +1934,11 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 #endif
         timespecsub(tp, &ftpl_starttime.mon, &tmp_ts);
         break;
+#ifdef CLOCK_MONOTONIC_RAW
       case CLOCK_MONOTONIC_RAW:
         timespecsub(tp, &ftpl_starttime.mon_raw, &tmp_ts);
         break;
+#endif
       default:
         printf("Invalid clock_id for clock_gettime: %d", clk_id);
         exit(EXIT_FAILURE);
@@ -2083,9 +2082,11 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 #endif
             timespecsub(tp, &ftpl_starttime.mon, &tdiff);
             break;
+#ifdef CLOCK_MONOTONIC_RAW
           case CLOCK_MONOTONIC_RAW:
             timespecsub(tp, &ftpl_starttime.mon_raw, &tdiff);
             break;
+#endif
           default:
             printf("Invalid clock_id for clock_gettime: %d", clk_id);
             exit(EXIT_FAILURE);
