@@ -63,13 +63,21 @@ extern char *__progname;
 #endif
 #else
 /* endianness related macros */
+#ifndef OSSwapHostToBigInt64
 #define OSSwapHostToBigInt64(x) ((uint64_t)(x))
+#endif
 #define htobe64(x) OSSwapHostToBigInt64(x)
+#ifndef OSSwapHostToLittleInt64
 #define OSSwapHostToLittleInt64(x) OSSwapInt64(x)
+#endif
 #define htole64(x) OSSwapHostToLittleInt64(x)
+#ifndef OSSwapBigToHostInt64
 #define OSSwapBigToHostInt64(x) ((uint64_t)(x))
+#endif
 #define be64toh(x) OSSwapBigToHostInt64(x)
+#ifndef OSSwapLittleToHostInt64
 #define OSSwapLittleToHostInt64(x) OSSwapInt64(x)
+#endif
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 
 /* clock_gettime() and related clock definitions are missing on __APPLE__ */
@@ -330,8 +338,10 @@ static void system_time_from_system (struct system_time_s * systime)
   systime->mon_raw.tv_sec = mts.tv_sec;
   systime->mon_raw.tv_nsec = mts.tv_nsec;
 #else
-  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &systime->real));
-  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC, &systime->mon));
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &systime->real))
+   ;
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC, &systime->mon))
+   ;
   DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_MONOTONIC_RAW, &systime->mon_raw));
 #endif
 }
