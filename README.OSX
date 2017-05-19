@@ -1,11 +1,11 @@
-README file for libfaketime on Mac OS X
-=======================================
+README file for libfaketime on macOS
+====================================
 
-Support for Mac OS X has meanwhile matured and many command line and
+Support for macOS has meanwhile matured and many command line and
 GUI applications will run stable.
 
-Developments and tests are done on OSX 10.8+ currently, although the
-current version will also work with OSX 10.7.
+Developments and tests are done on Sierra currently.
+Use libfaketime 0.9.6 or earlier on OS X (i.e., before Sierra).
 
 Version 0.9.5 and higher no longer works with OSX <= 10.6 due to
 changes in the underlying system libraries. If you need libfaketime
@@ -17,8 +17,8 @@ on Linux. Please make sure to read the README file for general
 setup and usage, and refer to this file only about OS X specifics.
 
 
-1) Installing libfaketime on OS X
----------------------------------
+1) Installing libfaketime on macOS
+----------------------------------
 
 If you use MacPorts, libfaketime can be installed on the command line
 as follows:
@@ -51,8 +51,8 @@ output is correct:
     make -f Makefile.OSX
 
 
-2) Using libfaketime from the command line on OS X
---------------------------------------------------
+2) Using libfaketime from the command line on macOS
+---------------------------------------------------
 
 You will need to set three environment variables. In a Terminal.app
 or iTerm2 session, the following commands can be used:
@@ -65,7 +65,7 @@ Please refer to the general README file concerning the format
 of the FAKETIME environment variable value and other environment
 variables that are related to it.
 
-The "faketime" wrapper application has been adapted to OS X;
+The "faketime" wrapper application has been adapted to macOS;
 it offers the same limited libfaketime functionality as on Linux
 in a simple-to-use manner without the need to manually set
 those environment variables. Run "faketime" without parameters
@@ -123,13 +123,21 @@ such updates, including own new builds when using Xcode.
 
 Please feel free to report non-working applications on the Github
 libfaketime issues website. This may help us to identify further
-time-related system calls that need to be intercepted on OS X.
+time-related system calls that need to be intercepted on macOS.
 
     https://github.com/wolfcw/libfaketime/issues
 
+Important: When reporting non-working applications, please make
+sure that your issue is not related to SIP (system integrity
+protection). For example, on a SIP-enabled, default macOS installation,
+libfaketime will not work for programs like /bin/bash because
+the path /bin is SIP-protected. Copy your application to a
+non-SIP-protected path, and if libfaketime still does not work,
+feel free to report it.
 
-4) Notes for developers of OS X applications
---------------------------------------------
+
+4) Notes for developers of macOS applications
+---------------------------------------------
 
 The environment variable FAKETIME can be changed at application run-time
 and always takes precedence over other user-controlled settings. It can
