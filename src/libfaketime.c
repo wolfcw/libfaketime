@@ -43,6 +43,7 @@
 
 #include "time_ops.h"
 #include "faketime_common.h"
+#include "atof_nolocale.h"
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #ifdef PTHREAD
@@ -1568,7 +1569,7 @@ static void parse_ft_string(const char *user_faked_time)
     case '-': /* User-specified offset */
       if (ft_mode != FT_NOOP) ft_mode = FT_START_AT;
       /* fractional time offsets contributed by Karl Chen in v0.8 */
-      double frac_offset = atof(user_faked_time);
+      double frac_offset = atof_nolocale(user_faked_time);
 
       /* offset is in seconds by default, but the string may contain
        * multipliers...
@@ -1604,12 +1605,12 @@ parse_modifiers:
       /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
       if (strchr(user_faked_time, 'x') != NULL)
       {
-        user_rate = atof(strchr(user_faked_time, 'x')+1);
+        user_rate = atof_nolocale(strchr(user_faked_time, 'x')+1);
         user_rate_set = true;
       }
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
-        double tick_inc = atof(tmp_time_fmt + 1);
+        double tick_inc = atof_nolocale(tmp_time_fmt + 1);
         /* increment time with every time() call*/
         user_per_tick_inc.tv_sec = floor(tick_inc);
         user_per_tick_inc.tv_nsec = (tick_inc - user_per_tick_inc.tv_sec) * SEC_TO_nSEC ;
