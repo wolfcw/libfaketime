@@ -1027,38 +1027,42 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
  * Faked select()
  */
 int select(int nfds, fd_set *readfds,
-                                             fd_set *writefds,
-                                             fd_set *errorfds,
-                                             struct timeval *timeout)
+           fd_set *writefds,
+           fd_set *errorfds,
+           struct timeval *timeout)
 {
   int ret;
   struct timeval timeout_real;
-
-  if (user_rate_set && !dont_fake && (timeout->tv_sec > 0 || timeout->tv_usec > 0))
-  {
-    struct timespec ts;
-
-    ts.tv_sec = timeout->tv_sec;
-    ts.tv_nsec = timeout->tv_usec * 1000;
-
-    timespecmul(&ts, 1.0 / user_rate, &ts);
-
-    timeout_real.tv_sec = ts.tv_sec;
-    timeout_real.tv_usec = ts.tv_nsec / 1000;
-  }
-  else
-  {
-    timeout_real.tv_sec = timeout->tv_sec;
-    timeout_real.tv_usec = timeout->tv_usec;
-  }
 
   if (!initialized)
   {
     ftpl_init();
   }
+
   if (real_select == NULL)
   {
     return -1;
+  }
+
+  if (timeout != NULL)
+  {
+    if (user_rate_set && !dont_fake && (timeout->tv_sec > 0 || timeout->tv_usec > 0))
+    {
+      struct timespec ts;
+
+      ts.tv_sec = timeout->tv_sec;
+      ts.tv_nsec = timeout->tv_usec * 1000;
+
+      timespecmul(&ts, 1.0 / user_rate, &ts);
+
+      timeout_real.tv_sec = ts.tv_sec;
+      timeout_real.tv_usec = ts.tv_nsec / 1000;
+    }
+    else
+    {
+      timeout_real.tv_sec = timeout->tv_sec;
+      timeout_real.tv_usec = timeout->tv_usec;
+    }
   }
 
   DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, &timeout_real));
