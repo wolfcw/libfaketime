@@ -1065,7 +1065,7 @@ int select(int nfds, fd_set *readfds,
     }
   }
 
-  DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, &timeout_real));
+  DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real));
   return ret;
 }
 
