@@ -1,11 +1,11 @@
 require 'formula'
 
 class Libfaketime < Formula
-  homepage 'http://www.code-wizards.com/projects/libfaketime'
-  url 'http://code-wizards.com/projects/libfaketime/libfaketime-0.9.5.tar.gz'
-  sha1 '12199af854004f231892ab6976c2e99b937e2d61'
+  homepage 'https://github.com/wolfcw/libfaketime'
+  url 'https://github.com/wolfcw/libfaketime/archive/v0.9.7b1.tar.gz'
+  sha1 'f38fe2b355cdfc74807646707a2f2c3e3be84032'
 
-  depends_on :macos => :lion
+  depends_on :macos => :sierra
 
   fails_with :llvm do
     build 2336
