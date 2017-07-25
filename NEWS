@@ -57,7 +57,7 @@ Since 0.8.2:
 
 Since 0.8.1:
     - Added a MacOS port.
-      Thanks to Derrick Brashear!
+      Thanks to Daria Phoebe Brashear!
     - Added a functional test framework that aids in automatically
       determining whether libfaketime works properly on the current
       machine. Thanks to Don Fong!
