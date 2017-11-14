@@ -2,8 +2,8 @@ require 'formula'
 
 class Libfaketime < Formula
   homepage 'https://github.com/wolfcw/libfaketime'
-  url 'https://github.com/wolfcw/libfaketime/archive/v0.9.7b1.tar.gz'
-  sha1 'f38fe2b355cdfc74807646707a2f2c3e3be84032'
+  url 'https://github.com/wolfcw/libfaketime/archive/v0.9.7.tar.gz'
+  sha1 'PLACEHOLDER'
 
   depends_on :macos => :sierra
 
@@ -19,4 +19,3 @@ class Libfaketime < Formula
     man1.install 'man/faketime.1'
   end
 end
-

@@ -15,8 +15,7 @@ command.
 Some libfaketime Portfile caveats:
 
 - Github-based source file distribution
-    (0.9.5rc3 is code-identical to 0.9.5 release except for Makefile patches)
-- Non-clang-compilers need to be blacklisted (for libfaketime =0.9.5)
+- Non-clang-compilers need to be blacklisted
 - MacPorts folks have requested to avoid a platform-specific Makefile.OSX in
   the future
 
@@ -64,4 +63,3 @@ Some libfaketime fink info file caveats:
   make packaging work.
 
 Submission is via https://sourceforge.net/p/fink/package-submissions/
-

@@ -4,7 +4,7 @@ README file for libfaketime on macOS
 Support for macOS has meanwhile matured and many command line and
 GUI applications will run stable.
 
-Developments and tests are done on Sierra currently.
+Developments and tests are done on High Sierra currently.
 Use libfaketime 0.9.6 or earlier on OS X (i.e., before Sierra).
 
 Version 0.9.5 and higher no longer works with OSX <= 10.6 due to

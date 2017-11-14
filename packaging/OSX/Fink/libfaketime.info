@@ -1,12 +1,12 @@
 Package: libfaketime
-Version: 0.9.5
+Version: 0.9.7
 Revision: 1
 
 Source: http://www.code-wizards.com/projects/%n/%n-%v.tar.gz
-Source-MD5: 89b5c71e6c6a93b1c6feba374ac37719
+Source-MD5: PLACEHOLDER
 
 Maintainer: Wolfgang Hommel <wolf@fink.code-wizards.com>
-HomePage: http://www.code-wizards.com/projects/%n
+HomePage: https://github.com/wolfcw/libfaketime
 License: GPL
 
 Description: Modify system time for single applications
@@ -30,7 +30,7 @@ and access its full raw functionality, please see
 <<
 
 BuildDepends: fink (>= 0.28)
-Distribution: 10.7, 10.8, 10.9
+Distribution: 10.7, 10.8, 10.9, 10.10, 10.11, 10.12
 
 CompileScript: <<
 #! /bin/sh -ev
@@ -51,4 +51,3 @@ DocFiles: COPYING README README.OSX
 Shlibs: <<
   !%p/lib/faketime/%N.1.dylib
 <<
-
