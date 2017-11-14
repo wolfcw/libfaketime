@@ -6,8 +6,8 @@ PortGroup           github 1.0
 
 github.setup        wolfcw libfaketime 0.9.7 v
 
-checksums           rmd160  PLACEHOLDER \
-                    sha256  PLACEHOLDER
+checksums           rmd160  8874d43bb212976d929c3007db0cf978311b3596 \
+                    sha256  4d65f368b2d53ee2f93a25d5e9541ce27357f2b95e5e5afff210e0805042811e
 
 categories          sysutils
 platforms           darwin

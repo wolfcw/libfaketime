@@ -3,7 +3,7 @@ Version: 0.9.7
 Revision: 1
 
 Source: http://www.code-wizards.com/projects/%n/%n-%v.tar.gz
-Source-MD5: PLACEHOLDER
+Source-MD5: 8617e2c6caf0977b3ce9a271f867302c
 
 Maintainer: Wolfgang Hommel <wolf@fink.code-wizards.com>
 HomePage: https://github.com/wolfcw/libfaketime
