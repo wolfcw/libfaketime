@@ -2020,8 +2020,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         break;
 #endif
       default:
-        printf("Invalid clock_id for clock_gettime: %d", clk_id);
-        exit(EXIT_FAILURE);
+        timespecsub(tp, &ftpl_starttime.real, &tmp_ts);
+        break;
     }
 
     if (limited_faking)
@@ -2171,8 +2171,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
             break;
 #endif
           default:
-            printf("Invalid clock_id for clock_gettime: %d", clk_id);
-            exit(EXIT_FAILURE);
+            timespecsub(tp, &ftpl_starttime.real, &tdiff);
+            break;
         } // end of switch (clk_id)
         if (user_rate_set)
         {
