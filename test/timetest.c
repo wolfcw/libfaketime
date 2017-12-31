@@ -18,6 +18,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -31,6 +32,8 @@
 #endif
 
 #ifndef __APPLE__
+#include <pthread.h>
+#include <errno.h>
 #include <signal.h>
 
 #define VERBOSE 0
@@ -49,6 +52,64 @@ handler(int sig, siginfo_t *si, void *uc)
     printf("Caught signal %d\n", sig);
   }
 }
+
+void* pthread_test(void* args)
+{
+  pthread_mutex_t fakeMutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t fakeCond = PTHREAD_COND_INITIALIZER;
+
+  pthread_cond_t monotonic_cond;
+  pthread_condattr_t attr;
+
+  struct timespec timeToWait, now;
+  int rt;
+
+  args = args; // silence compiler warning about unused argument
+
+  clock_gettime(CLOCK_REALTIME, &now);
+  timeToWait.tv_sec = now.tv_sec+1;
+  timeToWait.tv_nsec = now.tv_nsec;
+
+  printf("pthread_cond_timedwait: CLOCK_REALTIME test\n");
+  printf("(Intentionally sleeping 1 second...)\n");
+  fflush(stdout);
+
+  pthread_mutex_lock(&fakeMutex);
+  rt = pthread_cond_timedwait(&fakeCond, &fakeMutex, &timeToWait);
+  if (rt != ETIMEDOUT)
+  {
+    printf("pthread_cond_timedwait failed\n");
+    exit(EXIT_FAILURE);
+  }
+  pthread_mutex_unlock(&fakeMutex);
+
+
+  pthread_condattr_init(&attr);
+  pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+  pthread_cond_init(&monotonic_cond, &attr);
+
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  timeToWait.tv_sec = now.tv_sec+1;
+  timeToWait.tv_nsec = now.tv_nsec;
+
+  printf("pthread_cond_timedwait: CLOCK_MONOTONIC test\n");
+  printf("(Intentionally sleeping 1 second...)\n");
+  fflush(stdout);
+
+  pthread_mutex_lock(&fakeMutex);
+  rt = pthread_cond_timedwait(&monotonic_cond, &fakeMutex, &timeToWait);
+  if (rt != ETIMEDOUT)
+  {
+    printf("pthread_cond_timedwait failed\n");
+    exit(EXIT_FAILURE);
+  }
+  pthread_mutex_unlock(&fakeMutex);
+
+  pthread_cond_destroy(&monotonic_cond);
+
+  return NULL;
+}
+
 #endif
 
 int main (int argc, char **argv)
@@ -69,6 +130,12 @@ int main (int argc, char **argv)
 #endif
 
 #ifndef __APPLE__
+    pthread_t thread;
+    void *ret;
+
+    pthread_create(&thread, NULL, pthread_test, NULL);
+    pthread_join(thread, &ret);
+
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);

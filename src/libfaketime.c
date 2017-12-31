@@ -41,11 +41,14 @@
 #include <netinet/in.h>
 #include <limits.h>
 
+#include "uthash.h"
+
 #include "time_ops.h"
 #include "faketime_common.h"
 
+
 /* pthread-handling contributed by David North, TDI in version 0.7 */
-#ifdef PTHREAD
+#if defined PTHREAD_SINGLETHREADED_TIME || defined FAKE_PTHREAD
 #include <pthread.h>
 #endif
 
@@ -140,6 +143,13 @@ static int          (*real___ftime)           (struct timeb *);
 static int          (*real___gettimeofday)    (struct timeval *, void *);
 static int          (*real___clock_gettime)   (clockid_t clk_id, struct timespec *tp);
 #endif
+#ifdef FAKE_PTHREAD
+static int          (*real_pthread_cond_timedwait_225)  (pthread_cond_t *, pthread_mutex_t*, struct timespec *);
+static int          (*real_pthread_cond_timedwait_232)  (pthread_cond_t *, pthread_mutex_t*, struct timespec *);
+static int          (*real_pthread_cond_init_232) (pthread_cond_t *restrict, const pthread_condattr_t *restrict);
+static int          (*real_pthread_cond_destroy_232) (pthread_cond_t *);
+#endif
+
 #ifndef __APPLEOSX__
 #ifdef FAKE_TIMERS
 static int          (*real_timer_settime_22)   (int timerid, int flags, const struct itimerspec *new_value,
@@ -1681,6 +1691,26 @@ static void ftpl_init(void)
   real___gettimeofday =       dlsym(RTLD_NEXT, "__gettimeofday");
   real___clock_gettime  =     dlsym(RTLD_NEXT, "__clock_gettime");
 #endif
+#ifdef FAKE_PTHREAD
+  real_pthread_cond_timedwait_225 = dlvsym(RTLD_NEXT, "pthread_cond_timedwait", "GLIBC_2.2.5");
+
+  real_pthread_cond_timedwait_232 = dlvsym(RTLD_NEXT, "pthread_cond_timedwait", "GLIBC_2.3.2");
+  real_pthread_cond_init_232 = dlvsym(RTLD_NEXT, "pthread_cond_init", "GLIBC_2.3.2");
+  real_pthread_cond_destroy_232 = dlvsym(RTLD_NEXT, "pthread_cond_destroy", "GLIBC_2.3.2");
+
+  if (NULL == real_pthread_cond_timedwait_232)
+  {
+    real_pthread_cond_timedwait_232 =  dlsym(RTLD_NEXT, "pthread_cond_timedwait");
+  }
+  if (NULL == real_pthread_cond_init_232)
+  {
+    real_pthread_cond_init_232 =  dlsym(RTLD_NEXT, "pthread_cond_init");
+  }
+  if (NULL == real_pthread_cond_destroy_232)
+  {
+    real_pthread_cond_destroy_232 =  dlsym(RTLD_NEXT, "pthread_cond_destroy");
+  }
+#endif
 #ifdef __APPLEOSX__
   real_clock_get_time =     dlsym(RTLD_NEXT, "clock_get_time");
   real_clock_gettime  =     apple_clock_gettime;
@@ -2408,6 +2438,150 @@ int __ftime(struct timeb *tb)
 }
 
 #endif
+
+/*
+ *      =======================================================================
+ *      Faked pthread_cond_timedwait                          === FAKE(pthread)
+ *      =======================================================================
+ */
+
+/* pthread_cond_timedwait
+
+   The specified absolute time in pthread_cond_timedwait is directly
+   passed to the kernel via the futex syscall. The kernel, however,
+   does not know about the fake time. In 99.9% of cases, the time
+   until this function should wait is calculated by an application
+   relatively to the current time, which has been faked in the
+   application. Hence, we should convert the waiting time back to real
+   time.
+
+   pthread_cond_timedwait in GLIBC_2_2_5 only supports
+   CLOCK_REALTIME.  Since the init and destroy functions are not
+   redefined for GLIBC_2_2_5, a corresponding cond will never be
+   added to monotonic_conds and hence the correct branch will
+   always be taken.
+*/
+
+
+#ifdef FAKE_PTHREAD
+
+typedef enum {FT_COMPAT_GLIBC_2_2_5, FT_COMPAT_GLIBC_2_3_2} ft_lib_compat_pthread;
+
+struct pthread_cond_monotonic {
+    pthread_cond_t *ptr;
+    UT_hash_handle hh;
+};
+
+static struct pthread_cond_monotonic *monotonic_conds = NULL;
+
+int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr)
+{
+  clockid_t clock_id;
+  int result;
+
+  result = real_pthread_cond_init_232(cond, attr);
+
+  if (result != 0 || attr == NULL)
+    return result;
+
+  pthread_condattr_getclock(attr, &clock_id);
+
+  if (clock_id == CLOCK_MONOTONIC) {
+    struct pthread_cond_monotonic *e = (struct pthread_cond_monotonic*)malloc(sizeof(struct pthread_cond_monotonic));
+    e->ptr = cond;
+    HASH_ADD_PTR(monotonic_conds, ptr, e);
+  }
+
+  return result;
+}
+
+int pthread_cond_destroy_232(pthread_cond_t *cond)
+{
+  struct pthread_cond_monotonic* e;
+  HASH_FIND_PTR(monotonic_conds, &cond, e);
+  if (e) {
+    HASH_DEL(monotonic_conds, e);
+    free(e);
+  }
+
+  return real_pthread_cond_destroy_232(cond);
+}
+
+int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat)
+{
+  struct timespec tp, tdiff_actual, realtime, faketime;
+  struct timespec *tf = NULL;
+  struct pthread_cond_monotonic* e;
+  clockid_t clk_id;
+  int result;
+
+  if (abstime != NULL)
+  {
+    HASH_FIND_PTR(monotonic_conds, &cond, e);
+    if (e != NULL)
+      clk_id = CLOCK_MONOTONIC;
+    else
+      clk_id = CLOCK_REALTIME;
+
+    DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, &realtime));
+    if (result == -1)
+    {
+      return EINVAL;
+    }
+    faketime = realtime;
+    (void)fake_clock_gettime(clk_id, &faketime);
+
+    timespecsub(abstime, &faketime, &tp);
+    if (user_rate_set)
+    {
+      timespecmul(&tp, 1.0 / user_rate, &tdiff_actual);
+    }
+    else
+    {
+      tdiff_actual = tp;
+    }
+
+    /* For CLOCK_MONOTONIC, pthread_cond_timedwait uses clock_gettime
+       internally to calculate the appropriate duration for the
+       waiting time. This already uses the faked functions, hence, the
+       fake time needs to be passed to pthread_cond_timedwait for
+       CLOCK_MONOTONIC. */
+    if(clk_id == CLOCK_MONOTONIC)
+      timespecadd(&faketime, &tdiff_actual, &tp);
+    else
+      timespecadd(&realtime, &tdiff_actual, &tp);
+
+    tf = &tp;
+  }
+
+  switch (compat) {
+  case FT_COMPAT_GLIBC_2_3_2:
+    result = real_pthread_cond_timedwait_232(cond, mutex, tf);
+    break;
+  case FT_COMPAT_GLIBC_2_2_5:
+    result = real_pthread_cond_timedwait_225(cond, mutex, tf);
+    break;
+  }
+  return result;
+}
+
+int pthread_cond_timedwait_225(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
+{
+  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_2_5);
+}
+
+int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
+{
+  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2);
+}
+
+__asm__(".symver pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5");
+__asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@GLIBC_2.3.2");
+__asm__(".symver pthread_cond_init_232, pthread_cond_init@@GLIBC_2.3.2");
+__asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2");
+
+#endif
+
 
 /*
  * Editor modelines
