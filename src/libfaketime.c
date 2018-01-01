@@ -255,8 +255,8 @@ enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 /* Time to fake is not provided through FAKETIME env. var. */
 static bool parse_config_file = true;
 
-void ft_cleanup (void) __attribute__ ((destructor));
-void ftpl_init (void) __attribute__ ((constructor));
+static void ft_cleanup (void) __attribute__ ((destructor));
+static void ftpl_init (void) __attribute__ ((constructor));
 
 
 /*
@@ -299,7 +299,7 @@ static void ft_shm_init (void)
   }
 }
 
-void ft_cleanup (void)
+static void ft_cleanup (void)
 {
   /* detach from shared memory */
   if (ft_shared != NULL)
@@ -1636,7 +1636,7 @@ parse_modifiers:
  *      =======================================================================
  */
 
-void ftpl_init(void)
+static void ftpl_init(void)
 {
   char *tmp_env;
   bool dont_fake_final;
