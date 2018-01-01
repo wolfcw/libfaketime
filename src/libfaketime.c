@@ -1128,7 +1128,7 @@ typedef union {
 /*
  * Faketime's function implementation's compatibility mode
  */
-typedef enum {FT_COMPAT_GLIBC_2_2, FT_COMPAT_GLIBC_2_3_3} ft_lib_compat;
+typedef enum {FT_COMPAT_GLIBC_2_2, FT_COMPAT_GLIBC_2_3_3} ft_lib_compat_timer;
 
 
 /*
@@ -1138,7 +1138,7 @@ typedef enum {FT_COMPAT_GLIBC_2_2, FT_COMPAT_GLIBC_2_3_3} ft_lib_compat;
 static int
 timer_settime_common(timer_t_or_int timerid, int flags,
          const struct itimerspec *new_value,
-         struct itimerspec *old_value, ft_lib_compat compat)
+         struct itimerspec *old_value, ft_lib_compat_timer compat)
 {
   int result;
   struct itimerspec new_real;
@@ -1293,7 +1293,7 @@ int timer_settime_233(timer_t timerid, int flags,
  * Faked timer_gettime()
  * Does not affect timer speed when stepping clock with each time() call.
  */
-int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, ft_lib_compat compat)
+int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, ft_lib_compat_timer compat)
 {
   int result;
 
