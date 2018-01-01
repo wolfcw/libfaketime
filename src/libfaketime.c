@@ -1521,7 +1521,14 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
-  if (fake_monotonic_clock || clk_id != CLOCK_MONOTONIC)
+  if (fake_monotonic_clock || (clk_id != CLOCK_MONOTONIC && clk_id != CLOCK_MONOTONIC_RAW
+#ifdef CLOCK_MONOTONIC_COARSE
+      && clk_id != CLOCK_MONOTONIC_COARSE
+#endif
+#ifdef CLOCK_BOOTTIME
+      && clk_id != CLOCK_BOOTTIME
+#endif
+      ))
   {
     result = fake_clock_gettime(clk_id, tp);
   }
@@ -2327,7 +2334,15 @@ int __clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
-  if (fake_monotonic_clock || clk_id != CLOCK_MONOTONIC)
+  if (fake_monotonic_clock || (clk_id != CLOCK_MONOTONIC && clk_id != CLOCK_MONOTONIC_RAW
+#ifdef CLOCK_MONOTONIC_COARSE
+      && clk_id != CLOCK_MONOTONIC_COARSE
+#endif
+#ifdef CLOCK_BOOTTIME
+      && clk_id != CLOCK_BOOTTIME
+#endif
+      ))
+
   {
     result = fake_clock_gettime(clk_id, tp);
   }
