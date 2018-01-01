@@ -33,7 +33,7 @@ echo "FAKETIME=\"-10d\" NO_FAKE_STAT=1 ./timetest"
 FAKETIME="-10d" NO_FAKE_STAT=1 ./timetest
 echo
 
-echo "Running the test program with 10 days postive offset specified, and sped up 2 times"
+echo "Running the test program with 10 days positive offset specified, and sped up 2 times"
 echo "FAKETIME=\"+10d x2\" ./timetest"
 FAKETIME="+10d x2" NO_FAKE_STAT=1 ./timetest
 echo
