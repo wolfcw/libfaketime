@@ -47,7 +47,7 @@ echo
 echo "============================================================================="
 echo
 
-echo "Running the test program with 10 days postive offset specified, and sped up 2 times"
+echo "Running the test program with 10 days positive offset specified, and sped up 2 times"
 echo "\$ LD_PRELOAD=../src/libfaketime.so.1 FAKETIME=\"+10d x2\" ./timetest"
 LD_PRELOAD=../src/libfaketime.so.1 FAKETIME="+10d x2" NO_FAKE_STAT=1 ./timetest
 echo

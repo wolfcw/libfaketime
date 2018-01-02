@@ -9,12 +9,9 @@
 #     NO_ATFILE
 #         - Disables support for the fstatat() group of functions
 #
-#     PTHREAD
-#         - Define this to enable multithreading support.
-#
 #     PTHREAD_SINGLETHREADED_TIME
 #         - Define this if you want to single-thread time() ... there ARE
-#           possibile caching side-effects in a multithreaded environment
+#           possible caching side-effects in a multithreaded environment
 #           without this, but the performance impact may require you to
 #           try it unsynchronized.
 #
@@ -24,17 +21,20 @@
 #           that make use of low-level system calls, such as Java Virtual
 #           Machines.
 #
-# 	  FAKE_SLEEP
-# 	      - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
+#     FAKE_SLEEP
+#         - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
 #
-#	  FAKE_TIMERS
-#	      - Also intercept timer_settime() and timer_gettime()
+#     FAKE_TIMERS
+#         - Also intercept timer_settime() and timer_gettime()
 #
-#	  MULTI_ARCH
-#	  	  - If MULTI_ARCH is set, the faketime wrapper program will put a literal
-#	  	    $LIB into the LD_PRELOAD environment variable it creates, which makes
-#	  	    ld automatically choose the correct library version to use for the
-#	  	    target binary. Use for Linux platforms with Multi-Arch support only!
+#     FAKE_PTHREAD
+#         - Intercept pthread_cond_timedwait
+#
+#     MULTI_ARCH
+#  	  - If MULTI_ARCH is set, the faketime wrapper program will put a literal
+#           $LIB into the LD_PRELOAD environment variable it creates, which makes
+#           ld automatically choose the correct library version to use for the
+#           target binary. Use for Linux platforms with Multi-Arch support only!
 #
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
@@ -62,7 +62,7 @@ PREFIX ?= /usr/local
 LIBDIRNAME ?= /lib/faketime
 PLATFORM ?=$(shell uname)
 
-CFLAGS += -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"'
+CFLAGS += -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"'
 ifeq ($(PLATFORM),SunOS)
 CFLAGS += -D__EXTENSIONS__ -D_XOPEN_SOURCE=600
 endif
@@ -86,7 +86,7 @@ LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
 all: ${LIBS} ${BINS}
 
-libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD -DPTHREAD_SINGLETHREADED_TIME
+libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD_SINGLETHREADED_TIME
 
 ${LIBS_OBJ}: libfaketime.c
 	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<

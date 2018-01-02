@@ -1,7 +1,7 @@
 CC = gcc
 
 CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra
-LDFLAGS = -lrt
+LDFLAGS = -lrt -lpthread
 
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
