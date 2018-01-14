@@ -1692,11 +1692,14 @@ static void ftpl_init(void)
   real___clock_gettime  =     dlsym(RTLD_NEXT, "__clock_gettime");
 #endif
 #ifdef FAKE_PTHREAD
+
+#ifdef __GLIBC__
   real_pthread_cond_timedwait_225 = dlvsym(RTLD_NEXT, "pthread_cond_timedwait", "GLIBC_2.2.5");
 
   real_pthread_cond_timedwait_232 = dlvsym(RTLD_NEXT, "pthread_cond_timedwait", "GLIBC_2.3.2");
   real_pthread_cond_init_232 = dlvsym(RTLD_NEXT, "pthread_cond_init", "GLIBC_2.3.2");
   real_pthread_cond_destroy_232 = dlvsym(RTLD_NEXT, "pthread_cond_destroy", "GLIBC_2.3.2");
+#endif
 
   if (NULL == real_pthread_cond_timedwait_232)
   {
@@ -1725,14 +1728,18 @@ static void ftpl_init(void)
     real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
     real_timer_settime_233 =  dlsym(RTLD_NEXT, "timer_settime");
 #else
+#ifdef __GLIBC__
   real_timer_settime_22 =   dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.2");
   real_timer_settime_233 =  dlvsym(RTLD_NEXT, "timer_settime","GLIBC_2.3.3");
+#endif
   if (NULL == real_timer_settime_233)
   {
     real_timer_settime_233 =  dlsym(RTLD_NEXT, "timer_settime");
   }
+#ifdef __GLIBC__
   real_timer_gettime_22 =   dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.2");
   real_timer_gettime_233 =  dlvsym(RTLD_NEXT, "timer_gettime","GLIBC_2.3.3");
+#endif
   if (NULL == real_timer_gettime_233)
   {
     real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
