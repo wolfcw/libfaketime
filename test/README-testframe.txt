@@ -35,5 +35,5 @@
 # 3. create DIR/test_XXX.sh.
 # 4. write a run function and testcase functions in DIR/test_XXX.sh.
 # 5. within the run function, call run_testcase for each testcase function.
-# 6. within each testcase funtion, call assertneq or asserteq, or do
+# 6. within each testcase function, call assertneq or asserteq, or do
 #    the equivalent.

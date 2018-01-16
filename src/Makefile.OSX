@@ -14,7 +14,7 @@
 #
 #     PTHREAD_SINGLETHREADED_TIME
 #         - Define this if you want to single-thread time() ... there ARE
-#           possibile caching side-effects in a multithreaded environment
+#           possible caching side-effects in a multithreaded environment
 #           without this, but the performance impact may require you to
 #           try it unsynchronized.
 #
