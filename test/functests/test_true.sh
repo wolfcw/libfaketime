@@ -1,4 +1,4 @@
-# test suite that always succeds - for testing framework
+# test suite that always succeeds - for testing framework
 
 run()
 {
