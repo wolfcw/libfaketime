@@ -1675,7 +1675,11 @@ static void ftpl_init(void)
   real_lstat64 =            dlsym(RTLD_NEXT, "__lxstat64");
   real_time =               dlsym(RTLD_NEXT, "time");
   real_ftime =              dlsym(RTLD_NEXT, "ftime");
+#if defined(__alpha__) && defined(__GLIBC__)
+  real_gettimeofday =       dlvsym(RTLD_NEXT, "gettimeofday", "GLIBC_2.1");
+#else
   real_gettimeofday =       dlsym(RTLD_NEXT, "gettimeofday");
+#endif
 #ifdef FAKE_SLEEP
   real_nanosleep =          dlsym(RTLD_NEXT, "nanosleep");
   real_usleep =             dlsym(RTLD_NEXT, "usleep");
@@ -1688,7 +1692,11 @@ static void ftpl_init(void)
 #endif
 #ifdef FAKE_INTERNAL_CALLS
   real___ftime =              dlsym(RTLD_NEXT, "__ftime");
+#  if defined(__alpha__) && defined(__GLIBC__)
+  real___gettimeofday =       dlvsym(RTLD_NEXT, "__gettimeofday", "GLIBC_2.1");
+#  else
   real___gettimeofday =       dlsym(RTLD_NEXT, "__gettimeofday");
+#  endif
   real___clock_gettime  =     dlsym(RTLD_NEXT, "__clock_gettime");
 #endif
 #ifdef FAKE_PTHREAD
