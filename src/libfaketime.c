@@ -2527,6 +2527,8 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
   struct timespec tp, tdiff_actual, realtime, faketime;
   struct timespec *tf = NULL;
   struct pthread_cond_monotonic* e;
+  char *tmp_env;
+  int wait_ms;
   clockid_t clk_id;
   int result;
 
@@ -2546,14 +2548,32 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
     faketime = realtime;
     (void)fake_clock_gettime(clk_id, &faketime);
 
-    timespecsub(abstime, &faketime, &tp);
-    if (user_rate_set)
+    if ((tmp_env = getenv("FAKETIME_WAIT_MS")) != NULL)
     {
-      timespecmul(&tp, 1.0 / user_rate, &tdiff_actual);
+      wait_ms = atol(tmp_env);
+      DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, &realtime));
+      if (result == -1)
+      {
+        return EINVAL;
+      }
+
+      tdiff_actual.tv_sec = wait_ms / 1000;
+      tdiff_actual.tv_nsec = (wait_ms % 1000) * 1000000;
+      timespecadd(&realtime, &tdiff_actual, &tp);
+
+      tf = &tp;
     }
     else
     {
-      tdiff_actual = tp;
+      timespecsub(abstime, &faketime, &tp);
+      if (user_rate_set)
+      {
+        timespecmul(&tp, 1.0 / user_rate, &tdiff_actual);
+      }
+      else
+      {
+        tdiff_actual = tp;
+      }
     }
 
     /* For CLOCK_MONOTONIC, pthread_cond_timedwait uses clock_gettime
