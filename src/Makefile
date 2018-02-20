@@ -89,13 +89,13 @@ all: ${LIBS} ${BINS}
 libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD_SINGLETHREADED_TIME
 
 ${LIBS_OBJ}: libfaketime.c
-	${CC} -o $@ -c ${CFLAGS} ${EXTRA_FLAGS} $<
+	${CC} -o $@ -c ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $<
 
 %.so.${SONAME}: %.o libfaketime.map
 	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
 
 ${BINS}: faketime.c
-	${CC} -o $@ ${CFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS} ${BIN_LDFLAGS}
+	${CC} -o $@ ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS} ${BIN_LDFLAGS}
 
 clean:
 	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
