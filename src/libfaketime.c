@@ -265,6 +265,9 @@ enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 /* Time to fake is not provided through FAKETIME env. var. */
 static bool parse_config_file = true;
 
+/* The mtime of the config file that was read last time */
+static time_t LastReadFileMtime = -1;
+
 static void ft_cleanup (void) __attribute__ ((destructor));
 static void ftpl_init (void) __attribute__ ((constructor));
 
@@ -1607,6 +1610,7 @@ static void parse_ft_string(const char *user_faked_time)
 
       /* Contributed by David North, TDI in version 0.7 */
     case '@': /* Specific time, but clock along relative to that starttime */
+    case '%': /* Likewise, but start time is set to the config file mtime */
       ft_mode = FT_START_AT;
       user_faked_time_tm.tm_isdst = -1;
       (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
@@ -1616,6 +1620,12 @@ static void parse_ft_string(const char *user_faked_time)
 
       /* Reset starttime */
       system_time_from_system(&ftpl_starttime);
+      /* Reset starttime by config file mtime */
+      if (user_faked_time[0] == '%' && parse_config_file && LastReadFileMtime >= 0)
+      {
+        ftpl_starttime.real.tv_sec = LastReadFileMtime;
+        ftpl_starttime.real.tv_nsec = 0;
+      }
       goto parse_modifiers;
       break;
 
@@ -2155,6 +2165,14 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
           (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
       {
         char line[BUFFERLEN];
+        struct stat statbuf;
+        int ret;
+
+        DONT_FAKE_TIME(ret = fstat(fileno(faketimerc), &statbuf));
+        if (ret != -1)
+        {
+          LastReadFileMtime = statbuf.st_mtime;
+        }
         while(fgets(line, BUFFERLEN, faketimerc) != NULL)
         {
           if ((strlen(line) > 1) && (line[0] != ' ') &&
@@ -2167,6 +2185,11 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
           }
         }
         fclose(faketimerc);
+      }
+      else
+      {
+        snprintf(user_faked_time, BUFFERLEN, "+0");
+        LastReadFileMtime = -1;
       }
     } /* read fake time from file */
     parse_ft_string(user_faked_time);
