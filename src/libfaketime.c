@@ -2542,7 +2542,7 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
   char *tmp_env;
   int wait_ms;
   clockid_t clk_id;
-  int result;
+  int result = 0;
 
   if (abstime != NULL)
   {
