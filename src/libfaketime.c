@@ -2015,6 +2015,14 @@ static void remove_trailing_eols(char *line)
  *      =======================================================================
  */
 
+#ifdef PTHREAD_SINGLETHREADED_TIME
+static void pthread_cleanup_mutex_lock(void *data)
+{
+  pthread_mutex_t *mutex = data;
+  pthread_mutex_unlock(mutex);
+}
+#endif
+
 int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   /* variables used for caching, introduced in version 0.6 */
@@ -2038,7 +2046,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 #ifdef PTHREAD_SINGLETHREADED_TIME
   static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_lock(&time_mutex);
-  pthread_cleanup_push((void (*)(void *))pthread_mutex_unlock, (void *)&time_mutex);
+  pthread_cleanup_push(pthread_cleanup_mutex_lock, &time_mutex);
 #endif
 
   if ((limited_faking &&
