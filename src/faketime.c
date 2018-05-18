@@ -209,7 +209,7 @@ int main (int argc, char **argv)
     int shm_fd;
     sem_t *sem;
     struct ft_shared_s *ft_shared;
-    char shared_objs[PATH_BUFSIZE];
+    char shared_objs[PATH_BUFSIZE * 2 + 1];
 
     /*
      * Casting of getpid() return value to long needed to make GCC on SmartOS
@@ -286,7 +286,7 @@ int main (int argc, char **argv)
       exit(EXIT_FAILURE);
     }
 
-    snprintf(shared_objs, PATH_BUFSIZE, "%s %s", sem_name, shm_name);
+    snprintf(shared_objs, sizeof(shared_objs), "%s %s", sem_name, shm_name);
     setenv("FAKETIME_SHARED", shared_objs, true);
     sem_close(sem);
   }

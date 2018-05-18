@@ -1881,7 +1881,8 @@ static void ftpl_init(void)
   if ((tmp_env = getenv("FAKETIME_SPAWN_TARGET")) != NULL)
   {
     spawnsupport = true;
-    (void) strncpy(ft_spawn_target, getenv("FAKETIME_SPAWN_TARGET"), 1024);
+    (void) strncpy(ft_spawn_target, getenv("FAKETIME_SPAWN_TARGET"), sizeof(ft_spawn_target) - 1);
+    ft_spawn_target[sizeof(ft_spawn_target) - 1] = 0;
     if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL)
     {
       ft_spawn_secs = atol(tmp_env);
@@ -1942,7 +1943,8 @@ static void ftpl_init(void)
   }
   else
   {
-    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ);
+    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ - 1);
+    user_faked_time_fmt[BUFSIZ - 1] = 0;
   }
 
   if (shared_sem != 0)
@@ -2013,6 +2015,14 @@ static void remove_trailing_eols(char *line)
  *      =======================================================================
  */
 
+#ifdef PTHREAD_SINGLETHREADED_TIME
+static void pthread_cleanup_mutex_lock(void *data)
+{
+  pthread_mutex_t *mutex = data;
+  pthread_mutex_unlock(mutex);
+}
+#endif
+
 int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   /* variables used for caching, introduced in version 0.6 */
@@ -2036,7 +2046,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 #ifdef PTHREAD_SINGLETHREADED_TIME
   static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_lock(&time_mutex);
-  pthread_cleanup_push((void (*)(void *))pthread_mutex_unlock, (void *)&time_mutex);
+  pthread_cleanup_push(pthread_cleanup_mutex_lock, &time_mutex);
 #endif
 
   if ((limited_faking &&
@@ -2131,7 +2141,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
     if (NULL != (tmp_env = getenv("FAKETIME")))
     {
-      strncpy(user_faked_time, tmp_env, BUFFERLEN);
+      strncpy(user_faked_time, tmp_env, BUFFERLEN - 1);
+      user_faked_time[BUFFERLEN - 1] = 0;
     }
     else
     {
@@ -2531,7 +2542,7 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
   char *tmp_env;
   int wait_ms;
   clockid_t clk_id;
-  int result;
+  int result = 0;
 
   if (abstime != NULL)
   {
