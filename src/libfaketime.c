@@ -1558,6 +1558,7 @@ static void parse_ft_string(const char *user_faked_time)
 {
   struct tm user_faked_time_tm;
   char * tmp_time_fmt;
+  char * nstime_str;
 
   if (!strncmp(user_faked_time, user_faked_time_saved, BUFFERLEN))
   {
@@ -1572,10 +1573,18 @@ static void parse_ft_string(const char *user_faked_time)
     default:  /* Try and interpret this as a specified time */
       if (ft_mode != FT_NOOP) ft_mode = FT_FREEZE;
       user_faked_time_tm.tm_isdst = -1;
-      if (NULL != strptime(user_faked_time, user_faked_time_fmt, &user_faked_time_tm))
+      nstime_str = strptime(user_faked_time, user_faked_time_fmt, &user_faked_time_tm);
+
+      if (NULL != nstime_str)
       {
         user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
         user_faked_time_timespec.tv_nsec = 0;
+
+        if (nstime_str[0] == '.')
+        {
+          double nstime = atof(--nstime_str);
+          user_faked_time_timespec.tv_nsec = (nstime - floor(nstime)) * SEC_TO_nSEC;
+        }
         user_faked_time_set = true;
       }
       else
@@ -1610,10 +1619,23 @@ static void parse_ft_string(const char *user_faked_time)
     case '@': /* Specific time, but clock along relative to that starttime */
       ft_mode = FT_START_AT;
       user_faked_time_tm.tm_isdst = -1;
-      (void) strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
+      nstime_str = strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
+      if (NULL != nstime_str)
+      {
+        user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
+        user_faked_time_timespec.tv_nsec = 0;
 
-      user_faked_time_timespec.tv_sec = mktime(&user_faked_time_tm);
-      user_faked_time_timespec.tv_nsec = 0;
+        if (nstime_str[0] == '.')
+        {
+          double nstime = atof(--nstime_str);
+          user_faked_time_timespec.tv_nsec = (nstime - floor(nstime)) * SEC_TO_nSEC;
+        }
+      }
+      else
+      {
+        perror("Failed to parse FAKETIME timestamp");
+        exit(EXIT_FAILURE);
+      }
 
       /* Reset starttime */
       system_time_from_system(&ftpl_starttime);
