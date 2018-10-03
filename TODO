@@ -4,6 +4,5 @@ Open issues / next steps for libfaketime development
 - use the testing framework to also implement unit tests
 - fake timer_create and friends
 - work around thread local storage issue, e.g., by using pthreads
-- add autoconf/automake support to get rid of separate Makefile.OSX
 - improve pthread support
 
