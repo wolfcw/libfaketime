@@ -295,12 +295,12 @@ int main (int argc, char **argv)
   {
     char *ftpl_path;
 #ifdef __APPLE__
-    ftpl_path = PREFIX "/libfaketime.1.dylib";
+    ftpl_path = LIBPREFIX "/libfaketime." LIBVERSION ".dylib";
     FILE *check;
     check = fopen(ftpl_path, "ro");
     if (check == NULL)
     {
-      ftpl_path = PREFIX "/lib/faketime/libfaketime.1.dylib";
+      ftpl_path = PREFIX "/lib/faketime/libfaketime." LIBVERSION ".dylib";
     }
     else
     {
@@ -318,17 +318,17 @@ int main (int argc, char **argv)
          * on MultiArch platforms, such as Debian, we put a literal $LIB into LD_PRELOAD.
          */
 #ifndef MULTI_ARCH
-        ftpl_path = PREFIX LIBDIRNAME "/libfaketimeMT.so.1";
+        ftpl_path = LIBPREFIX "/libfaketimeMT.so." LIBVERSION;
 #else
-        ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so.1";
+        ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so." LIBVERSION;
 #endif
       }
       else
       {
 #ifndef MULTI_ARCH
-        ftpl_path = PREFIX LIBDIRNAME "/libfaketime.so.1";
+        ftpl_path = LIBPREFIX "/libfaketime.so." LIBVERSION;
 #else
-        ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so.1";
+        ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so." LIBVERSION;
 #endif
       }
       len = ((ld_preload)?strlen(ld_preload) + 1: 0) + 1 + strlen(ftpl_path);

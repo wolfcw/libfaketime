@@ -1,8 +1,8 @@
 Open issues / next steps for libfaketime development
 
 - add more functional tests that check more than the basic functionality
+- add unit tests specifically for the faketime program
 - use the testing framework to also implement unit tests
 - fake timer_create and friends
 - work around thread local storage issue, e.g., by using pthreads
 - improve pthread support
-

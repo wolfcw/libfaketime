@@ -7,15 +7,15 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_CONDITIONAL(MACOS, test `uname` = "Darwin")
 AM_CONDITIONAL(SOLARIS, test `uname` = "SunOS")
 
-dnl Defines
-eval PREFIX="${prefix}"
-eval LIBPREFIX="${prefix}/lib"
+eval PREFIX=`test "$prefix" = NONE && prefix=$ac_default_prefix; eval echo "${prefix}"`
+eval LIBPREFIX="$PREFIX/lib"
+eval LIBVERSION="$(echo ${VERSION} | cut -d. -f1)"
 AC_SUBST(PREFIX)
 AC_SUBST(LIBPREFIX)
+AC_SUBST(LIBVERSION)
 AC_DEFINE_UNQUOTED(PREFIX, "$PREFIX", [The install prefix for the package])
 AC_DEFINE_UNQUOTED(LIBPREFIX, "$LIBPREFIX", [The install prefix for libraries])
-
-SUBDIRS = . src test man
+AC_DEFINE_UNQUOTED(LIBVERSION, "$LIBVERSION", [The library version number])
 
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])

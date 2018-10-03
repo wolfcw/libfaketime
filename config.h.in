@@ -59,6 +59,9 @@
 /* The install prefix for libraries */
 #undef LIBPREFIX
 
+/* The library version number */
+#undef LIBVERSION
+
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
