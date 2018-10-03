@@ -1,3 +1,6 @@
+Since 0.9.7:
+    - Mike Stemle added GNU autotools
+
 Since 0.9.6:
     - Julien Gilli added an option to disable monotonic time faking
     - Azat Khuzhin added support for COARSE clocks

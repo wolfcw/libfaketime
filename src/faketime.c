@@ -47,8 +47,9 @@
 #include <semaphore.h>
 
 #include "faketime_common.h"
+#include "config.h"
 
-const char version[] = "0.9.7";
+const char version[] = VERSION;
 
 #ifdef __APPLE__
 static const char *date_cmd = "gdate";

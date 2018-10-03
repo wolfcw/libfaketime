@@ -87,8 +87,16 @@ documentation whether it can be achieved by using libfaketime directly.
 3. Installation
 ---------------
 
-Running "make" compiles both library versions and a test program, which it then
-also executes.
+This library supports GNU autotools, so you should be able to build it with:
+
+    sh ./build.sh init
+    ./configure
+    make
+
+After you have built the library, you may--optionally--run the tests with:
+
+    cd test
+    make test
 
 If the test works fine, you should copy the libfaketime libraries
 (libfaketime.so.1, and libfaketimeMT.so.1) to the place you want them in.
@@ -119,6 +127,11 @@ libfaketime.1.dylib, and the variable DYLD_FORCE_FLAT_NAMESPACE should be
 set (to anything). macOS users should read README.OSX for additional
 details.
 
+NOTE: When committing, clean up potentially non-portable files with:
+
+    sh build.sh clean
+
+This will clean up the build files which we don't want to version-control.
 
 4. Usage
 --------

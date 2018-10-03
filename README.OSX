@@ -4,7 +4,7 @@ README file for libfaketime on macOS
 Support for macOS has meanwhile matured and many command line and
 GUI applications will run stable.
 
-Developments and tests are done on High Sierra currently.
+Developments and tests are done on Mojave currently.
 Use libfaketime 0.9.6 or earlier on OS X (i.e., before Sierra).
 
 Version 0.9.5 and higher no longer works with OSX <= 10.6 due to
@@ -37,18 +37,23 @@ Otherwise, you have to compile and install libfaketime manually; this
 will require a working installation of Xcode and its command line tools
 on your machine.
 
-You can compile libfaketime by running the command
+This library now supports GNU autotools, so you can build it using:
 
+    sh build.sh init
+    ./configure
     make
-
-in libfaketime's top-level directory.
 
 The resulting library will be named libfaketime.1.dylib ; to check
 whether it works properly, run the test suite and verify whether its
 output is correct:
 
     cd test
-    make -f Makefile.OSX
+    make test
+
+NOTE: When committing, be sure to clean up potentially
+system-dependent files by running:
+
+    sh build.sh clean
 
 
 2) Using libfaketime from the command line on macOS
