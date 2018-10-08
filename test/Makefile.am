@@ -1,4 +1,4 @@
-AM_CFLAGS =-DFAKE_SLEEP
+AM_CFLAGS =-DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -I../ -I../src
 
 AM_LDFLAGS =
 
@@ -21,4 +21,3 @@ test: timetest functest
 # run functional tests
 functest:
 	./testframe.sh functests
-

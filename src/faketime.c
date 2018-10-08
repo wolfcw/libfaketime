@@ -295,19 +295,21 @@ int main (int argc, char **argv)
   {
     char *ftpl_path;
 #ifdef __APPLE__
-    ftpl_path = LIBPREFIX "/libfaketime." LIBVERSION ".dylib";
-    FILE *check;
-    check = fopen(ftpl_path, "ro");
-    if (check == NULL)
-    {
-      ftpl_path = PREFIX "/lib/faketime/libfaketime." LIBVERSION ".dylib";
+    if (!getenv("DYLD_INSERT_LIBRARIES") && !getenv("DYLD_FORCE_FLAT_NAMESPACE")) {
+      ftpl_path = LIBPREFIX "/libfaketime." LIBVERSION ".dylib";
+      FILE *check;
+      check = fopen(ftpl_path, "ro");
+      if (check == NULL)
+      {
+        ftpl_path = PREFIX "/lib/faketime/libfaketime." LIBVERSION ".dylib";
+      }
+      else
+      {
+        fclose(check);
+      }
+      setenv("DYLD_INSERT_LIBRARIES", ftpl_path, true);
+      setenv("DYLD_FORCE_FLAT_NAMESPACE", "1", true);
     }
-    else
-    {
-      fclose(check);
-    }
-    setenv("DYLD_INSERT_LIBRARIES", ftpl_path, true);
-    setenv("DYLD_FORCE_FLAT_NAMESPACE", "1", true);
 #else
     {
       char *ld_preload_new, *ld_preload = getenv("LD_PRELOAD");
