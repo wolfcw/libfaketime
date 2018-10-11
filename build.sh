@@ -11,6 +11,10 @@ LIBTOOLIZE=$(which libtoolize)
 if [ "$LIBTOOLIZE" = "" ]; then
     LIBTOOLIZE=$(which glibtoolize)
 fi
+if [ "$LIBTOOLIZE" = "" ]; then
+    echo "CANNOT CONTINUE! MISSING (G)LIBTOOLIZE! Install libtool!"
+		exit 1
+fi
 
 case "x$1" in
 xinit)
