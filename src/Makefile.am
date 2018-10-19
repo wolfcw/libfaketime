@@ -1,10 +1,5 @@
 ACLOCAL_AMFLAGS=-I m4
-LIBTOOL_DEPS = @LIBTOOL_DEPS@
-LIBOBJDIR = "."
-libtool: $(LIBTOOL_DEPS)
-	$(SHELL) ./config.status libtool
-
-AM_CFLAGS =-DFAKE_SLEEP -DFAKE_INTERNAL_CALLS
+AM_CFLAGS = -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS
 
 AM_LDFLAGS =
 
@@ -33,3 +28,8 @@ else
 	libfaketimeMT_la_LDFLAGS = -shared -Wl,--version-script=libfaketime.map -DPTHREAD_SINGLETHREADED_TIME
 	faketime_LDADD = -ldl -lm -lrt -lpthread
 endif
+
+LIBTOOL_DEPS = @LIBTOOL_DEPS@
+LIBOBJDIR = "."
+libtool: $(LIBTOOL_DEPS)
+	$(SHELL) ./config.status libtool
