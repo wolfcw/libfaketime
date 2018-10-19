@@ -56,7 +56,6 @@ struct ft_shared_s
 #include <mach/clock.h>
 #include <mach/mach_host.h>
 #include <mach/mach_port.h>
-#endif
 
 #ifdef FAKE_SLEEP
 #include <time.h>
@@ -82,4 +81,5 @@ int select(int nfds, fd_set *readfds,
 int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout);
 #endif /* FAKE_SLEEP */
 
+#endif
 #endif
