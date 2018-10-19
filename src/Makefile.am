@@ -27,7 +27,9 @@ else
 	libfaketimeMT_la_CFLAGS = -DPTHREAD_SINGLETHREADED_TIME
 	libfaketimeMT_la_LDFLAGS = -shared -Wl,--version-script=libfaketime.map -DPTHREAD_SINGLETHREADED_TIME
 	faketime_LDADD = -ldl -lm -lrt -lpthread
+	faketime_LDFLAGS = -Wl,--version-script=libfaketime.map
 endif
+# cc -o faketime -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'/usr/local'"' -DLIBDIRNAME='"'/lib/faketime'"'   faketime.c -lpthread -Wl,--version-script=libfaketime.map -lrt
 
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
 LIBOBJDIR = "."
