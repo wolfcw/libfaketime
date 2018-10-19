@@ -19,6 +19,7 @@
  */
 
 #include "config.h"
+#include <check.h>
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>

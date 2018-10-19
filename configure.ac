@@ -8,8 +8,11 @@ m4_define([libfaketime_version],
 AC_PREREQ([2.68])
 AC_INIT([libfaketime], [libfaketime_version])
 AC_SUBST([LIBTOOL_DEPS])
-#AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_MACRO_DIR([m4])
+
+# Checks for programs.
+AC_PROG_CC
+AM_PROG_AR
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_CONDITIONAL(MACOS, test `uname` = "Darwin")
@@ -31,20 +34,13 @@ AC_CONFIG_HEADERS([config.h])
 # libtool versioning
 LIBFAKETIME_VERSION=libfaketime_version
 AC_SUBST(LIBFAKETIME_VERSION)
-
-
-# Checks for programs.
-AC_PROG_CC
-AM_PROG_AR
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
 # Checks for libraries.
 AC_CHECK_LIB([c], [timespecadd], [timespecmul])
 
-## FORESHADOWING...
-## AC_CHECK_LIB([cunit], [CU_assertImplementation])
-
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h sys/param.h unistd.h stdbool.h time.h netinet/in.h math.h])
+AC_CHECK_HEADERS([stdlib.h sys/param.h unistd.h stdbool.h time.h netinet/in.h math.h check.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
