@@ -7,6 +7,14 @@ matrix:
       compiler: gcc
       before_install:
         - sudo apt-get install automake autoconf libtool check lcov
+    - os: linux
+      compiler: gcc
+      before_install:
+        - sudo apt-get install automake autoconf libtool check lcov
+    - os: osx
+      compiler: clang
+      before_install:
+        - brew install autoconf libtool check lcov
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}
