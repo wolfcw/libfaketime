@@ -1,0 +1,28 @@
+#travis configuration for coverage testing
+language: c
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      before_install:
+        - sudo apt-get install automake autoconf autoheader libtool check check-devel lconv
+
+before_script:
+- cd ${TRAVIS_BUILD_DIR}
+- lcov --directory . --zerocounters
+
+# Build steps
+script:
+  - cd ${TRAVIS_BUILD_DIR}
+  - sh ./build.sh init
+  - ./configure
+  - make
+  - make check
+
+after_success:
+- cd ${TRAVIS_BUILD_DIR}
+- lcov --directory . --capture --output-file coverage.info # capture coverage info
+- lcov --remove coverage.info 'test/*' '/usr/*' --output-file coverage.info # filter out system and test code
+- lcov --list coverage.info # debug before upload
+- coveralls-lcov  coverage.info #for open source
