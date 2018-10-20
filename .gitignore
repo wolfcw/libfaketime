@@ -1,9 +1,11 @@
 *.o
 *.so.1
 timetest
+.tags*
 
 src/libfaketime.dylib.1
 src/libfaketime.1.dylib
 src/core
 src/faketime
 m4/*.m4*
+test-driver
