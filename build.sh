@@ -21,6 +21,7 @@ xinit)
         set -x
         aclocal
         $LIBTOOLIZE --force --copy --automake
+	autoheader
         autoconf --force
         automake --foreign --copy --add-missing -Woverride
         ;;
