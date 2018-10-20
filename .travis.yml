@@ -6,7 +6,7 @@ matrix:
     - os: linux
       compiler: gcc
       before_install:
-        - sudo apt-get install automake autoconf autoheader libtool check check-devel lconv
+        - sudo apt-get install automake autoconf libtool check lcov
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}
