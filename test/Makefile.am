@@ -14,7 +14,7 @@ if SOLARIS
   AM_LDFLAGS += -Wl,--version-script=libfaketime.map
 endif
 if !MACOS
-  AM_CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_PTHREAD -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC
+  AM_CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_PTHREAD -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC	-Wno-nonnull-compare
   timetest_LDADD = -ldl -lm -lrt -lpthread
 endif
 

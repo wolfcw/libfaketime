@@ -22,7 +22,7 @@ faketime_SOURCES = faketime.c
 if MACOS
    libfaketime_la_LDFLAGS = -dynamiclib -current_version 0.9.8 -compatibility_version 0.7
 else
-   AM_CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_PTHREAD -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC
+   AM_CFLAGS += -std=gnu99 -Wall -Wextra -Werror -DFAKE_STAT -DFAKE_PTHREAD -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -Wno-nonnull-compare
    libfaketime_la_LIBADD = -ldl -lm -lrt -lpthread
    libfaketime_la_LDFLAGS = -shared -Wl,--version-script=libfaketime.map
    libfaketimeMT_la_LIBADD = -ldl -lm -lrt -lpthread
