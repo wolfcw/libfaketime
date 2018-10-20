@@ -8,7 +8,7 @@ matrix:
       before_install:
         - sudo apt-get install automake autoconf libtool check lcov
     - os: linux
-      compiler: gcc
+      compiler: clang
       before_install:
         - sudo apt-get install automake autoconf libtool check lcov
     - os: osx
