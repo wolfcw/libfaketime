@@ -12,6 +12,10 @@ matrix:
       before_install:
         - sudo apt-get install automake autoconf libtool check lcov
     - os: osx
+      compiler: gcc
+      before_install:
+        - brew install autoconf libtool check lcov
+    - os: osx
       compiler: clang
       before_install:
         - brew install autoconf libtool check lcov
