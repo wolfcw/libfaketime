@@ -124,7 +124,7 @@ int main (int argc, char **argv)
     }
     else if (0 == strcmp(argv[curr_opt], "--exclude-monotonic"))
     {
-      setenv("DONT_FAKE_MONOTONIC", "1", true);
+      setenv("FAKETIME_DONT_FAKE_MONOTONIC", "1", true);
       curr_opt++;
       continue;
     }

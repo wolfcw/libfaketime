@@ -71,8 +71,8 @@ documentation whether it can be achieved by using libfaketime directly.
   rebuilding libfaketimeMT.so.1
 
 * Java-/JVM-based applications work but you need to pass in an extra argument
-  (DONT_FAKE_MONOTONIC).  See usage basics below for details.  Without this
-  argument the java command usually hangs.
+  (FAKETIME_DONT_FAKE_MONOTONIC).  See usage basics below for details.  Without
+  this argument the java command usually hangs.
 
 * libfaketime will eventually be bypassed by applications that dynamically load
   system libraries, such as librt, explicitly themselves instead of relying on
@@ -141,7 +141,7 @@ user@host> LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d" date
 Mon Nov  8 12:01:12 CEST 2016
 
 user@host> LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d"
-DONT_FAKE_MONOTONIC=1 java -version
+FAKETIME_DONT_FAKE_MONOTONIC=1 java -version
 java version "1.8.0_111"
 Java(TM) SE Runtime Environment (build 1.8.0_111-b14)
 Java HotSpot(TM) 64-Bit Server VM (build 25.111-b14, mixed mode)
