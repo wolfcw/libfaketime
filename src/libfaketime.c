@@ -148,6 +148,7 @@ static int          (*real_pthread_cond_timedwait_225)  (pthread_cond_t *, pthre
 static int          (*real_pthread_cond_timedwait_232)  (pthread_cond_t *, pthread_mutex_t*, struct timespec *);
 static int          (*real_pthread_cond_init_232) (pthread_cond_t *restrict, const pthread_condattr_t *restrict);
 static int          (*real_pthread_cond_destroy_232) (pthread_cond_t *);
+static pthread_rwlock_t monotonic_conds_lock;
 #endif
 
 #ifndef __APPLEOSX__
@@ -324,6 +325,12 @@ static void ft_cleanup (void)
   {
     sem_close(shared_sem);
   }
+#ifdef FAKE_PTHREAD
+  if (pthread_rwlock_destroy(&monotonic_conds_lock) != 0) {
+    fprintf(stderr,"monotonic_conds_lock destroy failed\n");
+    exit(-1);
+  }
+#endif
 }
 
 
@@ -1744,6 +1751,11 @@ static void ftpl_init(void)
   {
     real_pthread_cond_destroy_232 =  dlsym(RTLD_NEXT, "pthread_cond_destroy");
   }
+
+  if (pthread_rwlock_init(&monotonic_conds_lock,NULL) != 0) {
+    fprintf(stderr,"monotonic_conds_lock init failed\n");
+    exit(-1);
+  }
 #endif
 #ifdef __APPLEOSX__
   real_clock_get_time =     dlsym(RTLD_NEXT, "clock_get_time");
@@ -2546,7 +2558,13 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   if (clock_id == CLOCK_MONOTONIC) {
     struct pthread_cond_monotonic *e = (struct pthread_cond_monotonic*)malloc(sizeof(struct pthread_cond_monotonic));
     e->ptr = cond;
+
+    if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+      exit(-1);
+    }
     HASH_ADD_PTR(monotonic_conds, ptr, e);
+    pthread_rwlock_unlock(&monotonic_conds_lock);
   }
 
   return result;
@@ -2555,14 +2573,22 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
 int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
+
+  if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+    fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+    exit(-1);
+  }
   HASH_FIND_PTR(monotonic_conds, &cond, e);
   if (e) {
     HASH_DEL(monotonic_conds, e);
     free(e);
   }
+  pthread_rwlock_unlock(&monotonic_conds_lock);
 
   return real_pthread_cond_destroy_232(cond);
 }
+
+//where init in pthread methods????
 
 int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat)
 {
@@ -2576,7 +2602,12 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
   if (abstime != NULL)
   {
+    if (pthread_rwlock_rdlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire read monotonic_conds_lock\n");
+      exit(-1);
+    }
     HASH_FIND_PTR(monotonic_conds, &cond, e);
+    pthread_rwlock_unlock(&monotonic_conds_lock);
     if (e != NULL)
       clk_id = CLOCK_MONOTONIC;
     else
