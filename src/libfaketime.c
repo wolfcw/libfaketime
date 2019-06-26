@@ -2147,9 +2147,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     }
   }
 
+  struct timespec current_ts;
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &current_ts));
+
   if (last_data_fetch > 0)
   {
-    if ((tp->tv_sec - last_data_fetch) > cache_duration)
+    if ((current_ts.tv_sec - last_data_fetch) > cache_duration)
     {
       cache_expired = 1;
     }
@@ -2184,7 +2187,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       snprintf(user_faked_time, BUFFERLEN, "+0");
     }
 
-    last_data_fetch = tp->tv_sec;
+    last_data_fetch = current_ts.tv_sec;
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
