@@ -2256,13 +2256,14 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 #ifdef CLOCK_REALTIME_COARSE
           case CLOCK_REALTIME_COARSE:
 #endif
-            if ((tp->tv_sec > ftpl_starttime.real.tv_sec) ||
-                ((tp->tv_sec == ftpl_starttime.real.tv_sec) &&
-                 (tp->tv_nsec > ftpl_starttime.real.tv_nsec))) {
-               timespecsub(tp, &ftpl_starttime.real, &tdiff);
+            if (((tp->tv_sec + 1 == ftpl_starttime.real.tv_sec) &&
+                 (tp->tv_nsec < ftpl_starttime.real.tv_nsec))   ||
+                ((tp->tv_sec == ftpl_starttime.real.tv_sec)     &&
+                (tp->tv_nsec > ftpl_starttime.real.tv_nsec))) {
+              timespecsub(tp, &ftpl_starttime.real, &tdiff); /* regular case */
             }
             else {
-               timespecsub(&ftpl_starttime.real, tp, &tdiff);
+              timespecsub(&ftpl_starttime.real, tp, &tdiff); /* startup case */
             }
             break;
           case CLOCK_MONOTONIC:
