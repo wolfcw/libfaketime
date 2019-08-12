@@ -1,3 +1,9 @@
+Since 0.9.7:
+    - Passthrough for unknown clock ids to avoid error messages
+    - Fixes for multithreaded operations (mliertzer, qnox)
+    - glibc-related fixes (jprjr) and gcc8 support (tpetazzoni)
+    - Improved error message output on parsing errors
+
 Since 0.9.6:
     - Julien Gilli added an option to disable monotonic time faking
     - Azat Khuzhin added support for COARSE clocks
