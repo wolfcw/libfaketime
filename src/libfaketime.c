@@ -276,6 +276,8 @@ static void ftpl_init (void) __attribute__ ((constructor));
  *      =======================================================================
  */
 
+static bool shmCreator = false;
+
 static void ft_shm_create(void) {
   char sem_name[256], shm_name[256];
   int shm_fdN;
@@ -338,6 +340,24 @@ static void ft_shm_create(void) {
   snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
   setenv("FAKETIME_SHARED", shared_objsN, true);
   sem_close(semN);
+
+  shmCreator = true;
+}
+
+static void ft_shm_destroy(void)
+{
+  char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+
+  if (ft_shared_env != NULL)
+  {
+    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
+    {
+      printf("Error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
+      exit(1);
+    }
+    sem_unlink(sem_name);
+    sem_unlink(shm_name);
+  }
 }
 
 static void ft_shm_init (void)
@@ -401,6 +421,7 @@ static void ft_cleanup (void)
     exit(-1);
   }
 #endif
+  if (shmCreator == true) ft_shm_destroy();
 }
 
 
