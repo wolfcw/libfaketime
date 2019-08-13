@@ -276,10 +276,80 @@ static void ftpl_init (void) __attribute__ ((constructor));
  *      =======================================================================
  */
 
+static void ft_shm_create(void) {
+  char sem_name[256], shm_name[256];
+  int shm_fdN;
+  sem_t *semN;
+  struct ft_shared_s *ft_sharedN;
+  char shared_objsN[513];
+
+  snprintf(sem_name, 255, "/faketime_sem_%ld", (long)getpid());
+  snprintf(shm_name, 255, "/faketime_shm_%ld", (long)getpid());
+  if (SEM_FAILED == (semN = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
+  {  
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  /* create shm */
+  if (-1 == (shm_fdN = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
+  {  
+    perror("shm_open");
+    exit(EXIT_FAILURE);
+  }
+  /* set shm size */
+  if (-1 == ftruncate(shm_fdN, sizeof(uint64_t)))
+  {
+    perror("ftruncate");
+    exit(EXIT_FAILURE);
+  }  
+  /* map shm */
+  if (MAP_FAILED == (ft_sharedN = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
+                     MAP_SHARED, shm_fdN, 0)))
+  {
+    perror("mmap");
+    exit(EXIT_FAILURE);
+  }
+  if (sem_wait(semN) == -1)
+  {
+    perror("sem_wait");
+    exit(EXIT_FAILURE);
+  }
+  /* init elapsed time ticks to zero */
+  ft_sharedN->ticks = 0;
+  ft_sharedN->file_idx = 0;
+  ft_sharedN->start_time.real.tv_sec = 0;
+  ft_sharedN->start_time.real.tv_nsec = -1;
+  ft_sharedN->start_time.mon.tv_sec = 0;
+  ft_sharedN->start_time.mon.tv_nsec = -1;
+  ft_sharedN->start_time.mon_raw.tv_sec = 0;
+  ft_sharedN->start_time.mon_raw.tv_nsec = -1;
+
+  if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
+  {
+    perror("munmap");
+    exit(EXIT_FAILURE);
+  }
+  if (sem_post(semN) == -1)
+  {
+    perror("semop");
+    exit(EXIT_FAILURE);
+  } 
+
+  snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
+  setenv("FAKETIME_SHARED", shared_objsN, true);
+  sem_close(semN);
+}
+
 static void ft_shm_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+
+  if (ft_shared_env == NULL)
+  {
+    ft_shm_create();
+    ft_shared_env = getenv("FAKETIME_SHARED");
+  }
 
   if (ft_shared_env != NULL)
   {
