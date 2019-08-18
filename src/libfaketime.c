@@ -279,11 +279,12 @@ static void ftpl_init (void) __attribute__ ((constructor));
 static bool shmCreator = false;
 
 static void ft_shm_create(void) {
-  char sem_name[256], shm_name[256];
+  char sem_name[256], shm_name[256], sem_nameT[256], shm_nameT[256];
   int shm_fdN;
   sem_t *semN;
   struct ft_shared_s *ft_sharedN;
   char shared_objsN[513];
+  sem_t *shared_semT = NULL;
 
   snprintf(sem_name, 255, "/faketime_sem_%ld", (long)getpid());
   snprintf(shm_name, 255, "/faketime_shm_%ld", (long)getpid());
@@ -334,15 +335,29 @@ static void ft_shm_create(void) {
   }
   if (sem_post(semN) == -1)
   {
-    perror("libfaketime: In ft_shm_create(), semop failed");
+    perror("libfaketime: In ft_shm_create(), sem_post failed");
     exit(EXIT_FAILURE);
   } 
 
   snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
-  setenv("FAKETIME_SHARED", shared_objsN, true);
+
+  int semSafetyCheckPassed = 0;
   sem_close(semN);
 
-  shmCreator = true;
+  sscanf(shared_objsN, "%255s %255s", sem_nameT, shm_nameT);
+  if (SEM_FAILED == (shared_semT = sem_open(sem_nameT, 0)))
+  {
+      fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal sem_open issue with %s", sem_nameT);
+  }
+  else {
+    semSafetyCheckPassed = 1;
+    sem_close(shared_semT);
+  }
+
+  if (semSafetyCheckPassed == 1) {
+    setenv("FAKETIME_SHARED", shared_objsN, true);
+    shmCreator = true;
+  }
 }
 
 static void ft_shm_destroy(void)
