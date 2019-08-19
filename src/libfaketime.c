@@ -398,6 +398,8 @@ static void ft_shm_init (void)
     if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0)))
     {
       perror("libfaketime: In ft_shm_init(), sem_open failed");
+      fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s", sem_name, shmCreator ? "true":"false");
+      fprintf(stderr, "libfaketime: parsed from env: %s", ft_shared_env);
       exit(1);
     }
 
