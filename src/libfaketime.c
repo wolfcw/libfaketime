@@ -231,7 +231,11 @@ static char ft_spawn_target[1024];
 static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
+#ifdef __ARM_ARCH
+static int fake_monotonic_clock = 0;
+#else
 static int fake_monotonic_clock = 1;
+#endif
 static int cache_enabled = 1;
 static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 
@@ -2789,9 +2793,15 @@ int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, con
 }
 
 __asm__(".symver pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5");
+#ifdef __ARM_ARCH
+__asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@");
+__asm__(".symver pthread_cond_init_232, pthread_cond_init@@");
+__asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@");
+#else
 __asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@GLIBC_2.3.2");
 __asm__(".symver pthread_cond_init_232, pthread_cond_init@@GLIBC_2.3.2");
 __asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2");
+#endif
 
 #endif
 

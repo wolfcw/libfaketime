@@ -38,9 +38,14 @@ echo "FAKETIME=\"+10d x2\" ./timetest"
 FAKETIME="+10d x2" NO_FAKE_STAT=1 ./timetest
 echo
 
-echo "Running the 'date' command with 15 days negative offset specified"
-echo "FAKETIME=\"-15d\" date"
-FAKETIME="-15d" date
-echo
+# On more recent macOS versions, the following won't work without copying gdate
+# to a different folder beforehand. We don't do that here, and since the output
+# of these tests must be reviewed manually anyway, the timetest binary should be
+# sufficient to determine whether everything works as planned.
+
+#echo "Running the 'date' command with 15 days negative offset specified"
+#echo "FAKETIME=\"-15d\" date"
+#FAKETIME="-15d" date
+#echo
 
 exit 0
