@@ -375,8 +375,17 @@ static void ft_shm_destroy(void)
       printf("libfaktime: In ft_shm_destroy(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
       exit(1);
     }
+    /*
+       To avoid shared memory / semaphores left after quitting, we have to clean
+       up here similar to how the faketime wrapper does.
+       However, there is no guarantee that all child processes have quit before
+       we clean up here, which potentially leaves us in a stale state.
+       Since there is no easy solution for this problem (see issue #56),
+       ft_shm_init() below at least tries to handle this carefully.
+    */
     sem_unlink(sem_name);
     sem_unlink(shm_name);
+    unsetenv("FAKETIME_SHARED");
   }
 }
 
@@ -384,13 +393,35 @@ static void ft_shm_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+  sem_t *shared_semR = NULL;
 
+  /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
   {
     ft_shm_create();
     ft_shared_env = getenv("FAKETIME_SHARED");
   }
+  
+  /* check for stale semaphore / shared memory information */
+  if (ft_shared_env != NULL)
+  {
+    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
+    {
+      printf("libfaketime: In ft_shm_init(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
+      exit(1);
+    }
+    if (SEM_FAILED == (shared_semR = sem_open(sem_name, 0))) /* gone stale? */
+    {
+      ft_shm_create();
+      ft_shared_env = getenv("FAKETIME_SHARED");
+    }
+    else 
+    {
+      sem_close(shared_semR);
+    }
+  }
 
+  /* process the semaphore / shared memory information */
   if (ft_shared_env != NULL)
   {
     if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
@@ -402,8 +433,8 @@ static void ft_shm_init (void)
     if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0)))
     {
       perror("libfaketime: In ft_shm_init(), sem_open failed");
-      fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s", sem_name, shmCreator ? "true":"false");
-      fprintf(stderr, "libfaketime: parsed from env: %s", ft_shared_env);
+      fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
+      fprintf(stderr, "libfaketime: parsed from env: %s\n", ft_shared_env);
       exit(1);
     }
 
