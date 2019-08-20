@@ -1832,6 +1832,10 @@ static void ftpl_init(void)
   char *tmp_env;
   bool dont_fake_final;
 
+  /* moved up here from below the dlsym calls #130 */
+  dont_fake = true; // Do not fake times during initialization
+  dont_fake_final = false;
+
 #ifdef __APPLE__
   const char *progname = getprogname();
 #else
@@ -1935,8 +1939,6 @@ static void ftpl_init(void)
 #endif
 #endif
 
-  dont_fake = true; // Do not fake times during initialization
-  dont_fake_final = false;
   initialized = 1;
 
   ft_shm_init();
