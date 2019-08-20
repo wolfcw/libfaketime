@@ -205,6 +205,22 @@ specified absolute time. The 'start at' format allows a 'relative' clock
 operation as described below in section 4d), but using a 'start at' time
 instead of an offset time.
 
+If the started process itself starts other (child) processes, they by default
+will start with the specified start-at-date again. If this is not what you need,
+set the environment variable FAKETIME_DONT_RESET=1. Try these examples to see
+the difference:
+
+LD_PRELOAD=src/libfaketime.so.1 FAKETIME="@2000-01-01 11:12:13" \
+  FAKETIME_DONT_RESET=1 \
+  /bin/bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
+
+LD_PRELOAD=src/libfaketime.so.1 FAKETIME="@2000-01-01 11:12:13" \
+  /bin/bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
+
+In the second example, the "date" command will always print the same time,
+while in the first example, with FAKETIME_DONT_RESET set, time will increment
+even though all the "date" commands are new processes.
+
 
 4d) Using offsets for relative dates
 ------------------------------------
@@ -334,6 +350,30 @@ problem in your scenario, you can change number of seconds before the file is re
 again with environment variable FAKETIME_CACHE_DURATION, or disable caching at all
 with FAKETIME_NO_CACHE=1. Remember that disabling the cache may negatively
 influence the performance.
+
+
+Setting FAKETIME by means of a file timestamp
+---------------------------------------------
+
+Based on a proposal by Hitoshi Harada (umitanuki), the "start at" time can now be
+set through any file in the file system by setting the FAKETIME environment variable
+to "%" (a percent sign) and FAKETIME_FOLLOW_FILE to the name of the file whose
+modification timestamp shall be used as source for the "start at" time.
+
+Usage example:
+
+# create any file with December 24th, 2009, 12:34:56 as timestamp
+touch -t 0912241234.56 /tmp/my-demo-file.tmp
+
+# run a bash shell with an endless loop printing the current time
+LD_PRELOAD=/path/to/libfaketime.so.1 \
+  FAKETIME='%' FAKETIME_FOLLOW_FILE=/tmp/my-demo-file.tmp \
+  FAKETIME_DONT_RESET=1 \
+  bash -c 'while true ; do date ; sleep 1 ; done'
+
+# now, while the above is running, change the file's timestamp
+# (in a different terminal window or whatever)
+touch -t 2002290123.45 /tmp/my-demo-file.tmp
 
 
 4f) Faking the date and time system-wide

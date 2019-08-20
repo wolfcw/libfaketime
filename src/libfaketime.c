@@ -1794,6 +1794,34 @@ static void parse_ft_string(const char *user_faked_time)
       goto parse_modifiers;
       break;
 
+    case '%': /* follow file timestamp as suggested by Hitoshi Harada (umitanuki) */
+      ft_mode = FT_START_AT;
+      struct stat master_file_stats;
+      int ret;
+      if (NULL == getenv("FAKETIME_FOLLOW_FILE"))
+      {
+        fprintf(stderr, "libfaketime: %% operator in FAKETIME setting requires environment variable FAKETIME_FOLLOW_FILE set.\n");
+        exit(1);
+      }
+      else
+      {
+        DONT_FAKE_TIME(ret = stat(getenv("FAKETIME_FOLLOW_FILE"), &master_file_stats));
+        if (ret == -1)
+        {
+          fprintf(stderr, "libfaketime: Cannot get timestamp of file %s as requested by %% operator.\n", getenv("FAKETIME_FOLLOW_FILE"));
+          exit(1);
+        }
+        else
+        {
+          user_faked_time_timespec.tv_sec = master_file_stats.st_mtime;
+          user_faked_time_timespec.tv_nsec = 0;
+        }
+      }
+      if (NULL == getenv("FAKETIME_DONT_RESET"))
+        system_time_from_system(&ftpl_starttime);
+      goto parse_modifiers;
+      break;
+      
     case 'i':
     case 'x': /* Only modifiers are passed, don't fall back to strptime */
 parse_modifiers:
