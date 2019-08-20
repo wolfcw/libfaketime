@@ -224,6 +224,11 @@ optionally followed by a multiplier:
   export FAKETIME="-10m" sets the faked time 10 minutes behind the real time.
   export FAKETIME="+14d" sets the faked time to 14 days in the future.
 
+  Please note that if you need other multipliers (weeks, months etc.) or higher
+  precision (e.g., correct leap year handling), you should use either the
+  faketime wrapper or the GNU date command as shown in the first of the three
+  examples below.
+
 You now should understand the complete example we've used before:
 
 LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d" date
