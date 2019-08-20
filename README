@@ -281,6 +281,11 @@ completely independently of the system clock. It helps running programs
 with some determinism. In this single case all spawned processes will use
 the same global clock without restarting it at the start of each process.
 
+Please note that using "x" or "i" in FAKETIME still requires giving an offset
+(see section 4d). This means that "+1y x2" will work, but "x2" only will not.
+If you do not want to fake the time, but just modify clock speed, use something
+like "+0 x2", i.e., use an explizit zero offset as a prefix in your FAKETIME.
+
 For testing, your should run a command like
 
 LD_PRELOAD=./libfaketime.so.1 FAKETIME="+1,5y x10,0" \
