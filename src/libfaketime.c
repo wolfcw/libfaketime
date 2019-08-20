@@ -1789,7 +1789,8 @@ static void parse_ft_string(const char *user_faked_time)
       }
 
       /* Reset starttime */
-      system_time_from_system(&ftpl_starttime);
+      if (NULL == getenv("FAKETIME_DONT_RESET"))
+        system_time_from_system(&ftpl_starttime);
       goto parse_modifiers;
       break;
 
