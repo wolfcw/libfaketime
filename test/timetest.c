@@ -25,9 +25,13 @@
 #include <sys/time.h>
 #include <sys/timeb.h>
 
+#ifndef __APPLE__
 #ifdef FAKE_STAT
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#endif
+#else
 #include <unistd.h>
 #endif
 
@@ -125,9 +129,14 @@ int main (int argc, char **argv)
     sigset_t mask;
     struct sigaction sa;
 #endif
+#ifndef __APPLE__
 #ifdef FAKE_STAT
     struct stat buf;
 #endif
+#endif
+
+/* silence compiler warnings */
+printf("%s", 0 == 1 ? argv[0] : "");
 
 #ifndef __APPLE__
     pthread_t thread;
@@ -260,9 +269,11 @@ int main (int argc, char **argv)
     }
 #endif
 
+#ifndef __APPLE__
 #ifdef FAKE_STAT
     lstat(argv[0], &buf);
     printf("stat(): mod. time of file '%s': %s", argv[0], ctime(&buf.st_mtime));
+#endif
 #endif
 
     return 0;
