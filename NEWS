@@ -15,6 +15,7 @@ Since 0.9.7:
     - Fixes for shared memory related issues, especially when
       not using the faketime wrapper
     - Updated glibc compatibility settings for various platforms
+    - Support for clock_nanosleep() with realtime and monotonic clocks
 
 Since 0.9.6:
     - Julien Gilli added an option to disable monotonic time faking

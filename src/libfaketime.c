@@ -166,6 +166,9 @@ static int          (*real_timer_gettime_233)  (timer_t timerid,
 #endif
 #ifdef FAKE_SLEEP
 static int          (*real_nanosleep)       (const struct timespec *req, struct timespec *rem);
+#ifndef __APPLE__
+static int          (*real_clock_nanosleep) (clockid_t clock_id, int flags, const struct timespec *req, struct timespec *rem); 
+#endif
 static int          (*real_usleep)          (useconds_t usec);
 static unsigned int (*real_sleep)           (unsigned int seconds);
 static unsigned int (*real_alarm)           (unsigned int seconds);
@@ -1052,6 +1055,85 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
   return result;
 }
 
+#ifndef __APPLE__
+/*
+ * Faked clock_nanosleep()
+ */
+int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec *req, struct timespec *rem)
+{
+  int result;
+  struct timespec real_req;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_clock_nanosleep == NULL)
+  {
+    return -1;
+  }
+  if (req != NULL)
+  {
+    if (flags & TIMER_ABSTIME) /* sleep until absolute time */
+    {
+      struct timespec tdiff, timeadj;
+      timespecsub(req, &user_faked_time_timespec, &timeadj);
+      if (user_rate_set)
+      {
+        timespecmul(&timeadj, 1.0/user_rate, &tdiff);
+      }
+      else
+      {
+        tdiff = timeadj;
+      }
+      if (clock_id == CLOCK_REALTIME)
+      {
+        timespecadd(&ftpl_starttime.real, &tdiff, &real_req);
+      }
+      else if (clock_id == CLOCK_MONOTONIC)
+      {
+        timespecadd(&ftpl_starttime.mon, &tdiff, &real_req);
+      }
+      else /* presumably only CLOCK_PROCESS_CPUTIME_ID, leave untouched */
+      {
+       real_req = *req;
+      }
+    }
+    else /* sleep for a relative time interval */
+    {
+      if (user_rate_set && !dont_fake && ((clock_id == CLOCK_REALTIME) || (clock_id == CLOCK_MONOTONIC))) /* don't touch CLOCK_PROCESS_CPUTIME_ID */
+      {
+        timespecmul(req, 1.0 / user_rate, &real_req);
+      }
+      else
+      {
+        real_req = *req;
+      }
+    }
+  }
+  else
+  {
+    return -1;
+  }
+
+  DONT_FAKE_TIME(result = (*real_clock_nanosleep)(clock_id, flags, &real_req, rem));
+  if (result == -1)
+  {
+    return result;
+  }
+  /* fake returned parts */
+  if ((rem != NULL) && ((rem->tv_sec != 0) || (rem->tv_nsec != 0)))
+  {
+    if (user_rate_set && !dont_fake)
+    {
+      timespecmul(rem, user_rate, rem);
+    }
+  }
+  /* return the result to the caller */
+  return result;
+}
+#endif
+
 /*
  * Faked usleep()
  */
@@ -1928,6 +2010,9 @@ static void ftpl_init(void)
 #endif
 #ifdef FAKE_SLEEP
   real_nanosleep =          dlsym(RTLD_NEXT, "nanosleep");
+#ifndef __APPLE__
+  real_clock_nanosleep =    dlsym(RTLD_NEXT, "clock_nanosleep");
+#endif
   real_usleep =             dlsym(RTLD_NEXT, "usleep");
   real_sleep =              dlsym(RTLD_NEXT, "sleep");
   real_alarm =              dlsym(RTLD_NEXT, "alarm");
