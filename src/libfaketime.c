@@ -264,6 +264,7 @@ static double user_rate = 1.0;
 static bool user_rate_set = false;
 static struct timespec user_per_tick_inc = {0, -1};
 static bool user_per_tick_inc_set = false;
+static bool user_per_tick_inc_set_backup = false;
 
 enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
@@ -661,6 +662,36 @@ static bool load_time(struct timespec *tp)
 
 static int fake_stat_disabled = 0;
 
+void lock_for_stat()
+{
+  if (shared_sem != NULL)
+  {
+    if (sem_wait(shared_sem) == -1)
+    {
+      perror("libfaketime: In lock_for_stat(), sem_wait failed");
+      exit(1);
+    }
+  }
+  user_per_tick_inc_set_backup = user_per_tick_inc_set;
+  user_per_tick_inc_set = false;
+  return;
+}
+
+void unlock_for_stat()
+{
+  user_per_tick_inc_set = user_per_tick_inc_set_backup;
+
+  if (shared_sem != NULL)
+  {
+    if (sem_post(shared_sem) == -1)
+    {
+      perror("libfaketime: In unlock_for_stat(), sem_post failed");
+      exit(1);
+    }
+  }
+  return;
+}
+
 #define FAKE_STRUCT_STAT_TIME(which) {                \
     struct timespec t = {buf->st_##which##time,       \
                          buf->st_##which##timensec};  \
@@ -671,25 +702,33 @@ static int fake_stat_disabled = 0;
 
 static inline void fake_statbuf (struct stat *buf) {
 #ifndef st_atime
+  lock_for_stat();
   FAKE_STRUCT_STAT_TIME(c);
   FAKE_STRUCT_STAT_TIME(a);
   FAKE_STRUCT_STAT_TIME(m);
+  unlock_for_stat();
 #else
+  lock_for_stat();
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+  unlock_for_stat();
 #endif
 }
 
 static inline void fake_stat64buf (struct stat64 *buf) {
 #ifndef st_atime
+  lock_for_stat();
   FAKE_STRUCT_STAT_TIME(c);
   FAKE_STRUCT_STAT_TIME(a);
   FAKE_STRUCT_STAT_TIME(m);
+  unlock_for_stat();
 #else
+  lock_for_stat();
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+  unlock_for_stat();
 #endif
 }
 
@@ -1821,7 +1860,7 @@ static void parse_ft_string(const char *user_faked_time)
         system_time_from_system(&ftpl_starttime);
       goto parse_modifiers;
       break;
-      
+
     case 'i':
     case 'x': /* Only modifiers are passed, don't fall back to strptime */
 parse_modifiers:
