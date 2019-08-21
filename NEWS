@@ -3,6 +3,18 @@ Since 0.9.7:
     - Fixes for multithreaded operations (mliertzer, qnox)
     - glibc-related fixes (jprjr) and gcc8 support (tpetazzoni)
     - Improved error message output on parsing errors
+    - fix file stat() faking when 'i' modifier is used for determinism
+    - Use FAKETIME="%" to take FAKETIME setting from a file as
+      specified in FAKETIME_FOLLOW_FILE
+    - Added FAKETIME_DONT_RESET environment variable to avoid
+      faketime resets when subprocesses are started (similar to
+      the old v0.9.6 behavior)
+    - Do not fake time during libfaketime initialization to
+      improve compatibility with memory allocation libraries that
+      use time-related functions themselves
+    - Fixes for shared memory related issues, especially when
+      not using the faketime wrapper
+    - Updated glibc compatibility settings for various platforms
 
 Since 0.9.6:
     - Julien Gilli added an option to disable monotonic time faking
