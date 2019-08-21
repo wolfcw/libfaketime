@@ -376,6 +376,41 @@ LD_PRELOAD=/path/to/libfaketime.so.1 \
 touch -t 2002290123.45 /tmp/my-demo-file.tmp
 
 
+Changing the 'x' modifier during run-time
+-----------------------------------------
+
+Using FAKETIME_TIMESTAMP_FILE allows for easily changing the FAKETIME setting
+while a program is running:
+
+echo "+0 x1" > /tmp/my-faketime.rc
+LD_PRELOAD=libfaketime.so.1 FAKETIME_TIMESTAMP_FILE="/tmp/my-faketime.rc" \
+  FAKETIME_NO_CACHE=1 ./some-program &
+sleep 10 ; echo "+0 x10" > /tmp/my-faketime.rc
+
+Changing the speed of the wall clock time, i.e., using a different 'x' modifier
+during run-time, by default can lead to greater jumps that may confuse the
+program. For example, if the program has been running for 10 seconds on 'x1',
+and then the setting is changed to 'x10', the faked time will look to the
+program as if it has been running for more than 100 instead of just more than
+10 seconds.
+
+By setting the environment variable FAKETIME_XRESET to any value, transitions
+between different 'x' modifier values will be significantly smoothed:
+
+LD_PRELOAD=libfaketime.so.1 FAKETIME_TIMESTAMP_FILE="/tmp/my-faketime.rc" \
+  FAKETIME_NO_CACHE=1 FAKETIME_XRESET=1 ./some-program &
+
+Setting FAKETIME_XRESET ensures that wall clock time begins to run faster
+only after the 'x' modifier has been changed (when increasing it) and also
+ensures that the reported faked time does not jump back to past values
+(when decreasing it).
+
+Please note that FAKETIME_XRESET internally works by resetting libfaketime's
+internal time-keeping data structures, which may have side effects on reported
+file timestamps. Using FAKETIME_XRESET should be considered experimental at
+the moment.
+
+
 4f) Faking the date and time system-wide
 ----------------------------------------
 

@@ -248,8 +248,12 @@ static int cache_duration = 10;     /* cache fake time input for 10 seconds */
  */
 #ifndef CLOCK_BOOTTIME
 static struct system_time_s ftpl_starttime = {{0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_timecache = {{0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_faketimecache = {{0, -1}, {0, -1}, {0, -1}};
 #else
 static struct system_time_s ftpl_starttime = {{0, -1}, {0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_timecache = {{0, -1}, {0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_faketimecache = {{0, -1}, {0, -1}, {0, -1}, {0, -1}};
 #endif
 
 static char user_faked_time_fmt[BUFSIZ] = {0};
@@ -1951,6 +1955,22 @@ parse_modifiers:
       {
         user_rate = atof(strchr(user_faked_time, 'x')+1);
         user_rate_set = true;
+        if (NULL != getenv("FAKETIME_XRESET")) { 
+          if (ftpl_timecache.real.tv_nsec >= 0) {
+            user_faked_time_timespec.tv_sec  = ftpl_faketimecache.real.tv_sec;
+            user_faked_time_timespec.tv_nsec = ftpl_faketimecache.real.tv_nsec;
+            ftpl_starttime.real.tv_sec       = ftpl_timecache.real.tv_sec;
+            ftpl_starttime.real.tv_nsec      = ftpl_timecache.real.tv_nsec;
+            ftpl_starttime.mon.tv_sec        = ftpl_timecache.mon.tv_sec;
+            ftpl_starttime.mon.tv_nsec       = ftpl_timecache.mon.tv_nsec;
+            ftpl_starttime.mon_raw.tv_sec    = ftpl_timecache.mon_raw.tv_sec;
+            ftpl_starttime.mon_raw.tv_nsec   = ftpl_timecache.mon_raw.tv_nsec;
+#ifdef CLOCK_BOOTTIME
+            ftpl_starttime.boot.tv_sec       = ftpl_timecache.boot.tv_sec;
+            ftpl_starttime.boot.tv_nsec      = ftpl_timecache.boot.tv_nsec;
+#endif
+          }
+        }        
       }
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
@@ -2363,6 +2383,11 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   static time_t last_data_fetch = 0;  /* not fetched previously at first call */
   static int cache_expired = 1;       /* considered expired at first call */
 
+  /* create a copy of the timespec containing the real system time for clk_id */
+  struct timespec tp_save;
+  tp_save.tv_sec = tp->tv_sec;
+  tp_save.tv_nsec = tp->tv_nsec;
+
   if (dont_fake) return 0;
   /* Per process timers are only sped up or slowed down */
   if ((clk_id == CLOCK_PROCESS_CPUTIME_ID ) || (clk_id == CLOCK_THREAD_CPUTIME_ID))
@@ -2595,6 +2620,39 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   pthread_cleanup_pop(1);
 #endif
   save_time(tp);
+
+  /* Cache this most recent real and faked time we encountered */
+  if (clk_id == CLOCK_REALTIME)
+  {
+    ftpl_timecache.real.tv_sec         = tp_save.tv_sec;
+    ftpl_timecache.real.tv_nsec        = tp_save.tv_nsec;
+    ftpl_faketimecache.real.tv_sec     = tp->tv_sec;
+    ftpl_faketimecache.real.tv_nsec    = tp->tv_nsec;
+  }
+  else if (clk_id == CLOCK_MONOTONIC)
+  {
+    ftpl_timecache.mon.tv_sec          = tp_save.tv_sec;
+    ftpl_timecache.mon.tv_nsec         = tp_save.tv_nsec;
+    ftpl_faketimecache.mon.tv_sec      = tp->tv_sec;
+    ftpl_faketimecache.mon.tv_nsec     = tp->tv_nsec;
+  }
+  else if (clk_id == CLOCK_MONOTONIC_RAW)
+  {
+    ftpl_timecache.mon_raw.tv_sec      = tp_save.tv_sec;
+    ftpl_timecache.mon_raw.tv_nsec     = tp_save.tv_nsec;
+    ftpl_faketimecache.mon_raw.tv_sec  = tp->tv_sec;
+    ftpl_faketimecache.mon_raw.tv_nsec = tp->tv_nsec;
+  }
+#ifdef CLOCK_BOOTTIME
+  else if (clk_id == CLOCK_BOOTTIME)
+  {
+    ftpl_timecache.boot.tv_sec         = tp_save.tv_sec;
+    ftpl_timecache.boot.tv_nsec        = tp_save.tv_nsec;
+    ftpl_faketimecache.boot.tv_sec     = tp->tv_sec;
+    ftpl_faketimecache.boot.tv_nsec    = tp->tv_nsec;
+  }
+#endif
+  
   return 0;
 }
 
