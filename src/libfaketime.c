@@ -1303,6 +1303,7 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
   return ret;
 }
 
+#ifdef __linux__
 /*
  * Faked epoll_wait()
  */
@@ -1356,6 +1357,7 @@ int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout
   DONT_FAKE_TIME(ret = (*real_epoll_pwait)(epfd, events, maxevents, real_timeout, sigmask));
   return ret;
 }
+#endif
 
 /*
  * Faked poll()
