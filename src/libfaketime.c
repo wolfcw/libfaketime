@@ -30,6 +30,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
+#ifdef __linux__
+#include <sys/epoll.h>
+#endif
 #include <time.h>
 #include <math.h>
 #include <errno.h>
@@ -174,10 +177,21 @@ static unsigned int (*real_sleep)           (unsigned int seconds);
 static unsigned int (*real_alarm)           (unsigned int seconds);
 static int          (*real_poll)            (struct pollfd *, nfds_t, int);
 static int          (*real_ppoll)           (struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
+#ifdef __linux__
+static int          (*real_epoll_wait)      (int epfd, struct epoll_event *events, int maxevents, int timeout);
+static int          (*real_epoll_pwait)     (int epfd, struct epoll_event *events, int maxevents, int timeout, const sigset_t *sigmask);
+#endif
 static int          (*real_select)          (int nfds, fd_set *restrict readfds,
                                              fd_set *restrict writefds,
                                              fd_set *restrict errorfds,
                                              struct timeval *restrict timeout);
+#ifdef __linux__
+static int          (*real_pselect)         (int nfds, fd_set *restrict readfds,
+                                             fd_set *restrict writefds,
+                                             fd_set *restrict errorfds,
+                                             const struct timespec *timeout,
+                                             const sigset_t *sigmask);
+#endif
 static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 #endif
 #ifdef __APPLEOSX__
@@ -1290,6 +1304,60 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
 }
 
 /*
+ * Faked epoll_wait()
+ */
+int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
+{
+  int ret, real_timeout;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_epoll_wait == NULL)
+  {
+    return -1;
+  }
+  if (user_rate_set && !dont_fake && timeout > 0)
+  {
+    real_timeout = (int) timeout * 1.0/user_rate;
+  }
+  else
+  {
+    real_timeout = timeout;
+  }
+  DONT_FAKE_TIME(ret = (*real_epoll_wait)(epfd, events, maxevents, real_timeout));
+  return ret;
+}
+
+/*
+ * Faked epoll_pwait()
+ */
+int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout, const sigset_t *sigmask)
+{
+  int ret, real_timeout;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_epoll_pwait == NULL)
+  {
+    return -1;
+  }
+  if (user_rate_set && !dont_fake && timeout > 0)
+  {
+    real_timeout = (int) timeout * 1.0/user_rate;
+  }
+  else
+  {
+    real_timeout = timeout;
+  }
+  DONT_FAKE_TIME(ret = (*real_epoll_pwait)(epfd, events, maxevents, real_timeout, sigmask));
+  return ret;
+}
+
+/*
  * Faked poll()
  */
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
@@ -1354,6 +1422,47 @@ int select(int nfds, fd_set *readfds,
   DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real));
   return ret;
 }
+
+#ifdef __linux__
+/*
+ * Faked pselect()
+ */
+int pselect(int nfds, fd_set *readfds,
+            fd_set *writefds,
+            fd_set *errorfds,
+            const struct timespec *timeout,
+            const sigset_t *sigmask)
+{
+  int ret;
+  struct timespec timeout_real;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+
+  if (real_pselect == NULL)
+  {
+    return -1;
+  }
+
+  if (timeout != NULL)
+  {
+    if (user_rate_set && !dont_fake && (timeout->tv_sec > 0 || timeout->tv_nsec > 0))
+    {
+      timespecmul(timeout, 1.0 / user_rate, &timeout_real);
+    }
+    else
+    {
+      timeout_real.tv_sec = timeout->tv_sec;
+      timeout_real.tv_nsec = timeout->tv_nsec;
+    }
+  }
+
+  DONT_FAKE_TIME(ret = (*real_pselect)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real, sigmask));
+  return ret;
+}
+#endif
 
 int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
 {
@@ -2038,7 +2147,14 @@ static void ftpl_init(void)
   real_alarm =              dlsym(RTLD_NEXT, "alarm");
   real_poll =               dlsym(RTLD_NEXT, "poll");
   real_ppoll =              dlsym(RTLD_NEXT, "ppoll");
+#ifdef linux
+  real_epoll_wait =         dlsym(RTLD_NEXT, "epoll_wait");
+  real_epoll_pwait =        dlsym(RTLD_NEXT, "epoll_pwait");
+#endif
   real_select =             dlsym(RTLD_NEXT, "select");
+#ifdef __linux__
+  real_pselect =            dlsym(RTLD_NEXT, "pselect");
+#endif
   real_sem_timedwait =      dlsym(RTLD_NEXT, "sem_timedwait");
 #endif
 #ifdef FAKE_INTERNAL_CALLS

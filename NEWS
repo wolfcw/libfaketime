@@ -9,6 +9,8 @@ Since 0.9.7:
     - Added FAKETIME_DONT_RESET environment variable to avoid
       faketime resets when subprocesses are started (similar to
       the old v0.9.6 behavior)
+    - Added FAKETIME_XRESET to avoid large clock jumps when
+      the 'x' modifier is used and changed during run-time
     - Do not fake time during libfaketime initialization to
       improve compatibility with memory allocation libraries that
       use time-related functions themselves
@@ -16,6 +18,7 @@ Since 0.9.7:
       not using the faketime wrapper
     - Updated glibc compatibility settings for various platforms
     - Support for clock_nanosleep() with realtime and monotonic clocks
+    - Support for epoll_wait(), epoll_pwait(), and pselect()
 
 Since 0.9.6:
     - Julien Gilli added an option to disable monotonic time faking
