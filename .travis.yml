@@ -7,5 +7,5 @@ matrix:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - make
+  - FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
   - make test
