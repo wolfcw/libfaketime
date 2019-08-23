@@ -19,6 +19,9 @@ Since 0.9.7:
     - Updated glibc compatibility settings for various platforms
     - Support for clock_nanosleep() with realtime and monotonic clocks
     - Support for epoll_wait(), epoll_pwait(), and pselect()
+    - src/Makefile CFLAG FORCE_MONOTONIC_FIX should be set (only) on
+      platforms where the test program hangs forever at the
+      CLOCK_MONOTONIC test.
 
 Since 0.9.6:
     - Julien Gilli added an option to disable monotonic time faking

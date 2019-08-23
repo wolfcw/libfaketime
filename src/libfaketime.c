@@ -3124,9 +3124,11 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
        fake time needs to be passed to pthread_cond_timedwait for
        CLOCK_MONOTONIC. */
 #ifndef __ARM_ARCH
+#ifndef FORCE_MONOTONIC_FIX
     if(clk_id == CLOCK_MONOTONIC)
       timespecadd(&faketime, &tdiff_actual, &tp);
     else
+#endif
 #endif
       timespecadd(&realtime, &tdiff_actual, &tp);
 

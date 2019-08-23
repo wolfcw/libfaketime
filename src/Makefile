@@ -30,6 +30,13 @@
 #     FAKE_PTHREAD
 #         - Intercept pthread_cond_timedwait
 #
+#     FORCE_MONOTONIC_FIX
+#         - If the test program hangs forever on
+#                  " pthread_cond_timedwait: CLOCK_MONOTONIC test
+#                    (Intentionally sleeping 1 second...)          "
+#           then add -DFORCE_MONOTONIC_FIX to CFLAGS and recompile.
+#           (This is a platform-specific issue we cannot handle at run-time.)
+#
 #     MULTI_ARCH
 #  	  - If MULTI_ARCH is set, the faketime wrapper program will put a literal
 #           $LIB into the LD_PRELOAD environment variable it creates, which makes
@@ -50,8 +57,8 @@
 # Change PREFIX to where you want libfaketime (libraries and wrapper binary) installed.
 # LIBDIRNAME is relative to PREFIX. The default is to install into $PREFIX/lib/faketime,
 # but you can set LIBDIRNAME to, e.g., /lib64 if you want to install it elsewhere.
-# LIBDIRNAME has been introduced to support MultiLib systems. Please do not change the 
-# default value on MultiArch systems. 
+# LIBDIRNAME has been introduced to support MultiLib systems. Please do not change the
+# default value on MultiArch systems.
 #
 # For testing in the current directory without installation, try make PREFIX= LIBDIRNAME='.'
 

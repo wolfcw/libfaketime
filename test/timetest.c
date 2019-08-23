@@ -97,7 +97,7 @@ void* pthread_test(void* args)
   timeToWait.tv_nsec = now.tv_nsec;
 
   printf("pthread_cond_timedwait: CLOCK_MONOTONIC test\n");
-  printf("(Intentionally sleeping 1 second...)\n");
+  printf("(Intentionally sleeping 1 second..., see docs about CLOCK_MONOTONIC test)\n");
   fflush(stdout);
 
   pthread_mutex_lock(&fakeMutex);

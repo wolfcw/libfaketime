@@ -83,6 +83,12 @@ documentation whether it can be achieved by using libfaketime directly.
   e.g., by checking whether certain environment variables are set or whether
   libfaketime-specific files are present.
 
+* CLOCK_MONOTONIC test: Running "make test" performs a series of tests after
+  successful compilation of the libfaketime library. On some platforms, the
+  "CLOCK_MONOTONIC test" will apparently hang forever. If and only if this
+  happens on your platform, add the CFLAG -DFORCE_MONOTONIC_FIX to
+  src/Makefile and recompile libfaketime. Do not set FORCE_MONOTONIC_FIX on
+  platforms where the test does not hang.
 
 3. Installation
 ---------------
