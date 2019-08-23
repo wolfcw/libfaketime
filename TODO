@@ -1,10 +1,15 @@
-Open issues / next steps for libfaketime development
+Open issues / next steps for libfaketime development:
 
-- support interception of further system calls, e.g. clock_nanosleep (#105),
-  walltime (#195), chrono::system_clock::now (#176), select (#115)
+Please see the issue tracker on Github - https://github.com/wolfcw/libfaketime
 
-- fake timer_create and friends
-- add more functional tests that check more than the basic functionality
-- use the testing framework to also implement unit tests
-- work around thread local storage issue, e.g., by using pthreads
+- New features, such as additional system calls to intercept, are labelled
+  "feature request" when they are considered for implementation
+
+- Issues labelled "help wanted" should be your starting point if you are
+  interested in contributing to libfaketime
+
+Besides the open issues, two major changes are planned for the next release:
+
 - integrate manchicken's autoconf/automake support to get rid of separate Makefile.OSX
+
+- use the testing framework to also implement unit tests

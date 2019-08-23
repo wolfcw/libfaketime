@@ -4,19 +4,26 @@ This file contains information for libfaketime developers and contributors.
 GENERAL
 =======
 
-Starting with libfaketime v0.9.5, development and issue handling is 
-completely done via Github: 
+Starting with libfaketime v0.9.5, development and issue handling is
+completely done via Github:
 
 	https://github.com/wolfcw/libfaketime
 
-- Official releases are tagged. 
-- Code contributions and bugfixes are merged into the "development" branch, 
-  which is considered unstable and may contain code that is not yet fully 
-  tested.
+- Official releases are tagged.
+
+- Code contributions and bugfixes should be submitted to and then merged into
+  the "development" branch, which is considered unstable and may contain code
+  that is not yet fully tested.
+
 - The "master" branch is updated with tested code only; it is ensured that
-  it compiles and works cleanly at least on current Linux and OS X systems.
+  it compiles and works cleanly at least on current Linux and macOS systems.
 
 Code contributions are highly welcome, preferably via pull requests on Github.
+
+Please have a look at issues labelled as "help wanted" in the Github issue
+tracker. If you are interested in contributing to libfaketime, helping with
+these issues is not only much appreciated, but also a good way to familiarize
+yourself with the overall codebase.
 
 
 CODE STYLE
@@ -43,16 +50,16 @@ void do_nothing(int how_often)
   }
 }
 
-- Use -DDEBUG and #ifdef DEBUG for development and testing. Avoid printing
-  to stdout or stderr outside "#ifdef DEBUG"; if it is necessary to inform
-  the user a run-time, prefix your output with "faketime" or make otherwise
-  sure that the user knows where the message is coming from.  
+- Use -DDEBUG and #ifdef DEBUG for development and testing. Avoid printing to
+  stdout or stderr outside "#ifdef DEBUG"; if it is necessary to inform the
+  user a run-time, prefix your output with "libfaketime" or make otherwise sure
+  that the user knows where the message is coming from.
 
 - If you add new functions to libfaketime.c, try placing them somewhere
   where they fit will: Usually, functions are grouped by functionality
   (e.g., all functions related to faking file timestamps). If that's not
   possible, group them by contributor, or document your placement strategy
-  in the commit message. 
+  in the commit message.
 
 
 DEVELOPMENT, BUILDING, AND TESTING
@@ -62,19 +69,19 @@ DEVELOPMENT, BUILDING, AND TESTING
   the modification fixes bugs :-)).
 
 - Add tests for new features. Extend test/timetest.c appropriately and
-  try to use the functional testing framework wherever possible. 
+  try to use the functional testing framework wherever possible.
 
 - Compiler and linker warnings are treated as errors and not acceptable.
 
-- If you cannot test the code on both Linux and OS X yourself, please 
-  let us know and consider wrapping your code in #ifdef / #ifndef __APPLE__ 
-  statements. 
+- If you cannot test the code on both Linux and macOS yourself, please
+  let us know and consider wrapping your code in #ifdef / #ifndef __APPLE__
+  statements.
 
 
 DOCUMENTATION
 =============
 
-For anything more than small bugfixes, please update the user documentation 
+For anything more than small bugfixes, please update the user documentation
 and credits appropriately:
 
 - The NEWS file should mention the change and your credits.
@@ -83,8 +90,8 @@ and credits appropriately:
 - The manpage man/faketime.1 should be updated when the wrapper application
   is modified.
 
-For credits, please either mention your real name, your Github username, or 
-your email address. 
+For credits, please either mention your real name, your Github username, or
+your email address.
 
 In your own interest, please be verbose on user documentation and comments
 in the source code. Users will not know about new features unless they are
@@ -97,7 +104,7 @@ RELEASES
 
 Official new releases are created whenever a significant amount of changes
 (bugfixes or new functionality) has piled up; on average, there is one new
-official release per year. Users who need to stick to the bleeding edge
+official release per 1-2 years. Users who need to stick to the bleeding edge
 are supposed to use the current state of the "master" branch at any time.
 
 libfaketime maintainers for several Linux distributions are informed about

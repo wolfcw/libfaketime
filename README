@@ -79,6 +79,13 @@ documentation whether it can be achieved by using libfaketime directly.
   the linker to do so at application start time. libfaketime will not work with
   those applications unless you can modify them.
 
+  This apparently happens a lot in complex run-time environments, e.g., for
+  programs written in golang, for some Java Virtual Machine implementations,
+  etc. Since libfaketime is effectively bypassed in such situations, there's
+  nothing we can do about it. Please consider asking the appropriate developers
+  and vendors to implement their runtime environment in a way that supports
+  intercepting selected system calls through LD_PRELOAD.
+
 * Applications can explicitly be designed to prevent libfaketime from working,
   e.g., by checking whether certain environment variables are set or whether
   libfaketime-specific files are present.

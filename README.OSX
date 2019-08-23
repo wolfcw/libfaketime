@@ -4,17 +4,15 @@ README file for libfaketime on macOS
 Support for macOS has meanwhile matured and many command line and
 GUI applications will run stable.
 
-Developments and tests are done on High Sierra currently.
-Use libfaketime 0.9.6 or earlier on OS X (i.e., before Sierra).
+Developments and tests are done on Mojave currently.
 
-Version 0.9.5 and higher no longer works with OSX <= 10.6 due to
+Version 0.9.5 and higher no longer work with OSX <= 10.6 due to
 changes in the underlying system libraries. If you need libfaketime
 on OSX <= 10.6, please use libfaketime version 0.9.
 
-
-Installing and using libfaketime on OS X is slightly different than
+Installing and using libfaketime on macOS is slightly different than
 on Linux. Please make sure to read the README file for general
-setup and usage, and refer to this file only about OS X specifics.
+setup and usage, and refer to this file only about macOS specifics.
 
 
 1) Installing libfaketime on macOS
@@ -32,6 +30,10 @@ Or, if you use Fink, install using:
 Or, if you use Homebrew, install using:
 
     brew install libfaketime
+
+Please inform the respective package maintainers if the latest release
+is not yet available this way. With homebrew, you can typically use
+"brew install --HEAD" to install from the latest source automatically.
 
 Otherwise, you have to compile and install libfaketime manually; this
 will require a working installation of Xcode and its command line tools
@@ -55,7 +57,7 @@ output is correct:
 ---------------------------------------------------
 
 You will need to set three environment variables. In a Terminal.app
-or iTerm2 session, the following commands can be used:
+or any other CLI session, the following commands can be used:
 
 export DYLD_FORCE_FLAT_NAMESPACE=1
 export DYLD_INSERT_LIBRARIES=/path/to/libfaketime.1.dylib
@@ -76,7 +78,7 @@ for help and use "man faketime" for details.
 --------------------------------------------
 
 Given the limited number of system calls libfaketime intercepts,
-it may not work too well with specific GUI applications on OS X.
+it may not work too well with specific GUI applications on macOS.
 This can result in crashes after a seemingly random time, or an
 application will not or at least not always see the faked time,
 and so on.
@@ -127,13 +129,20 @@ time-related system calls that need to be intercepted on macOS.
 
     https://github.com/wolfcw/libfaketime/issues
 
-Important: When reporting non-working applications, please make
-sure that your issue is not related to SIP (system integrity
-protection). For example, on a SIP-enabled, default macOS installation,
-libfaketime will not work for programs like /bin/bash because
-the path /bin is SIP-protected. Copy your application to a
-non-SIP-protected path, and if libfaketime still does not work,
-feel free to report it.
+However, there are two important aspects:
+
+- When reporting non-working applications, please make sure that your issue is
+  not related to SIP (system integrity protection). For example, on a
+  SIP-enabled, default macOS installation, libfaketime will not work for
+  programs like /bin/bash because the path /bin is SIP-protected. Copy your
+  application to a non-SIP-protected path, and if libfaketime still does not
+  work, feel free to report it.
+
+- We cannot and will not help with using libfaketime for proprietary or
+  commercial software unless you are its developer trying to integrate
+  libfaketime. Please contact the developers or the vendor directly if
+  you have problems using libfaketime with non-free / not open sourced
+  macOS applications.
 
 
 4) Notes for developers of macOS applications
@@ -141,4 +150,5 @@ feel free to report it.
 
 The environment variable FAKETIME can be changed at application run-time
 and always takes precedence over other user-controlled settings. It can
-be re-set to 0 (zero) to work around potential incompatibilities.
+be re-set to 0 (zero) to work around potential incompatibilities or if
+you do not want libfaketime applied to your software.
