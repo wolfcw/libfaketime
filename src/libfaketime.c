@@ -404,7 +404,7 @@ static void ft_shm_destroy(void)
        ft_shm_init() below at least tries to handle this carefully.
     */
     sem_unlink(sem_name);
-    sem_unlink(shm_name);
+    shm_unlink(shm_name);
     unsetenv("FAKETIME_SHARED");
   }
 }
