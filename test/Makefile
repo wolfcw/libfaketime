@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra
+CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra $(FAKETIME_COMPILE_CFLAGS)
 LDFLAGS = -lrt -lpthread
 
 SRC = timetest.c

@@ -1,6 +1,6 @@
 CC ?= clang
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT 
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
 
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}

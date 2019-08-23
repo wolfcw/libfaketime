@@ -38,7 +38,7 @@ INSTALL ?= install
 
 PREFIX ?= /usr/local
 
-CFLAGS += -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -DPREFIX='"'${PREFIX}'"'
+CFLAGS += -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -DPREFIX='"'${PREFIX}'"' $(FAKETIME_COMPILE_CFLAGS)
 LIB_LDFLAGS += -dynamiclib -current_version 0.9.8 -compatibility_version 0.7
 
 SONAME = 1
