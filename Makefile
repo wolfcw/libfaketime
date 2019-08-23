@@ -7,6 +7,7 @@ all:
 	$(MAKE) $(SELECTOR) -C src all
 
 test:
+	$(MAKE) $(SELECTOR) -C src all
 	$(MAKE) $(SELECTOR) -C test all
 
 install:
