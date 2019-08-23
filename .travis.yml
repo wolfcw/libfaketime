@@ -1,0 +1,11 @@
+language: c
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+
+script:
+  - cd ${TRAVIS_BUILD_DIR}
+  - make
+  - make test
