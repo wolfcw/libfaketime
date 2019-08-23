@@ -417,6 +417,32 @@ file timestamps. Using FAKETIME_XRESET should be considered experimental at
 the moment.
 
 
+Cleaning up shared memory
+-------------------------
+
+libfaketime uses semaphores and shared memory on platforms that support it in
+order to sync faketime settings across parent-child processes. It will clean
+up when it exits properly. However, when processes are terminated (e.g., by
+Ctrl-C on command line), shared memory cannot be cleaned up properly. In such
+cases, you should occasionally delete
+
+  /dev/shm/faketime_shm_* and
+  /dev/shm/sem.faketime_sem_*
+
+manually (or properly automated). Leftover files there from processes that
+already have been terminated are not a problem in general, but result in a
+libfaketime error the next time a process is started with a process id for
+which such a stale semaphore/shared memory exists. Thus, if you run across
+the following error message
+
+  libfaketime: In ft_shm_create(), shm_open failed: File exists
+
+please cleanup /dev/shm as described above. This is especially relevant
+for long-running systems (servers with high uptime) and systems on which
+a lot of processes are started (e.g., servers handling many containers
+or similar virtualization mechanisms).
+
+
 4f) Faking the date and time system-wide
 ----------------------------------------
 

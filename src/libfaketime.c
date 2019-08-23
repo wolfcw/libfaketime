@@ -354,7 +354,7 @@ static void ft_shm_create(void) {
 
   if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
   {
-    perror("libfaktime: In ft_shm_create(), munmap failed");
+    perror("libfaketime: In ft_shm_create(), munmap failed");
     exit(EXIT_FAILURE);
   }
   if (sem_post(semN) == -1)
@@ -392,7 +392,7 @@ static void ft_shm_destroy(void)
   {
     if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
     {
-      printf("libfaktime: In ft_shm_destroy(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
+      printf("libfaketime: In ft_shm_destroy(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
       exit(1);
     }
     /*
