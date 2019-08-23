@@ -224,6 +224,7 @@ int main (int argc, char **argv)
     if (SEM_FAILED == (sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
     {
       perror("sem_open");
+      fprintf(stderr, "The faketime wrapper only works on platforms that support the sem_open()\nsystem call. However, you may LD_PRELOAD libfaketime without using this wrapper.\n");
       exit(EXIT_FAILURE);
     }
 

@@ -315,10 +315,8 @@ static void ft_shm_create(void) {
   snprintf(sem_name, 255, "/faketime_sem_%ld", (long)getpid());
   snprintf(shm_name, 255, "/faketime_shm_%ld", (long)getpid());
   if (SEM_FAILED == (semN = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
-  {  
-    perror("libfaketime: In ft_shm_create(), sem_open failed");
-    fprintf(stderr, "libfaketime: attempted sem_name was %s\n", sem_name);
-    exit(EXIT_FAILURE);
+  { /* silently fail on platforms that do not support sem_open() */
+    return; 
   }
   /* create shm */
   if (-1 == (shm_fdN = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
