@@ -3157,7 +3157,7 @@ int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, con
 }
 
 __asm__(".symver pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5");
-#ifdef __ARM_ARCH
+#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
 __asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@");
 __asm__(".symver pthread_cond_init_232, pthread_cond_init@@");
 __asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@");
