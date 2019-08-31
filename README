@@ -97,6 +97,12 @@ documentation whether it can be achieved by using libfaketime directly.
   src/Makefile and recompile libfaketime. Do not set FORCE_MONOTONIC_FIX on
   platforms where the test does not hang.
 
+  If you observe hangs on the CLOCK_REALTIME test, add the CFLAG
+  -DFORCE_PTHREAD_NONVER. Also set this FORCE_PTHREAD_NONVER flag in case
+  FORCE_MONOTONIC_FIX alone does not solve the hang on the MONOTONIC_CLOCK
+  test.
+
+
 3. Installation
 ---------------
 

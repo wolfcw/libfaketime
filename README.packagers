@@ -1,0 +1,62 @@
+README for packagers of libfaketime
+
+First, thank you for your efforts to make libfaketime packages available
+on your platform / distribution!
+
+libfaketime has tagged releases about once every 1-2 years, made available
+through github.com/wolfcw/libfaketime, but usually it is also safe (i.e.,
+stable) to use the latest HEAD of the master branch, which contains bug
+fixes since the last tagged release.
+
+You may want to familiarize yourself with the options you can set into
+src/Makefile, but sane defaults for stable operations have been chosen.
+
+Currently, libfaketime does not use autotools yet, so there is
+_no_ ./configure step, but "make" and "make test" will work as expected.
+
+
+However, one problem makes it somewhat difficult to get libfaketime
+working on different platforms:
+
+libfaketime currently has the challenge that depending on the version
+of glibc and the platform (e.g., x86_64 or aarch64) certain compiler
+CFLAGS have to be set manually, as we have not yet found a way to
+safely determine behavior at run-time automatically.
+
+Please proceed as follows:
+
+- run "make test". If everything runs through smoothly and you do not
+  encounter any hangs or test failure reports, use the binaries as
+  they are.
+
+- If you encounter endless hangs during the CLOCK_REALTIME test,
+  add -DFORCE_PTHREAD_NONVER to the CFLAGS.
+
+- If you encounter endless hangs during the CLOCK_MONOTONIC test,
+  add -DFORCE_MONOTONIC_FIX to the CFLAGS. If it works with that,
+  it's fine, otherwise additionally use -DFORCE_PTHREAD_NONVER.
+
+CFLAGS can also be passed through the FAKETIME_COMPILE_CFLAGS environment
+variable, so for example
+
+  FAKETIME_COMPILE_CFLAGS="-DFORCE_PTHREAD_NONVER" make test
+
+would create the libfaketime binaries and run the tests with the
+FORCE_PTHREAD_NONVER flag set in a single step.
+
+Please do not use FORCE_MONOTONIC_FIX by default, as it would result
+in incorrect operations on platforms that do not need it.
+
+Our observations with a limited number of Linux distributions is that
+libfaketime may require different compile flags per platform even
+if the same distribution and glibc version is used across these
+platforms.
+
+As soon as we have found a reliable way to automatically choose the
+correct compile-time flags, we will remove this burden from you as
+packager for obvious reasons. Until then, please feel free to report
+your experiences with different platforms and distribution versions
+through the issue tracker on Github.
+
+Again, thanks for your time and effort to make libfaketime available
+easily for everyone else!
