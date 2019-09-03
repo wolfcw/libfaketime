@@ -456,6 +456,16 @@ a lot of processes are started (e.g., servers handling many containers
 or similar virtualization mechanisms).
 
 
+Intercepting time-setting calls
+-------------------------------
+
+libfaketime can be compiled with the CFLAG "-DFAKE_SETTIME" in order
+to also intercept time-setting functions, i.e., clock_settime(),
+settimeofday(), and adjtime(). Instead of passing the timestamp a
+program sets through to the system, only the FAKETIME environment
+variable will be adjusted accordingly.
+
+
 4f) Faking the date and time system-wide
 ----------------------------------------
 

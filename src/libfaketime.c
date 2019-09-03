@@ -255,6 +255,7 @@ static int fake_monotonic_clock = 1;
 #endif
 static int cache_enabled = 1;
 static int cache_duration = 10;     /* cache fake time input for 10 seconds */
+static int force_cache_expiration = 0;
 
 /*
  * Static timespec to store our startup time, followed by a load-time library
@@ -2607,6 +2608,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     cache_expired = 1;
   }
 
+  if (force_cache_expiration != 0)
+  {
+    cache_expired = 1;
+    force_cache_expiration = 0;
+  }
+
   if (cache_expired == 1)
   {
     static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
@@ -3169,6 +3176,89 @@ __asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2");
 
 #endif
 
+/*
+ *  Intercept calls to time-setting functions if compiled with FAKE_SETTIME set.
+ *  Based on suggestion and prototype by @ojura, see https://github.com/wolfcw/libfaketime/issues/179
+ */
+#ifdef FAKE_SETTIME
+int clock_settime(clockid_t clk_id, const struct timespec *tp) {
+
+  /* only CLOCK_REALTIME can be set */
+  if (clk_id != CLOCK_REALTIME) {
+    errno = EPERM;
+    return -1;
+  }
+
+  /* sanity check for the pointer */
+  if (tp == NULL) {
+    errno = EFAULT;
+    return -1;
+  }
+
+  /* When setting the FAKETIME environment variable to the new timestamp,
+     we do not have to care about 'x' or 'i' modifiers given previously,
+     as they are not erased when parsing them. */
+  struct timespec current_time;
+  DONT_FAKE_TIME(clock_gettime(clk_id, &current_time))
+   ;
+
+  time_t sec_diff = tp->tv_sec - current_time.tv_sec;
+  long nsec_diff = tp->tv_nsec - current_time.tv_nsec;
+  char newenv_string[256];
+  double offset = (double) sec_diff;
+  offset += (double) nsec_diff/SEC_TO_nSEC;
+  snprintf(newenv_string, 255, "%+f", offset);
+
+  setenv("FAKETIME", newenv_string, 1);
+  force_cache_expiration = 1; /* make sure it becomes effective immediately */
+
+  return 0;
+}
+
+int settimeofday(const struct timeval *tv, void *tz) 
+{
+  /* The use of timezone *tz is obsolete and simply ignored here. */
+  if (tz == NULL) tz = NULL;
+
+  if (tv == NULL)
+  {
+    errno = EFAULT;
+    return -1;
+  }
+  else
+  {
+    struct timespec tp;
+    tp.tv_sec = tv->tv_sec;
+    tp.tv_nsec = tv->tv_usec * 1000;
+    clock_settime(CLOCK_REALTIME, &tp);    
+  }
+  return 0;
+}
+
+int adjtime (const struct timeval *delta, struct timeval *olddelta) 
+{
+  /* Always signal true full success when olddelta is requested. */
+  if (olddelta != NULL)
+  {
+    olddelta->tv_sec = 0;
+    olddelta->tv_usec = 0;
+  }
+
+  if (delta != NULL)
+  {
+    struct timespec tp;
+    clock_gettime(CLOCK_REALTIME, &tp);
+    tp.tv_sec += delta->tv_sec;
+    tp.tv_nsec += delta->tv_usec * 1000;
+    /* This actually will make the clock jump instead of gradually
+       adjusting it, but we fulfill the caller's intention and an
+       additional thread just for the gradual changes does not seem
+       to be worth the effort presently. */
+    clock_settime(CLOCK_REALTIME, &tp);    
+  }
+  return 0;
+}
+#endif
 
 /*
  * Editor modelines

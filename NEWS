@@ -1,3 +1,14 @@
+Since 0.9.8:
+    - Compile-time CFLAG FAKE_SETTIME can be enabled to
+      intercept calls to clock_settime(), settimeofday(), and
+      adjtime(). (suggested and prototyped by @ojura)
+    - Additional compile-time CFLAGs can be passed via the
+      environment variable FAKETIME_COMPILE_CFLAGS when
+      running 'make'.
+    - src/Makefile CFLAG FORCE_PTHREAD_NONVER should be set on
+      systems that hang on CLOCK_REALTIME, or that hang on
+      CLOCK_MONOTONIC where FORCE_MONOTONIC_FIX is not sufficient.
+
 Since 0.9.7:
     - Passthrough for unknown clock ids to avoid error messages
     - Fixes for multithreaded operations (mliertzer, qnox)
