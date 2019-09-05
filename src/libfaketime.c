@@ -170,7 +170,7 @@ static int          (*real_timer_gettime_233)  (timer_t timerid,
 #ifdef FAKE_SLEEP
 static int          (*real_nanosleep)       (const struct timespec *req, struct timespec *rem);
 #ifndef __APPLE__
-static int          (*real_clock_nanosleep) (clockid_t clock_id, int flags, const struct timespec *req, struct timespec *rem); 
+static int          (*real_clock_nanosleep) (clockid_t clock_id, int flags, const struct timespec *req, struct timespec *rem);
 #endif
 static int          (*real_usleep)          (useconds_t usec);
 static unsigned int (*real_sleep)           (unsigned int seconds);
@@ -317,11 +317,11 @@ static void ft_shm_create(void) {
   snprintf(shm_name, 255, "/faketime_shm_%ld", (long)getpid());
   if (SEM_FAILED == (semN = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
   { /* silently fail on platforms that do not support sem_open() */
-    return; 
+    return;
   }
   /* create shm */
   if (-1 == (shm_fdN = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
-  {  
+  {
     perror("libfaketime: In ft_shm_create(), shm_open failed");
     exit(EXIT_FAILURE);
   }
@@ -330,7 +330,7 @@ static void ft_shm_create(void) {
   {
     perror("libfaketime: In ft_shm_create(), ftruncate failed");
     exit(EXIT_FAILURE);
-  }  
+  }
   /* map shm */
   if (MAP_FAILED == (ft_sharedN = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
                      MAP_SHARED, shm_fdN, 0)))
@@ -362,7 +362,7 @@ static void ft_shm_create(void) {
   {
     perror("libfaketime: In ft_shm_create(), sem_post failed");
     exit(EXIT_FAILURE);
-  } 
+  }
 
   snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
 
@@ -422,7 +422,7 @@ static void ft_shm_init (void)
     ft_shm_create();
     ft_shared_env = getenv("FAKETIME_SHARED");
   }
-  
+
   /* check for stale semaphore / shared memory information */
   if (ft_shared_env != NULL)
   {
@@ -436,7 +436,7 @@ static void ft_shm_init (void)
       ft_shm_create();
       ft_shared_env = getenv("FAKETIME_SHARED");
     }
-    else 
+    else
     {
       sem_close(shared_semR);
     }
@@ -1893,10 +1893,32 @@ int gettimeofday(struct timeval *tv, void *tz)
 int clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   int result;
+  static int recursion_depth = 0;
 
   if (!initialized)
   {
-    ftpl_init();
+    recursion_depth++;
+    if (recursion_depth == 2)
+    {
+      fprintf(stderr, "libfaketime: Unexpected recursive calls to clock_gettime() without proper initialization. Trying alternative.\n");
+      DONT_FAKE_TIME(ftpl_init()) ;
+    }
+    else if (recursion_depth == 3)
+    {
+      fprintf(stderr, "libfaketime: Cannot recover from unexpected recursive calls to clock_gettime().\n");
+      fprintf(stderr, "libfaketime:  Please check whether any other libraries are in use that clash with libfaketime.\n");
+      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime() to break recursion now... if that does not work, please check other libraries' error handling.\n");
+      if (tp != NULL)
+      {
+        tp->tv_sec = 0;
+        tp->tv_nsec = 0;
+      }
+      return -1;
+    }
+    else {
+      ftpl_init();
+    }
+    recursion_depth--;
   }
   /* sanity check */
   if (tp == NULL)
@@ -2065,7 +2087,7 @@ parse_modifiers:
       {
         user_rate = atof(strchr(user_faked_time, 'x')+1);
         user_rate_set = true;
-        if (NULL != getenv("FAKETIME_XRESET")) { 
+        if (NULL != getenv("FAKETIME_XRESET")) {
           if (ftpl_timecache.real.tv_nsec >= 0) {
             user_faked_time_timespec.tv_sec  = ftpl_faketimecache.real.tv_sec;
             user_faked_time_timespec.tv_nsec = ftpl_faketimecache.real.tv_nsec;
@@ -2080,7 +2102,7 @@ parse_modifiers:
             ftpl_starttime.boot.tv_nsec      = ftpl_timecache.boot.tv_nsec;
 #endif
           }
-        }        
+        }
       }
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
@@ -2775,7 +2797,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     ftpl_faketimecache.boot.tv_nsec    = tp->tv_nsec;
   }
 #endif
-  
+
   return 0;
 }
 
@@ -3215,7 +3237,7 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   return 0;
 }
 
-int settimeofday(const struct timeval *tv, void *tz) 
+int settimeofday(const struct timeval *tv, void *tz)
 {
   /* The use of timezone *tz is obsolete and simply ignored here. */
   if (tz == NULL) tz = NULL;
@@ -3230,12 +3252,12 @@ int settimeofday(const struct timeval *tv, void *tz)
     struct timespec tp;
     tp.tv_sec = tv->tv_sec;
     tp.tv_nsec = tv->tv_usec * 1000;
-    clock_settime(CLOCK_REALTIME, &tp);    
+    clock_settime(CLOCK_REALTIME, &tp);
   }
   return 0;
 }
 
-int adjtime (const struct timeval *delta, struct timeval *olddelta) 
+int adjtime (const struct timeval *delta, struct timeval *olddelta)
 {
   /* Always signal true full success when olddelta is requested. */
   if (olddelta != NULL)
@@ -3254,7 +3276,7 @@ int adjtime (const struct timeval *delta, struct timeval *olddelta)
        adjusting it, but we fulfill the caller's intention and an
        additional thread just for the gradual changes does not seem
        to be worth the effort presently. */
-    clock_settime(CLOCK_REALTIME, &tp);    
+    clock_settime(CLOCK_REALTIME, &tp);
   }
   return 0;
 }
