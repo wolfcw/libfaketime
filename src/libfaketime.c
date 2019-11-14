@@ -286,8 +286,6 @@ static double user_rate = 1.0;
 static bool user_rate_set = false;
 static struct timespec user_per_tick_inc = {0, -1};
 static bool user_per_tick_inc_set = false;
-static bool user_per_tick_inc_set_backup = false;
-
 enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
 /* Time to fake is not provided through FAKETIME env. var. */
@@ -681,6 +679,7 @@ static bool load_time(struct timespec *tp)
 #include <sys/stat.h>
 
 static int fake_stat_disabled = 0;
+static bool user_per_tick_inc_set_backup = false;
 
 void lock_for_stat()
 {
