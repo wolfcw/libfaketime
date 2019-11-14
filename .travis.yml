@@ -4,6 +4,8 @@ matrix:
   include:
     - os: linux
       compiler: gcc
+    - os: osx
+      osx_image: xcode11
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
