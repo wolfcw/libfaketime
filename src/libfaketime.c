@@ -413,6 +413,7 @@ static void ft_shm_init (void)
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
   sem_t *shared_semR = NULL;
+  static int nt=1;
 
   /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
@@ -451,10 +452,28 @@ static void ft_shm_init (void)
 
     if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0)))
     {
-      perror("libfaketime: In ft_shm_init(), sem_open failed");
-      fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
-      fprintf(stderr, "libfaketime: parsed from env: %s\n", ft_shared_env);
-      exit(1);
+      if (shmCreator)
+      {
+        perror("libfaketime: In ft_shm_init(), sem_open failed");
+        fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
+        fprintf(stderr, "libfaketime: parsed from env: %s\n", ft_shared_env);
+        exit(1);
+      }
+      else
+      {
+        nt++;
+        if (nt > 3)
+        {
+          perror("libfaketime: In ft_shm_init(), sem_open failed and recreation attempts failed");
+          fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
+          exit(1);
+        }
+        else{
+          ft_shm_init();
+          return;
+        }
+
+      }
     }
 
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR)))
