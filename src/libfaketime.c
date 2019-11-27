@@ -287,8 +287,6 @@ static double user_rate = 1.0;
 static bool user_rate_set = false;
 static struct timespec user_per_tick_inc = {0, -1};
 static bool user_per_tick_inc_set = false;
-static bool user_per_tick_inc_set_backup = false;
-
 enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
 /* Time to fake is not provided through FAKETIME env. var. */
@@ -416,6 +414,7 @@ static void ft_shm_init (void)
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
   sem_t *shared_semR = NULL;
+  static int nt=1;
 
   /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
@@ -454,10 +453,28 @@ static void ft_shm_init (void)
 
     if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0)))
     {
-      perror("libfaketime: In ft_shm_init(), sem_open failed");
-      fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
-      fprintf(stderr, "libfaketime: parsed from env: %s\n", ft_shared_env);
-      exit(1);
+      if (shmCreator)
+      {
+        perror("libfaketime: In ft_shm_init(), sem_open failed");
+        fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
+        fprintf(stderr, "libfaketime: parsed from env: %s\n", ft_shared_env);
+        exit(1);
+      }
+      else
+      {
+        nt++;
+        if (nt > 3)
+        {
+          perror("libfaketime: In ft_shm_init(), sem_open failed and recreation attempts failed");
+          fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
+          exit(1);
+        }
+        else{
+          ft_shm_init();
+          return;
+        }
+
+      }
     }
 
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR)))
@@ -682,6 +699,7 @@ static bool load_time(struct timespec *tp)
 #include <sys/stat.h>
 
 static int fake_stat_disabled = 0;
+static bool user_per_tick_inc_set_backup = false;
 
 void lock_for_stat()
 {
