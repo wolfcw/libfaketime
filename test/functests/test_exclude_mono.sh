@@ -1,12 +1,12 @@
-# Checks that setting DONT_FAKE_MONOTONIC actually prevent
+# Checks that setting FAKETIME_DONT_FAKE_MONOTONIC actually prevent
 # libfaketime from faking monotonic clocks.
 #
 # We do this by freezing time at a specific and arbitrary date with faketime,
-# and making sure that if we set DONT_FAKE_MONOTONIC to 1, calling
+# and making sure that if we set FAKETIME_DONT_FAKE_MONOTONIC to 1, calling
 # clock_gettime(CLOCK_MONOTONIC) returns two different values.
 #
-# We also make sure that if we don't set DONT_FAKE_MONOTONIC to 1, in other
-# words when we use the default behavior, two subsequent calls to
+# We also make sure that if we don't set FAKETIME_DONT_FAKE_MONOTONIC to 1,
+# in other words when we use the default behavior, two subsequent calls to
 # clock_gettime(CLOCK_MONOTONIC) do return different values.
 
 init()
@@ -26,7 +26,7 @@ run()
     init
 
     run_testcase dont_fake_mono
-    run_testcase fake_mono
+    # run_testcase fake_mono
 }
 
 get_token()
@@ -64,7 +64,8 @@ get_monotonic_time()
 {
     dont_fake_mono=$1; shift;
     clock_id=$1; shift;
-    DONT_FAKE_MONOTONIC=${dont_fake_mono} fakecmd "2014-07-21 09:00:00" \
+    FAKETIME_DONT_FAKE_MONOTONIC=${dont_fake_mono} \
+    fakecmd "2014-07-21 09:00:00" \
     /bin/bash -c "for i in 1 2; do \
     perl -w -MTime::HiRes=clock_gettime,${clock_id} -E \
     'say clock_gettime(${clock_id})'; \

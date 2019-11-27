@@ -1,5 +1,5 @@
 /*
- *  This file is part of libfaketime, version 0.9.7
+ *  This file is part of libfaketime, version 0.9.8
  *
  *  libfaketime is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License v2 as published by the
@@ -30,6 +30,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
+#ifdef __linux__
+#include <sys/epoll.h>
+#endif
 #include <time.h>
 #include <math.h>
 #include <errno.h>
@@ -149,6 +152,7 @@ static int          (*real_pthread_cond_timedwait_225)  (pthread_cond_t *, pthre
 static int          (*real_pthread_cond_timedwait_232)  (pthread_cond_t *, pthread_mutex_t*, struct timespec *);
 static int          (*real_pthread_cond_init_232) (pthread_cond_t *restrict, const pthread_condattr_t *restrict);
 static int          (*real_pthread_cond_destroy_232) (pthread_cond_t *);
+static pthread_rwlock_t monotonic_conds_lock;
 #endif
 
 #ifndef __APPLEOSX__
@@ -166,15 +170,29 @@ static int          (*real_timer_gettime_233)  (timer_t timerid,
 #endif
 #ifdef FAKE_SLEEP
 static int          (*real_nanosleep)       (const struct timespec *req, struct timespec *rem);
+#ifndef __APPLE__
+static int          (*real_clock_nanosleep) (clockid_t clock_id, int flags, const struct timespec *req, struct timespec *rem);
+#endif
 static int          (*real_usleep)          (useconds_t usec);
 static unsigned int (*real_sleep)           (unsigned int seconds);
 static unsigned int (*real_alarm)           (unsigned int seconds);
 static int          (*real_poll)            (struct pollfd *, nfds_t, int);
 static int          (*real_ppoll)           (struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
+#ifdef __linux__
+static int          (*real_epoll_wait)      (int epfd, struct epoll_event *events, int maxevents, int timeout);
+static int          (*real_epoll_pwait)     (int epfd, struct epoll_event *events, int maxevents, int timeout, const sigset_t *sigmask);
+#endif
 static int          (*real_select)          (int nfds, fd_set *restrict readfds,
                                              fd_set *restrict writefds,
                                              fd_set *restrict errorfds,
                                              struct timeval *restrict timeout);
+#ifdef __linux__
+static int          (*real_pselect)         (int nfds, fd_set *restrict readfds,
+                                             fd_set *restrict writefds,
+                                             fd_set *restrict errorfds,
+                                             const struct timespec *timeout,
+                                             const sigset_t *sigmask);
+#endif
 static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 #endif
 #ifdef __APPLEOSX__
@@ -231,9 +249,14 @@ static char ft_spawn_target[1024];
 static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
 
+#ifdef __ARM_ARCH
+static int fake_monotonic_clock = 0;
+#else
 static int fake_monotonic_clock = 1;
+#endif
 static int cache_enabled = 1;
 static int cache_duration = 10;     /* cache fake time input for 10 seconds */
+static int force_cache_expiration = 0;
 
 /*
  * Static timespec to store our startup time, followed by a load-time library
@@ -241,8 +264,12 @@ static int cache_duration = 10;     /* cache fake time input for 10 seconds */
  */
 #ifndef CLOCK_BOOTTIME
 static struct system_time_s ftpl_starttime = {{0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_timecache = {{0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_faketimecache = {{0, -1}, {0, -1}, {0, -1}};
 #else
 static struct system_time_s ftpl_starttime = {{0, -1}, {0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_timecache = {{0, -1}, {0, -1}, {0, -1}, {0, -1}};
+static struct system_time_s ftpl_faketimecache = {{0, -1}, {0, -1}, {0, -1}, {0, -1}};
 #endif
 
 static char user_faked_time_fmt[BUFSIZ] = {0};
@@ -260,6 +287,7 @@ static double user_rate = 1.0;
 static bool user_rate_set = false;
 static struct timespec user_per_tick_inc = {0, -1};
 static bool user_per_tick_inc_set = false;
+static bool user_per_tick_inc_set_backup = false;
 
 enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
@@ -276,35 +304,172 @@ static void ftpl_init (void) __attribute__ ((constructor));
  *      =======================================================================
  */
 
-static void ft_shm_init (void)
+static bool shmCreator = false;
+
+static void ft_shm_create(void) {
+  char sem_name[256], shm_name[256], sem_nameT[256], shm_nameT[256];
+  int shm_fdN;
+  sem_t *semN;
+  struct ft_shared_s *ft_sharedN;
+  char shared_objsN[513];
+  sem_t *shared_semT = NULL;
+
+  snprintf(sem_name, 255, "/faketime_sem_%ld", (long)getpid());
+  snprintf(shm_name, 255, "/faketime_shm_%ld", (long)getpid());
+  if (SEM_FAILED == (semN = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
+  { /* silently fail on platforms that do not support sem_open() */
+    return;
+  }
+  /* create shm */
+  if (-1 == (shm_fdN = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
+  {
+    perror("libfaketime: In ft_shm_create(), shm_open failed");
+    exit(EXIT_FAILURE);
+  }
+  /* set shm size */
+  if (-1 == ftruncate(shm_fdN, sizeof(uint64_t)))
+  {
+    perror("libfaketime: In ft_shm_create(), ftruncate failed");
+    exit(EXIT_FAILURE);
+  }
+  /* map shm */
+  if (MAP_FAILED == (ft_sharedN = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
+                     MAP_SHARED, shm_fdN, 0)))
+  {
+    perror("libfaketime: In ft_shm_create(), mmap failed");
+    exit(EXIT_FAILURE);
+  }
+  if (sem_wait(semN) == -1)
+  {
+    perror("libfaketime: In ft_shm_create(), sem_wait failed");
+    exit(EXIT_FAILURE);
+  }
+  /* init elapsed time ticks to zero */
+  ft_sharedN->ticks = 0;
+  ft_sharedN->file_idx = 0;
+  ft_sharedN->start_time.real.tv_sec = 0;
+  ft_sharedN->start_time.real.tv_nsec = -1;
+  ft_sharedN->start_time.mon.tv_sec = 0;
+  ft_sharedN->start_time.mon.tv_nsec = -1;
+  ft_sharedN->start_time.mon_raw.tv_sec = 0;
+  ft_sharedN->start_time.mon_raw.tv_nsec = -1;
+
+  if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
+  {
+    perror("libfaketime: In ft_shm_create(), munmap failed");
+    exit(EXIT_FAILURE);
+  }
+  if (sem_post(semN) == -1)
+  {
+    perror("libfaketime: In ft_shm_create(), sem_post failed");
+    exit(EXIT_FAILURE);
+  }
+
+  snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
+
+  int semSafetyCheckPassed = 0;
+  sem_close(semN);
+
+  sscanf(shared_objsN, "%255s %255s", sem_nameT, shm_nameT);
+  if (SEM_FAILED == (shared_semT = sem_open(sem_nameT, 0)))
+  {
+      fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal sem_open issue with %s", sem_nameT);
+  }
+  else {
+    semSafetyCheckPassed = 1;
+    sem_close(shared_semT);
+  }
+
+  if (semSafetyCheckPassed == 1) {
+    setenv("FAKETIME_SHARED", shared_objsN, true);
+    shmCreator = true;
+  }
+}
+
+static void ft_shm_destroy(void)
 {
-  int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
 
   if (ft_shared_env != NULL)
   {
     if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
     {
-      printf("Error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
+      printf("libfaketime: In ft_shm_destroy(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
+      exit(1);
+    }
+    /*
+       To avoid shared memory / semaphores left after quitting, we have to clean
+       up here similar to how the faketime wrapper does.
+       However, there is no guarantee that all child processes have quit before
+       we clean up here, which potentially leaves us in a stale state.
+       Since there is no easy solution for this problem (see issue #56),
+       ft_shm_init() below at least tries to handle this carefully.
+    */
+    sem_unlink(sem_name);
+    shm_unlink(shm_name);
+    unsetenv("FAKETIME_SHARED");
+  }
+}
+
+static void ft_shm_init (void)
+{
+  int ticks_shm_fd;
+  char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+  sem_t *shared_semR = NULL;
+
+  /* create semaphore and shared memory locally unless it has been passed along */
+  if (ft_shared_env == NULL)
+  {
+    ft_shm_create();
+    ft_shared_env = getenv("FAKETIME_SHARED");
+  }
+
+  /* check for stale semaphore / shared memory information */
+  if (ft_shared_env != NULL)
+  {
+    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
+    {
+      printf("libfaketime: In ft_shm_init(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
+      exit(1);
+    }
+    if (SEM_FAILED == (shared_semR = sem_open(sem_name, 0))) /* gone stale? */
+    {
+      ft_shm_create();
+      ft_shared_env = getenv("FAKETIME_SHARED");
+    }
+    else
+    {
+      sem_close(shared_semR);
+    }
+  }
+
+  /* process the semaphore / shared memory information */
+  if (ft_shared_env != NULL)
+  {
+    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
+    {
+      printf("libfaketime: In ft_shm_init(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
       exit(1);
     }
 
     if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0)))
     {
-      perror("sem_open");
+      perror("libfaketime: In ft_shm_init(), sem_open failed");
+      fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
+      fprintf(stderr, "libfaketime: parsed from env: %s\n", ft_shared_env);
       exit(1);
     }
 
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR)))
     {
-      perror("shm_open");
+      perror("libfaketime: In ft_shm_init(), shm_open failed");
       exit(1);
     }
 
     if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
             MAP_SHARED, ticks_shm_fd, 0)))
     {
-      perror("mmap");
+      perror("libfaketime: In ft_shm_init(), mmap failed");
       exit(1);
     }
   }
@@ -325,6 +490,13 @@ static void ft_cleanup (void)
   {
     sem_close(shared_sem);
   }
+#ifdef FAKE_PTHREAD
+  if (pthread_rwlock_destroy(&monotonic_conds_lock) != 0) {
+    fprintf(stderr, "libfaketime: In ft_cleanup(), monotonic_conds_lock destroy failed\n");
+    exit(-1);
+  }
+#endif
+  if (shmCreator == true) ft_shm_destroy();
 }
 
 
@@ -374,7 +546,7 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
-      perror("sem_wait");
+      perror("libfaketime: In next_time(), sem_wait failed");
       exit(1);
     }
     /* calculate and update elapsed time */
@@ -384,7 +556,7 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
     /* unlock */
     if (sem_post(shared_sem) == -1)
     {
-      perror("sem_post");
+      perror("libfaketime: In next_time(), sem_post failed");
       exit(1);
     }
   }
@@ -411,7 +583,7 @@ static void save_time(struct timespec *tp)
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
-      perror("sem_wait");
+      perror("libfaketime: In save_time(), sem_wait failed");
       exit(1);
     }
 
@@ -425,13 +597,13 @@ static void save_time(struct timespec *tp)
 
     if ((written == -1) || (n < sizeof(time_write)))
     {
-      perror("Saving timestamp to file failed");
+      perror("libfaketime: In save_time(), saving timestamp to file failed");
     }
 
     /* unlock */
     if (sem_post(shared_sem) == -1)
     {
-      perror("sem_post");
+      perror("libfaketime: In save_time(), sem_post failed");
       exit(1);
     }
   }
@@ -449,7 +621,7 @@ static bool load_time(struct timespec *tp)
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
-      perror("sem_wait");
+      perror("libfaketime: In load_time(), sem_wait failed");
       exit(1);
     }
 
@@ -484,7 +656,7 @@ static bool load_time(struct timespec *tp)
     /* unlock */
     if (sem_post(shared_sem) == -1)
     {
-      perror("sem_post");
+      perror("libfaketime: In load_time(), sem_post failed");
       exit(1);
     }
   }
@@ -511,6 +683,36 @@ static bool load_time(struct timespec *tp)
 
 static int fake_stat_disabled = 0;
 
+void lock_for_stat()
+{
+  if (shared_sem != NULL)
+  {
+    if (sem_wait(shared_sem) == -1)
+    {
+      perror("libfaketime: In lock_for_stat(), sem_wait failed");
+      exit(1);
+    }
+  }
+  user_per_tick_inc_set_backup = user_per_tick_inc_set;
+  user_per_tick_inc_set = false;
+  return;
+}
+
+void unlock_for_stat()
+{
+  user_per_tick_inc_set = user_per_tick_inc_set_backup;
+
+  if (shared_sem != NULL)
+  {
+    if (sem_post(shared_sem) == -1)
+    {
+      perror("libfaketime: In unlock_for_stat(), sem_post failed");
+      exit(1);
+    }
+  }
+  return;
+}
+
 #define FAKE_STRUCT_STAT_TIME(which) {                \
     struct timespec t = {buf->st_##which##time,       \
                          buf->st_##which##timensec};  \
@@ -521,25 +723,33 @@ static int fake_stat_disabled = 0;
 
 static inline void fake_statbuf (struct stat *buf) {
 #ifndef st_atime
+  lock_for_stat();
   FAKE_STRUCT_STAT_TIME(c);
   FAKE_STRUCT_STAT_TIME(a);
   FAKE_STRUCT_STAT_TIME(m);
+  unlock_for_stat();
 #else
+  lock_for_stat();
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+  unlock_for_stat();
 #endif
 }
 
 static inline void fake_stat64buf (struct stat64 *buf) {
 #ifndef st_atime
+  lock_for_stat();
   FAKE_STRUCT_STAT_TIME(c);
   FAKE_STRUCT_STAT_TIME(a);
   FAKE_STRUCT_STAT_TIME(m);
+  unlock_for_stat();
 #else
+  lock_for_stat();
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+  unlock_for_stat();
 #endif
 }
 
@@ -863,6 +1073,85 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
   return result;
 }
 
+#ifndef __APPLE__
+/*
+ * Faked clock_nanosleep()
+ */
+int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec *req, struct timespec *rem)
+{
+  int result;
+  struct timespec real_req;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_clock_nanosleep == NULL)
+  {
+    return -1;
+  }
+  if (req != NULL)
+  {
+    if (flags & TIMER_ABSTIME) /* sleep until absolute time */
+    {
+      struct timespec tdiff, timeadj;
+      timespecsub(req, &user_faked_time_timespec, &timeadj);
+      if (user_rate_set)
+      {
+        timespecmul(&timeadj, 1.0/user_rate, &tdiff);
+      }
+      else
+      {
+        tdiff = timeadj;
+      }
+      if (clock_id == CLOCK_REALTIME)
+      {
+        timespecadd(&ftpl_starttime.real, &tdiff, &real_req);
+      }
+      else if (clock_id == CLOCK_MONOTONIC)
+      {
+        timespecadd(&ftpl_starttime.mon, &tdiff, &real_req);
+      }
+      else /* presumably only CLOCK_PROCESS_CPUTIME_ID, leave untouched */
+      {
+       real_req = *req;
+      }
+    }
+    else /* sleep for a relative time interval */
+    {
+      if (user_rate_set && !dont_fake && ((clock_id == CLOCK_REALTIME) || (clock_id == CLOCK_MONOTONIC))) /* don't touch CLOCK_PROCESS_CPUTIME_ID */
+      {
+        timespecmul(req, 1.0 / user_rate, &real_req);
+      }
+      else
+      {
+        real_req = *req;
+      }
+    }
+  }
+  else
+  {
+    return -1;
+  }
+
+  DONT_FAKE_TIME(result = (*real_clock_nanosleep)(clock_id, flags, &real_req, rem));
+  if (result == -1)
+  {
+    return result;
+  }
+  /* fake returned parts */
+  if ((rem != NULL) && ((rem->tv_sec != 0) || (rem->tv_nsec != 0)))
+  {
+    if (user_rate_set && !dont_fake)
+    {
+      timespecmul(rem, user_rate, rem);
+    }
+  }
+  /* return the result to the caller */
+  return result;
+}
+#endif
+
 /*
  * Faked usleep()
  */
@@ -1014,6 +1303,62 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
   return ret;
 }
 
+#ifdef __linux__
+/*
+ * Faked epoll_wait()
+ */
+int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
+{
+  int ret, real_timeout;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_epoll_wait == NULL)
+  {
+    return -1;
+  }
+  if (user_rate_set && !dont_fake && timeout > 0)
+  {
+    real_timeout = (int) timeout * 1.0/user_rate;
+  }
+  else
+  {
+    real_timeout = timeout;
+  }
+  DONT_FAKE_TIME(ret = (*real_epoll_wait)(epfd, events, maxevents, real_timeout));
+  return ret;
+}
+
+/*
+ * Faked epoll_pwait()
+ */
+int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout, const sigset_t *sigmask)
+{
+  int ret, real_timeout;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_epoll_pwait == NULL)
+  {
+    return -1;
+  }
+  if (user_rate_set && !dont_fake && timeout > 0)
+  {
+    real_timeout = (int) timeout * 1.0/user_rate;
+  }
+  else
+  {
+    real_timeout = timeout;
+  }
+  DONT_FAKE_TIME(ret = (*real_epoll_pwait)(epfd, events, maxevents, real_timeout, sigmask));
+  return ret;
+}
+#endif
+
 /*
  * Faked poll()
  */
@@ -1079,6 +1424,47 @@ int select(int nfds, fd_set *readfds,
   DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real));
   return ret;
 }
+
+#ifdef __linux__
+/*
+ * Faked pselect()
+ */
+int pselect(int nfds, fd_set *readfds,
+            fd_set *writefds,
+            fd_set *errorfds,
+            const struct timespec *timeout,
+            const sigset_t *sigmask)
+{
+  int ret;
+  struct timespec timeout_real;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+
+  if (real_pselect == NULL)
+  {
+    return -1;
+  }
+
+  if (timeout != NULL)
+  {
+    if (user_rate_set && !dont_fake && (timeout->tv_sec > 0 || timeout->tv_nsec > 0))
+    {
+      timespecmul(timeout, 1.0 / user_rate, &timeout_real);
+    }
+    else
+    {
+      timeout_real.tv_sec = timeout->tv_sec;
+      timeout_real.tv_nsec = timeout->tv_nsec;
+    }
+  }
+
+  DONT_FAKE_TIME(ret = (*real_pselect)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real, sigmask));
+  return ret;
+}
+#endif
 
 int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
 {
@@ -1508,10 +1894,32 @@ int gettimeofday(struct timeval *tv, void *tz)
 int clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   int result;
+  static int recursion_depth = 0;
 
   if (!initialized)
   {
-    ftpl_init();
+    recursion_depth++;
+    if (recursion_depth == 2)
+    {
+      fprintf(stderr, "libfaketime: Unexpected recursive calls to clock_gettime() without proper initialization. Trying alternative.\n");
+      DONT_FAKE_TIME(ftpl_init()) ;
+    }
+    else if (recursion_depth == 3)
+    {
+      fprintf(stderr, "libfaketime: Cannot recover from unexpected recursive calls to clock_gettime().\n");
+      fprintf(stderr, "libfaketime:  Please check whether any other libraries are in use that clash with libfaketime.\n");
+      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime() to break recursion now... if that does not work, please check other libraries' error handling.\n");
+      if (tp != NULL)
+      {
+        tp->tv_sec = 0;
+        tp->tv_nsec = 0;
+      }
+      return -1;
+    }
+    else {
+      ftpl_init();
+    }
+    recursion_depth--;
   }
   /* sanity check */
   if (tp == NULL)
@@ -1590,7 +1998,7 @@ static void parse_ft_string(const char *user_faked_time)
       }
       else
       {
-        perror("Failed to parse FAKETIME timestamp");
+        perror("libfaketime: In parse_ft_string(), failed to parse FAKETIME timestamp");
         fprintf(stderr, "Please check specification %s with format %s\n", user_faked_time, user_faked_time_fmt);
         exit(EXIT_FAILURE);
       }
@@ -1634,12 +2042,41 @@ static void parse_ft_string(const char *user_faked_time)
       }
       else
       {
-        perror("Failed to parse FAKETIME timestamp");
+        perror("libfaketime: In parse_ft_string(), failed to parse FAKETIME timestamp");
         exit(EXIT_FAILURE);
       }
 
       /* Reset starttime */
-      system_time_from_system(&ftpl_starttime);
+      if (NULL == getenv("FAKETIME_DONT_RESET"))
+        system_time_from_system(&ftpl_starttime);
+      goto parse_modifiers;
+      break;
+
+    case '%': /* follow file timestamp as suggested by Hitoshi Harada (umitanuki) */
+      ft_mode = FT_START_AT;
+      struct stat master_file_stats;
+      int ret;
+      if (NULL == getenv("FAKETIME_FOLLOW_FILE"))
+      {
+        fprintf(stderr, "libfaketime: %% operator in FAKETIME setting requires environment variable FAKETIME_FOLLOW_FILE set.\n");
+        exit(1);
+      }
+      else
+      {
+        DONT_FAKE_TIME(ret = stat(getenv("FAKETIME_FOLLOW_FILE"), &master_file_stats));
+        if (ret == -1)
+        {
+          fprintf(stderr, "libfaketime: Cannot get timestamp of file %s as requested by %% operator.\n", getenv("FAKETIME_FOLLOW_FILE"));
+          exit(1);
+        }
+        else
+        {
+          user_faked_time_timespec.tv_sec = master_file_stats.st_mtime;
+          user_faked_time_timespec.tv_nsec = 0;
+        }
+      }
+      if (NULL == getenv("FAKETIME_DONT_RESET"))
+        system_time_from_system(&ftpl_starttime);
       goto parse_modifiers;
       break;
 
@@ -1651,6 +2088,22 @@ parse_modifiers:
       {
         user_rate = atof(strchr(user_faked_time, 'x')+1);
         user_rate_set = true;
+        if (NULL != getenv("FAKETIME_XRESET")) {
+          if (ftpl_timecache.real.tv_nsec >= 0) {
+            user_faked_time_timespec.tv_sec  = ftpl_faketimecache.real.tv_sec;
+            user_faked_time_timespec.tv_nsec = ftpl_faketimecache.real.tv_nsec;
+            ftpl_starttime.real.tv_sec       = ftpl_timecache.real.tv_sec;
+            ftpl_starttime.real.tv_nsec      = ftpl_timecache.real.tv_nsec;
+            ftpl_starttime.mon.tv_sec        = ftpl_timecache.mon.tv_sec;
+            ftpl_starttime.mon.tv_nsec       = ftpl_timecache.mon.tv_nsec;
+            ftpl_starttime.mon_raw.tv_sec    = ftpl_timecache.mon_raw.tv_sec;
+            ftpl_starttime.mon_raw.tv_nsec   = ftpl_timecache.mon_raw.tv_nsec;
+#ifdef CLOCK_BOOTTIME
+            ftpl_starttime.boot.tv_sec       = ftpl_timecache.boot.tv_sec;
+            ftpl_starttime.boot.tv_nsec      = ftpl_timecache.boot.tv_nsec;
+#endif
+          }
+        }
       }
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
@@ -1682,6 +2135,10 @@ static void ftpl_init(void)
   char *tmp_env;
   bool dont_fake_final;
 
+  /* moved up here from below the dlsym calls #130 */
+  dont_fake = true; // Do not fake times during initialization
+  dont_fake_final = false;
+
 #ifdef __APPLE__
   const char *progname = getprogname();
 #else
@@ -1706,12 +2163,22 @@ static void ftpl_init(void)
 #endif
 #ifdef FAKE_SLEEP
   real_nanosleep =          dlsym(RTLD_NEXT, "nanosleep");
+#ifndef __APPLE__
+  real_clock_nanosleep =    dlsym(RTLD_NEXT, "clock_nanosleep");
+#endif
   real_usleep =             dlsym(RTLD_NEXT, "usleep");
   real_sleep =              dlsym(RTLD_NEXT, "sleep");
   real_alarm =              dlsym(RTLD_NEXT, "alarm");
   real_poll =               dlsym(RTLD_NEXT, "poll");
   real_ppoll =              dlsym(RTLD_NEXT, "ppoll");
+#ifdef linux
+  real_epoll_wait =         dlsym(RTLD_NEXT, "epoll_wait");
+  real_epoll_pwait =        dlsym(RTLD_NEXT, "epoll_pwait");
+#endif
   real_select =             dlsym(RTLD_NEXT, "select");
+#ifdef __linux__
+  real_pselect =            dlsym(RTLD_NEXT, "pselect");
+#endif
   real_sem_timedwait =      dlsym(RTLD_NEXT, "sem_timedwait");
 #endif
 #ifdef FAKE_INTERNAL_CALLS
@@ -1744,6 +2211,11 @@ static void ftpl_init(void)
   if (NULL == real_pthread_cond_destroy_232)
   {
     real_pthread_cond_destroy_232 =  dlsym(RTLD_NEXT, "pthread_cond_destroy");
+  }
+
+  if (pthread_rwlock_init(&monotonic_conds_lock,NULL) != 0) {
+    fprintf(stderr,"monotonic_conds_lock init failed\n");
+    exit(-1);
   }
 #endif
 #ifdef __APPLEOSX__
@@ -1780,8 +2252,6 @@ static void ftpl_init(void)
 #endif
 #endif
 
-  dont_fake = true; // Do not fake times during initialization
-  dont_fake_final = false;
   initialized = 1;
 
   ft_shm_init();
@@ -1803,7 +2273,8 @@ static void ftpl_init(void)
       cache_enabled = 0;
     }
   }
-  if ((tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
+  if ((tmp_env = getenv("FAKETIME_DONT_FAKE_MONOTONIC")) != NULL
+    || (tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
   {
     if (0 == strcmp(tmp_env, "1"))
     {
@@ -1921,7 +2392,7 @@ static void ftpl_init(void)
     if (-1 == (outfile = open(tmp_env, O_RDWR | O_APPEND | O_CLOEXEC | O_CREAT,
                               S_IWUSR | S_IRUSR)))
     {
-      perror("Opening file for saving timestamps failed");
+      perror("libfaketime: In ftpl_init(), opening file for saving timestamps failed");
       exit(EXIT_FAILURE);
     }
   }
@@ -1933,7 +2404,7 @@ static void ftpl_init(void)
     struct stat sb;
     if (-1 == (infile = open(tmp_env, O_RDONLY|O_CLOEXEC)))
     {
-      perror("Opening file for loading timestamps failed");
+      perror("libfaketime: In ftpl_init(), opening file for loading timestamps failed");
       exit(EXIT_FAILURE);
     }
 
@@ -1953,7 +2424,7 @@ static void ftpl_init(void)
     stss = mmap(NULL, infile_size, PROT_READ, MAP_SHARED, infile, 0);
     if (stss == MAP_FAILED)
     {
-      perror("Mapping file for loading timestamps failed");
+      perror("libfaketime: In ftpl_init(), mapping file for loading timestamps failed");
       exit(EXIT_FAILURE);
     }
     infile_set = true;
@@ -1974,7 +2445,7 @@ static void ftpl_init(void)
   {
     if (sem_wait(shared_sem) == -1)
     {
-      perror("sem_wait");
+      perror("libfaketime: In ftpl_init(), sem_wait failed");
       exit(1);
     }
     if (ft_shared->start_time.real.tv_nsec == -1)
@@ -1990,7 +2461,7 @@ static void ftpl_init(void)
     }
     if (sem_post(shared_sem) == -1)
     {
-      perror("sem_post");
+      perror("libfaketime: In ftpl_init(), sem_post failed");
       exit(1);
     }
   }
@@ -2051,6 +2522,11 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   /* variables used for caching, introduced in version 0.6 */
   static time_t last_data_fetch = 0;  /* not fetched previously at first call */
   static int cache_expired = 1;       /* considered expired at first call */
+
+  /* create a copy of the timespec containing the real system time for clk_id */
+  struct timespec tp_save;
+  tp_save.tv_sec = tp->tv_sec;
+  tp_save.tv_nsec = tp->tv_nsec;
 
   if (dont_fake) return 0;
   /* Per process timers are only sped up or slowed down */
@@ -2135,9 +2611,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     }
   }
 
+  struct timespec current_ts;
+  DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &current_ts));
+
   if (last_data_fetch > 0)
   {
-    if ((tp->tv_sec - last_data_fetch) > cache_duration)
+    if ((current_ts.tv_sec - last_data_fetch) > cache_duration)
     {
       cache_expired = 1;
     }
@@ -2150,6 +2629,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (cache_enabled == 0)
   {
     cache_expired = 1;
+  }
+
+  if (force_cache_expiration != 0)
+  {
+    cache_expired = 1;
+    force_cache_expiration = 0;
   }
 
   if (cache_expired == 1)
@@ -2172,7 +2657,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       snprintf(user_faked_time, BUFFERLEN, "+0");
     }
 
-    last_data_fetch = tp->tv_sec;
+    last_data_fetch = current_ts.tv_sec;
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
@@ -2281,6 +2766,39 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   pthread_cleanup_pop(1);
 #endif
   save_time(tp);
+
+  /* Cache this most recent real and faked time we encountered */
+  if (clk_id == CLOCK_REALTIME)
+  {
+    ftpl_timecache.real.tv_sec         = tp_save.tv_sec;
+    ftpl_timecache.real.tv_nsec        = tp_save.tv_nsec;
+    ftpl_faketimecache.real.tv_sec     = tp->tv_sec;
+    ftpl_faketimecache.real.tv_nsec    = tp->tv_nsec;
+  }
+  else if (clk_id == CLOCK_MONOTONIC)
+  {
+    ftpl_timecache.mon.tv_sec          = tp_save.tv_sec;
+    ftpl_timecache.mon.tv_nsec         = tp_save.tv_nsec;
+    ftpl_faketimecache.mon.tv_sec      = tp->tv_sec;
+    ftpl_faketimecache.mon.tv_nsec     = tp->tv_nsec;
+  }
+  else if (clk_id == CLOCK_MONOTONIC_RAW)
+  {
+    ftpl_timecache.mon_raw.tv_sec      = tp_save.tv_sec;
+    ftpl_timecache.mon_raw.tv_nsec     = tp_save.tv_nsec;
+    ftpl_faketimecache.mon_raw.tv_sec  = tp->tv_sec;
+    ftpl_faketimecache.mon_raw.tv_nsec = tp->tv_nsec;
+  }
+#ifdef CLOCK_BOOTTIME
+  else if (clk_id == CLOCK_BOOTTIME)
+  {
+    ftpl_timecache.boot.tv_sec         = tp_save.tv_sec;
+    ftpl_timecache.boot.tv_nsec        = tp_save.tv_nsec;
+    ftpl_faketimecache.boot.tv_sec     = tp->tv_sec;
+    ftpl_faketimecache.boot.tv_nsec    = tp->tv_nsec;
+  }
+#endif
+
   return 0;
 }
 
@@ -2539,7 +3057,13 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   if (clock_id == CLOCK_MONOTONIC) {
     struct pthread_cond_monotonic *e = (struct pthread_cond_monotonic*)malloc(sizeof(struct pthread_cond_monotonic));
     e->ptr = cond;
+
+    if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+      exit(-1);
+    }
     HASH_ADD_PTR(monotonic_conds, ptr, e);
+    pthread_rwlock_unlock(&monotonic_conds_lock);
   }
 
   return result;
@@ -2548,14 +3072,22 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
 int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
+
+  if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+    fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+    exit(-1);
+  }
   HASH_FIND_PTR(monotonic_conds, &cond, e);
   if (e) {
     HASH_DEL(monotonic_conds, e);
     free(e);
   }
+  pthread_rwlock_unlock(&monotonic_conds_lock);
 
   return real_pthread_cond_destroy_232(cond);
 }
+
+//where init in pthread methods????
 
 int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat)
 {
@@ -2569,7 +3101,12 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
   if (abstime != NULL)
   {
+    if (pthread_rwlock_rdlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire read monotonic_conds_lock\n");
+      exit(-1);
+    }
     HASH_FIND_PTR(monotonic_conds, &cond, e);
+    pthread_rwlock_unlock(&monotonic_conds_lock);
     if (e != NULL)
       clk_id = CLOCK_MONOTONIC;
     else
@@ -2616,9 +3153,13 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
        waiting time. This already uses the faked functions, hence, the
        fake time needs to be passed to pthread_cond_timedwait for
        CLOCK_MONOTONIC. */
+#ifndef __ARM_ARCH
+#ifndef FORCE_MONOTONIC_FIX
     if(clk_id == CLOCK_MONOTONIC)
       timespecadd(&faketime, &tdiff_actual, &tp);
     else
+#endif
+#endif
       timespecadd(&realtime, &tdiff_actual, &tp);
 
     tf = &tp;
@@ -2646,12 +3187,101 @@ int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, con
 }
 
 __asm__(".symver pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5");
+#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
+__asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@");
+__asm__(".symver pthread_cond_init_232, pthread_cond_init@@");
+__asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@");
+#else
 __asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@GLIBC_2.3.2");
 __asm__(".symver pthread_cond_init_232, pthread_cond_init@@GLIBC_2.3.2");
 __asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2");
+#endif
 
 #endif
 
+/*
+ *  Intercept calls to time-setting functions if compiled with FAKE_SETTIME set.
+ *  Based on suggestion and prototype by @ojura, see https://github.com/wolfcw/libfaketime/issues/179
+ */
+#ifdef FAKE_SETTIME
+int clock_settime(clockid_t clk_id, const struct timespec *tp) {
+
+  /* only CLOCK_REALTIME can be set */
+  if (clk_id != CLOCK_REALTIME) {
+    errno = EPERM;
+    return -1;
+  }
+
+  /* sanity check for the pointer */
+  if (tp == NULL) {
+    errno = EFAULT;
+    return -1;
+  }
+
+  /* When setting the FAKETIME environment variable to the new timestamp,
+     we do not have to care about 'x' or 'i' modifiers given previously,
+     as they are not erased when parsing them. */
+  struct timespec current_time;
+  DONT_FAKE_TIME(clock_gettime(clk_id, &current_time))
+   ;
+
+  time_t sec_diff = tp->tv_sec - current_time.tv_sec;
+  long nsec_diff = tp->tv_nsec - current_time.tv_nsec;
+  char newenv_string[256];
+  double offset = (double) sec_diff;
+  offset += (double) nsec_diff/SEC_TO_nSEC;
+  snprintf(newenv_string, 255, "%+f", offset);
+
+  setenv("FAKETIME", newenv_string, 1);
+  force_cache_expiration = 1; /* make sure it becomes effective immediately */
+
+  return 0;
+}
+
+int settimeofday(const struct timeval *tv, void *tz)
+{
+  /* The use of timezone *tz is obsolete and simply ignored here. */
+  if (tz == NULL) tz = NULL;
+
+  if (tv == NULL)
+  {
+    errno = EFAULT;
+    return -1;
+  }
+  else
+  {
+    struct timespec tp;
+    tp.tv_sec = tv->tv_sec;
+    tp.tv_nsec = tv->tv_usec * 1000;
+    clock_settime(CLOCK_REALTIME, &tp);
+  }
+  return 0;
+}
+
+int adjtime (const struct timeval *delta, struct timeval *olddelta)
+{
+  /* Always signal true full success when olddelta is requested. */
+  if (olddelta != NULL)
+  {
+    olddelta->tv_sec = 0;
+    olddelta->tv_usec = 0;
+  }
+
+  if (delta != NULL)
+  {
+    struct timespec tp;
+    clock_gettime(CLOCK_REALTIME, &tp);
+    tp.tv_sec += delta->tv_sec;
+    tp.tv_nsec += delta->tv_usec * 1000;
+    /* This actually will make the clock jump instead of gradually
+       adjusting it, but we fulfill the caller's intention and an
+       additional thread just for the gradual changes does not seem
+       to be worth the effort presently. */
+    clock_settime(CLOCK_REALTIME, &tp);
+  }
+  return 0;
+}
+#endif
 
 /*
  * Editor modelines

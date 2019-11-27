@@ -1,0 +1,11 @@
+language: c
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+
+script:
+  - cd ${TRAVIS_BUILD_DIR}
+  - FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
+  - make test
