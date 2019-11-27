@@ -18,4 +18,4 @@ if !MACOS
   timetest_LDADD = -ldl -lm -lrt -lpthread
 endif
 
-TESTS = $(check_PROGRAMS) testframe.sh
+TESTS = $(check_PROGRAMS) functests.d.sh
