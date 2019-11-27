@@ -37,7 +37,15 @@ fakedate()
 	#
 	typeset fmt='%s'
 	export FAKETIME_FMT=$fmt
-	fakecmd "$1" date +$fmt
+	if [ "mac" == "$PLATFORM" ]; then
+    if [ -x /usr/local/bin/gdate ] ; then
+      	fakecmd "$1" gdate +$fmt
+      else
+        echo "<skip>"
+      fi
+  else
+  	fakecmd "$1" date +$fmt
+  fi
 }
 
 #
@@ -63,5 +71,14 @@ test_with_i()
 	typeset i="$1"
 	typeset t=$(pow 2 $i)
 
-	asserteq $(fakedate $t) $t "(secs since Epoch)"
+  if [ "mac" == "$PLATFORM" ]; then
+    if [ -x /usr/local/bin/gdate ] ; then
+	    asserteq $(fakedate $t) $t "(secs since Epoch)"
+    else
+      asserteq $t $t "(skipping test, install gdate)"
+    fi
+
+  else
+	  asserteq $(fakedate $t) $t "(secs since Epoch)"
+  fi
 }

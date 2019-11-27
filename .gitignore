@@ -9,3 +9,5 @@ src/core
 src/faketime
 m4/*.m4*
 test-driver
+
+.vscode/

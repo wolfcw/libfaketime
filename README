@@ -1,5 +1,5 @@
-libfaketime, version 0.9.7 (November 2017)
-==========================================
+libfaketime, version 0.9.8 (August 2019)
+========================================
 
 
 Content of this file:
@@ -71,17 +71,36 @@ documentation whether it can be achieved by using libfaketime directly.
   rebuilding libfaketimeMT.so.1
 
 * Java-/JVM-based applications work but you need to pass in an extra argument
-  (DONT_FAKE_MONOTONIC).  See usage basics below for details.  Without this
-  argument the java command usually hangs.
+  (FAKETIME_DONT_FAKE_MONOTONIC).  See usage basics below for details.  Without
+  this argument the java command usually hangs.
 
 * libfaketime will eventually be bypassed by applications that dynamically load
   system libraries, such as librt, explicitly themselves instead of relying on
   the linker to do so at application start time. libfaketime will not work with
   those applications unless you can modify them.
 
+  This apparently happens a lot in complex run-time environments, e.g., for
+  programs written in golang, for some Java Virtual Machine implementations,
+  etc. Since libfaketime is effectively bypassed in such situations, there's
+  nothing we can do about it. Please consider asking the appropriate developers
+  and vendors to implement their runtime environment in a way that supports
+  intercepting selected system calls through LD_PRELOAD.
+
 * Applications can explicitly be designed to prevent libfaketime from working,
   e.g., by checking whether certain environment variables are set or whether
   libfaketime-specific files are present.
+
+* CLOCK_MONOTONIC test: Running "make test" performs a series of tests after
+  successful compilation of the libfaketime library. On some platforms, the
+  "CLOCK_MONOTONIC test" will apparently hang forever. If and only if this
+  happens on your platform, add the CFLAG -DFORCE_MONOTONIC_FIX to
+  src/Makefile and recompile libfaketime. Do not set FORCE_MONOTONIC_FIX on
+  platforms where the test does not hang.
+
+  If you observe hangs on the CLOCK_REALTIME test, add the CFLAG
+  -DFORCE_PTHREAD_NONVER. Also set this FORCE_PTHREAD_NONVER flag in case
+  FORCE_MONOTONIC_FIX alone does not solve the hang on the MONOTONIC_CLOCK
+  test.
 
 
 3. Installation
@@ -151,7 +170,7 @@ user@host> LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d" date
 Mon Nov  8 12:01:12 CEST 2016
 
 user@host> LD_PRELOAD=/usr/local/lib/libfaketime.so.1 FAKETIME="-15d"
-DONT_FAKE_MONOTONIC=1 java -version
+FAKETIME_DONT_FAKE_MONOTONIC=1 java -version
 java version "1.8.0_111"
 Java(TM) SE Runtime Environment (build 1.8.0_111-b14)
 Java HotSpot(TM) 64-Bit Server VM (build 25.111-b14, mixed mode)
@@ -215,6 +234,22 @@ specified absolute time. The 'start at' format allows a 'relative' clock
 operation as described below in section 4d), but using a 'start at' time
 instead of an offset time.
 
+If the started process itself starts other (child) processes, they by default
+will start with the specified start-at-date again. If this is not what you need,
+set the environment variable FAKETIME_DONT_RESET=1. Try these examples to see
+the difference:
+
+LD_PRELOAD=src/libfaketime.so.1 FAKETIME="@2000-01-01 11:12:13" \
+  FAKETIME_DONT_RESET=1 \
+  /bin/bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
+
+LD_PRELOAD=src/libfaketime.so.1 FAKETIME="@2000-01-01 11:12:13" \
+  /bin/bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
+
+In the second example, the "date" command will always print the same time,
+while in the first example, with FAKETIME_DONT_RESET set, time will increment
+even though all the "date" commands are new processes.
+
 
 4d) Using offsets for relative dates
 ------------------------------------
@@ -233,6 +268,11 @@ optionally followed by a multiplier:
 
   export FAKETIME="-10m" sets the faked time 10 minutes behind the real time.
   export FAKETIME="+14d" sets the faked time to 14 days in the future.
+
+  Please note that if you need other multipliers (weeks, months etc.) or higher
+  precision (e.g., correct leap year handling), you should use either the
+  faketime wrapper or the GNU date command as shown in the first of the three
+  examples below.
 
 You now should understand the complete example we've used before:
 
@@ -291,6 +331,11 @@ completely independently of the system clock. It helps running programs
 with some determinism. In this single case all spawned processes will use
 the same global clock without restarting it at the start of each process.
 
+Please note that using "x" or "i" in FAKETIME still requires giving an offset
+(see section 4d). This means that "+1y x2" will work, but "x2" only will not.
+If you do not want to fake the time, but just modify clock speed, use something
+like "+0 x2", i.e., use an explizit zero offset as a prefix in your FAKETIME.
+
 For testing, your should run a command like
 
 LD_PRELOAD=./libfaketime.so.1 FAKETIME="+1,5y x10,0" \
@@ -334,6 +379,101 @@ problem in your scenario, you can change number of seconds before the file is re
 again with environment variable FAKETIME_CACHE_DURATION, or disable caching at all
 with FAKETIME_NO_CACHE=1. Remember that disabling the cache may negatively
 influence the performance.
+
+
+Setting FAKETIME by means of a file timestamp
+---------------------------------------------
+
+Based on a proposal by Hitoshi Harada (umitanuki), the "start at" time can now be
+set through any file in the file system by setting the FAKETIME environment variable
+to "%" (a percent sign) and FAKETIME_FOLLOW_FILE to the name of the file whose
+modification timestamp shall be used as source for the "start at" time.
+
+Usage example:
+
+# create any file with December 24th, 2009, 12:34:56 as timestamp
+touch -t 0912241234.56 /tmp/my-demo-file.tmp
+
+# run a bash shell with an endless loop printing the current time
+LD_PRELOAD=/path/to/libfaketime.so.1 \
+  FAKETIME='%' FAKETIME_FOLLOW_FILE=/tmp/my-demo-file.tmp \
+  FAKETIME_DONT_RESET=1 \
+  bash -c 'while true ; do date ; sleep 1 ; done'
+
+# now, while the above is running, change the file's timestamp
+# (in a different terminal window or whatever)
+touch -t 2002290123.45 /tmp/my-demo-file.tmp
+
+
+Changing the 'x' modifier during run-time
+-----------------------------------------
+
+Using FAKETIME_TIMESTAMP_FILE allows for easily changing the FAKETIME setting
+while a program is running:
+
+echo "+0 x1" > /tmp/my-faketime.rc
+LD_PRELOAD=libfaketime.so.1 FAKETIME_TIMESTAMP_FILE="/tmp/my-faketime.rc" \
+  FAKETIME_NO_CACHE=1 ./some-program &
+sleep 10 ; echo "+0 x10" > /tmp/my-faketime.rc
+
+Changing the speed of the wall clock time, i.e., using a different 'x' modifier
+during run-time, by default can lead to greater jumps that may confuse the
+program. For example, if the program has been running for 10 seconds on 'x1',
+and then the setting is changed to 'x10', the faked time will look to the
+program as if it has been running for more than 100 instead of just more than
+10 seconds.
+
+By setting the environment variable FAKETIME_XRESET to any value, transitions
+between different 'x' modifier values will be significantly smoothed:
+
+LD_PRELOAD=libfaketime.so.1 FAKETIME_TIMESTAMP_FILE="/tmp/my-faketime.rc" \
+  FAKETIME_NO_CACHE=1 FAKETIME_XRESET=1 ./some-program &
+
+Setting FAKETIME_XRESET ensures that wall clock time begins to run faster
+only after the 'x' modifier has been changed (when increasing it) and also
+ensures that the reported faked time does not jump back to past values
+(when decreasing it).
+
+Please note that FAKETIME_XRESET internally works by resetting libfaketime's
+internal time-keeping data structures, which may have side effects on reported
+file timestamps. Using FAKETIME_XRESET should be considered experimental at
+the moment.
+
+
+Cleaning up shared memory
+-------------------------
+
+libfaketime uses semaphores and shared memory on platforms that support it in
+order to sync faketime settings across parent-child processes. It will clean
+up when it exits properly. However, when processes are terminated (e.g., by
+Ctrl-C on command line), shared memory cannot be cleaned up properly. In such
+cases, you should occasionally delete
+
+  /dev/shm/faketime_shm_* and
+  /dev/shm/sem.faketime_sem_*
+
+manually (or properly automated). Leftover files there from processes that
+already have been terminated are not a problem in general, but result in a
+libfaketime error the next time a process is started with a process id for
+which such a stale semaphore/shared memory exists. Thus, if you run across
+the following error message
+
+  libfaketime: In ft_shm_create(), shm_open failed: File exists
+
+please cleanup /dev/shm as described above. This is especially relevant
+for long-running systems (servers with high uptime) and systems on which
+a lot of processes are started (e.g., servers handling many containers
+or similar virtualization mechanisms).
+
+
+Intercepting time-setting calls
+-------------------------------
+
+libfaketime can be compiled with the CFLAG "-DFAKE_SETTIME" in order
+to also intercept time-setting functions, i.e., clock_settime(),
+settimeofday(), and adjtime(). Instead of passing the timestamp a
+program sets through to the system, only the FAKETIME environment
+variable will be adjusted accordingly.
 
 
 4f) Faking the date and time system-wide
