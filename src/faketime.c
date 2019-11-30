@@ -47,9 +47,8 @@
 #include <semaphore.h>
 
 #include "faketime_common.h"
-#include "config.h"
 
-const char version[] = VERSION;
+const char version[] = "0.9.7";
 
 #ifdef __APPLE__
 static const char *date_cmd = "gdate";
@@ -296,21 +295,19 @@ int main (int argc, char **argv)
   {
     char *ftpl_path;
 #ifdef __APPLE__
-    if (!getenv("DYLD_INSERT_LIBRARIES") && !getenv("DYLD_FORCE_FLAT_NAMESPACE")) {
-      ftpl_path = LIBPREFIX "/libfaketime." LIBVERSION ".dylib";
-      FILE *check;
-      check = fopen(ftpl_path, "ro");
-      if (check == NULL)
-      {
-        ftpl_path = PREFIX "/lib/faketime/libfaketime." LIBVERSION ".dylib";
-      }
-      else
-      {
-        fclose(check);
-      }
-      setenv("DYLD_INSERT_LIBRARIES", ftpl_path, true);
-      setenv("DYLD_FORCE_FLAT_NAMESPACE", "1", true);
+    ftpl_path = PREFIX "/libfaketime.1.dylib";
+    FILE *check;
+    check = fopen(ftpl_path, "ro");
+    if (check == NULL)
+    {
+      ftpl_path = PREFIX "/lib/faketime/libfaketime.1.dylib";
     }
+    else
+    {
+      fclose(check);
+    }
+    setenv("DYLD_INSERT_LIBRARIES", ftpl_path, true);
+    setenv("DYLD_FORCE_FLAT_NAMESPACE", "1", true);
 #else
     {
       char *ld_preload_new, *ld_preload = getenv("LD_PRELOAD");
@@ -321,17 +318,17 @@ int main (int argc, char **argv)
          * on MultiArch platforms, such as Debian, we put a literal $LIB into LD_PRELOAD.
          */
 #ifndef MULTI_ARCH
-        ftpl_path = LIBPREFIX "/libfaketimeMT.so." LIBVERSION;
+        ftpl_path = PREFIX LIBDIRNAME "/libfaketimeMT.so.1";
 #else
-        ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so." LIBVERSION;
+        ftpl_path = PREFIX "/$LIB/faketime/libfaketimeMT.so.1";
 #endif
       }
       else
       {
 #ifndef MULTI_ARCH
-        ftpl_path = LIBPREFIX "/libfaketime.so." LIBVERSION;
+        ftpl_path = PREFIX LIBDIRNAME "/libfaketime.so.1";
 #else
-        ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so." LIBVERSION;
+        ftpl_path = PREFIX "/$LIB/faketime/libfaketime.so.1";
 #endif
       }
       len = ((ld_preload)?strlen(ld_preload) + 1: 0) + 1 + strlen(ftpl_path);

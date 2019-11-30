@@ -106,16 +106,8 @@ documentation whether it can be achieved by using libfaketime directly.
 3. Installation
 ---------------
 
-This library supports GNU autotools, so you should be able to build it with:
-
-    sh ./build.sh init
-    ./configure
-    make
-
-After you have built the library, you may--optionally--run the tests with:
-
-    cd test
-    make test
+Running "make" compiles both library versions and a test program, which it then
+also executes.
 
 If the test works fine, you should copy the libfaketime libraries
 (libfaketime.so.1, and libfaketimeMT.so.1) to the place you want them in.
@@ -138,16 +130,14 @@ not need this feature or if it confuses the application you want to use FTPL
 with, define the environment variable NO_FAKE_STAT, and the intercepted stat
 calls will be passed through unaltered.
 
-On macOS, instead of using LD_PRELOAD, the variable DYLD_INSERT_LIBRARIES
-should be set to the path to libfaketime.0.dylib, and the variable
-DYLD_FORCE_FLAT_NAMESPACE should be set (to anything). macOS users should
-read README.OSX for additional details.
+On macOS, it is necessary to compile differently, due to the different
+behavior dyld has. Use the Makefile.OSX file provided to compile
+libfaketime.1.dylib. Additionally, instead of using LD_PRELOAD,
+the variable DYLD_INSERT_LIBRARIES should be set to the path to
+libfaketime.1.dylib, and the variable DYLD_FORCE_FLAT_NAMESPACE should be
+set (to anything). macOS users should read README.OSX for additional
+details.
 
-NOTE: When committing, clean up potentially non-portable files with:
-
-    sh build.sh clean
-
-This will clean up the build files which we don't want to version-control.
 
 4. Usage
 --------
