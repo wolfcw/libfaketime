@@ -1,3 +1,6 @@
+Since 0.9.9:
+    - Mike Stemle added GNU autotools
+
 Since 0.9.8:
     - Compile-time CFLAG FAKE_SETTIME can be enabled to
       intercept calls to clock_settime(), settimeofday(), and
