@@ -1,8 +1,5 @@
 # libfaketime-specific common support routines for tests
 
-LIB_BUILD_PATH="../src/$(grep 'LT_OBJDIR' ../config.h | cut -d'"' -f2)"
-LIBFAKETIME_LA=$(find "$LIB_BUILD_PATH" | grep 'libfaketime\.\(dylib\|so\)$')
-
 # say which *_fakecmd wrapper to use
 platform()
 {
@@ -22,7 +19,7 @@ platform()
 mac_fakecmd()
 {
 	typeset timestring="$1"; shift
-	typeset fakelib="$LIBFAKETIME_LA"
+	typeset fakelib=../src/libfaketime.1.dylib
 	export DYLD_INSERT_LIBRARIES=$fakelib
 	export DYLD_FORCE_FLAT_NAMESPACE=1
 	FAKETIME="$timestring" \
@@ -32,7 +29,7 @@ mac_fakecmd()
 sunos_fakecmd()
 {
         typeset timestring="$1"; shift
-        typeset fakelib="$LIBFAKETIME_LA"
+        typeset fakelib=../src/libfaketime.so.1
         export LD_PRELOAD=$fakelib
         FAKETIME="$timestring" \
         "$@"
@@ -42,7 +39,7 @@ sunos_fakecmd()
 linuxlike_fakecmd()
 {
 	typeset timestring="$1"; shift
-	typeset fakelib="$LIBFAKETIME_LA"
+	typeset fakelib=../src/libfaketime.so.1
 	export LD_PRELOAD=$fakelib
 	FAKETIME="$timestring" \
 	"$@"

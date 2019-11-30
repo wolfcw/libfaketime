@@ -18,7 +18,6 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "config.h"
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,7 +115,6 @@ void* pthread_test(void* args)
 }
 
 #endif
-#include "faketime_common.h"
 
 int main (int argc, char **argv)
 {

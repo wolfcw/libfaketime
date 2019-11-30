@@ -58,28 +58,4 @@ struct ft_shared_s
 #include <mach/mach_port.h>
 #endif
 
-#ifdef FAKE_SLEEP
-#include <time.h>
-#include <poll.h>
-#include <sys/types.h>
-#include <semaphore.h>
-/*
- * Fake sleep prototypes!
- */
-struct pollfd;
-
-int nanosleep(const struct timespec *req, struct timespec *rem);
-int usleep(useconds_t usec);
-unsigned int sleep(unsigned int seconds);
-unsigned int alarm(unsigned int seconds);
-int ppoll(struct pollfd *fds, nfds_t nfds,
-const struct timespec *timeout_ts, const sigset_t *sigmask);
-int poll(struct pollfd *fds, nfds_t nfds, int timeout);
-int select(int nfds, fd_set *readfds,
-           fd_set *writefds,
-           fd_set *errorfds,
-           struct timeval *timeout);
-int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout);
-#endif /* FAKE_SLEEP */
-
 #endif
