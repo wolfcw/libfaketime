@@ -110,6 +110,13 @@ typedef int clockid_t;
 #define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1)
 #endif
 
+#ifdef FAKE_FILE_TIMESTAMPS
+struct utimbuf {
+  time_t actime;       /* access time */
+  time_t modtime;      /* modification time */
+};
+#endif
+
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
@@ -198,6 +205,11 @@ static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
 static int          apple_clock_gettime     (clockid_t clk_id, struct timespec *tp);
 static clock_serv_t clock_serv_real;
+#endif
+
+#ifdef FAKE_FILE_TIMESTAMPS
+static int          (*real_utimes)          (const char *filename, const struct timeval times[2]);
+static int          (*real_utime)           (const char *filename, const struct utimbuf *times);
 #endif
 
 static int initialized = 0;
@@ -1028,6 +1040,65 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
       fake_stat64buf(buf);
     }
   }
+  return result;
+}
+#endif
+
+#ifdef FAKE_FILE_TIMESTAMPS
+int utime(const char *filename, const struct utimbuf *times)
+{
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (NULL == real_utime)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original utime() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
+
+  int result;
+  struct utimbuf ntbuf;
+  ntbuf.actime = times->actime - user_offset.tv_sec;
+  ntbuf.modtime = times->modtime - user_offset.tv_sec;
+  DONT_FAKE_TIME(result = real_utime(filename, &ntbuf));
+  if (result == -1)
+  {
+    return -1;
+  }
+
+  return result;
+}
+
+int utimes(const char *filename, const struct timeval times[2])
+{
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (NULL == real_utimes)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original utimes() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
+
+  int result;
+  struct timeval tn[2];
+  struct timeval user_offset2;
+  user_offset2.tv_sec = user_offset.tv_sec;
+  user_offset2.tv_usec = 0;
+  timersub(&times[0], &user_offset2, &tn[0]);
+  timersub(&times[1], &user_offset2, &tn[1]);
+  DONT_FAKE_TIME(result = real_utimes(filename, tn));
+  if (result == -1)
+  {
+    return -1;
+  }
+
   return result;
 }
 #endif
@@ -2173,6 +2244,10 @@ static void ftpl_init(void)
   real_lstat64 =            dlsym(RTLD_NEXT, "__lxstat64");
   real_time =               dlsym(RTLD_NEXT, "time");
   real_ftime =              dlsym(RTLD_NEXT, "ftime");
+#ifdef FAKE_FILE_TIMESTAMPS
+  real_utimes  =            dlsym(RTLD_NEXT, "utimes");
+  real_utime   =            dlsym(RTLD_NEXT, "utime");
+#endif
 #if defined(__alpha__) && defined(__GLIBC__)
   real_gettimeofday =       dlvsym(RTLD_NEXT, "gettimeofday", "GLIBC_2.1");
 #else
