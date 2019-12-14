@@ -89,7 +89,7 @@
 #ifndef timersub
 #define timersub(a, b, result) timersub2(a, b, result, u)
 #endif
-#ifndef timersub
+#ifndef timermul
 #define timermul(a, c, result) timermul2(a, c, result, u)
 #endif
 
