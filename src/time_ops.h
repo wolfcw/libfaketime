@@ -94,11 +94,23 @@
 #endif
 
 /* ops for nanosecs */
+#ifndef timespecisset
 #define timespecisset(tvp) timerisset2(tvp,n)
+#endif
+#ifndef timespecclear
 #define timespecclear(tvp) timerclear2(tvp, n)
+#endif
+#ifndef timespeccmp
 #define timespeccmp(a, b, CMP) timercmp2(a, b, CMP, n)
+#endif
+#ifndef timespecadd
 #define timespecadd(a, b, result) timeradd2(a, b, result, n)
+#endif
+#ifndef timespecsub
 #define timespecsub(a, b, result) timersub2(a, b, result, n)
+#endif
+#ifndef timespecmul
 #define timespecmul(a, c, result) timermul2(a, c, result, n)
+#endif
 
 #endif
