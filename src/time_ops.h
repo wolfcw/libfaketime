@@ -60,9 +60,9 @@
 #define timermul2(tvp, c, result, prefix)                           \
   do                                                                \
   {                                                                 \
-    long long tmp_time;                                             \
-    tmp_time = (c) * ((tvp)->tv_sec * SEC_TO_##prefix##SEC +        \
-               (tvp)->tv_##prefix##sec);                            \
+    int64_t tmp_time;                                             \
+    tmp_time = (c) * (int64_t) ((tvp)->tv_sec * SEC_TO_##prefix##SEC +        \
+               (int64_t) (tvp)->tv_##prefix##sec);                            \
     (result)->tv_##prefix##sec = tmp_time % SEC_TO_##prefix##SEC;   \
     (result)->tv_sec = (tmp_time - (result)->tv_##prefix##sec) /    \
       SEC_TO_##prefix##SEC;                                         \
