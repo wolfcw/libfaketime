@@ -518,6 +518,30 @@ static void ft_cleanup (void)
 
 /*
  *      =======================================================================
+ *      Get monotonic faketime setting                               === GETENV
+ *      =======================================================================
+ */
+
+static void get_fake_monotonic_setting(int* current_value)
+{
+  char *tmp_env;
+  if ((tmp_env = getenv("FAKETIME_DONT_FAKE_MONOTONIC")) != NULL
+    || (tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
+  {
+    if (0 == strcmp(tmp_env, "1"))
+    {
+      (*current_value) = 0;
+    }
+    else
+    {
+      (*current_value) = 1;
+    }
+  }
+}
+
+
+/*
+ *      =======================================================================
  *      Internal time retrieval                                     === INTTIME
  *      =======================================================================
  */
@@ -2290,14 +2314,7 @@ static void ftpl_init(void)
       cache_enabled = 0;
     }
   }
-  if ((tmp_env = getenv("FAKETIME_DONT_FAKE_MONOTONIC")) != NULL
-    || (tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
-  {
-    if (0 == strcmp(tmp_env, "1"))
-    {
-      fake_monotonic_clock = 0;
-    }
-  }
+  get_fake_monotonic_setting(&fake_monotonic_clock);
   /* Check whether we actually should be faking the returned timestamp. */
 
   /* We can prevent faking time for specified commands */
@@ -2707,6 +2724,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       }
     } /* read fake time from file */
     parse_ft_string(user_faked_time);
+    /* read monotonic faketime setting from envar */
+    get_fake_monotonic_setting(&fake_monotonic_clock);
   } /* cache had expired */
 
   if (infile_set)
