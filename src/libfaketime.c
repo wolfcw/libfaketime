@@ -2770,8 +2770,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
-      char custom_filename[BUFSIZ];
-      char filename[BUFSIZ];
+      static char custom_filename[BUFSIZ];
+      static char filename[BUFSIZ];
       FILE *faketimerc;
       /* check whether there's a .faketimerc in the user's home directory, or
        * a system-wide /etc/faketimerc present.
@@ -2783,7 +2783,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
           (faketimerc = fopen(filename, "rt")) != NULL ||
           (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
       {
-        char line[BUFFERLEN];
+        static char line[BUFFERLEN];
         while(fgets(line, BUFFERLEN, faketimerc) != NULL)
         {
           if ((strlen(line) > 1) && (line[0] != ' ') &&
