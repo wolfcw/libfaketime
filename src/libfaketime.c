@@ -53,6 +53,7 @@
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #if defined PTHREAD_SINGLETHREADED_TIME || defined FAKE_PTHREAD
 #include <pthread.h>
+#include <signal.h>
 #endif
 
 #include <sys/timeb.h>
@@ -2619,10 +2620,24 @@ static void remove_trailing_eols(char *line)
  */
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
+/*
+ * To avoid a deadlock if a faketime function is interrupted by a signal while
+ * holding the lock, we block all signals while the mutex is locked.
+ * The original_mask field is used to restore the previous set of signals
+ * after the lock has been released.
+ * (Prompted by issues with parallel garbage collection in D 2.090. D uses signals
+ * to freeze all but one thread. The frozen threads may be in faketime operations.)
+ */
+struct LockedState {
+  pthread_mutex_t mutex;
+  sigset_t original_mask;
+};
+
 static void pthread_cleanup_mutex_lock(void *data)
 {
-  pthread_mutex_t *mutex = data;
-  pthread_mutex_unlock(mutex);
+  struct LockedState *state = data;
+  pthread_mutex_unlock(&state->mutex);
+  sigprocmask(SIG_SETMASK, &state->original_mask, NULL);
 }
 #endif
 
@@ -2652,9 +2667,15 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (tp == NULL) return -1;
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
-  static pthread_mutex_t time_mutex=PTHREAD_MUTEX_INITIALIZER;
-  pthread_mutex_lock(&time_mutex);
-  pthread_cleanup_push(pthread_cleanup_mutex_lock, &time_mutex);
+  static struct LockedState state = { 0 };
+
+  // block all signals while locked. prevents deadlocks if signal interrupts in in mid-operation.
+  sigset_t all_signals;
+  sigfillset(&all_signals);
+  sigprocmask(SIG_SETMASK, &all_signals, &state.original_mask);
+
+  pthread_mutex_lock(&state.mutex);
+  pthread_cleanup_push(pthread_cleanup_mutex_lock, &state);
 #endif
 
   if ((limited_faking &&
