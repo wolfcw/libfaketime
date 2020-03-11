@@ -2666,6 +2666,9 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   /* Sanity check by Karl Chan since v0.8 */
   if (tp == NULL) return -1;
 
+  // {ret = value; goto abort;} to call matching pthread_cleanup_pop and return value
+  int ret = INT_MAX;
+
 #ifdef PTHREAD_SINGLETHREADED_TIME
   static struct LockedState state = { 0 };
 
@@ -2719,10 +2722,14 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     {
       /* Check whether we actually should be faking the returned timestamp. */
       /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu\n", (*time_tptr - ftpl_starttime), callcounter); */
-      if ((ft_start_after_secs != -1)   && (tmp_ts.tv_sec < ft_start_after_secs)) return 0;
-      if ((ft_stop_after_secs != -1)    && (tmp_ts.tv_sec >= ft_stop_after_secs)) return 0;
-      if ((ft_start_after_ncalls != -1) && (callcounter < ft_start_after_ncalls)) return 0;
-      if ((ft_stop_after_ncalls != -1)  && (callcounter >= ft_stop_after_ncalls)) return 0;
+      if (((ft_start_after_secs != -1)    && (tmp_ts.tv_sec < ft_start_after_secs))
+        || ((ft_stop_after_secs != -1)    && (tmp_ts.tv_sec >= ft_stop_after_secs))
+        || ((ft_start_after_ncalls != -1) && (callcounter < ft_start_after_ncalls))
+        || ((ft_stop_after_ncalls != -1)  && (callcounter >= ft_stop_after_ncalls)))
+      {
+        ret = 0;
+        goto abort;
+      }
       /* fprintf(stderr, "(libfaketime limits -> runtime: %lu, callcounter: %lu continues\n", (*time_tptr - ftpl_starttime), callcounter); */
     }
 
@@ -2827,7 +2834,8 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   {
     if (load_time(tp))
     {
-      return 0;
+      ret = 0;
+      goto abort;
     }
   }
 
@@ -2890,12 +2898,16 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       break;
 
     default:
-      return -1;
+      ret = -1;
+      goto abort;
   } // end of switch(ft_mode)
 
+abort:
 #ifdef PTHREAD_SINGLETHREADED_TIME
   pthread_cleanup_pop(1);
 #endif
+  // came here via goto abort?
+  if (ret != INT_MAX) return ret;
   save_time(tp);
 
   /* Cache this most recent real and faked time we encountered */
