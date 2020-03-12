@@ -2636,8 +2636,9 @@ struct LockedState {
 static void pthread_cleanup_mutex_lock(void *data)
 {
   struct LockedState *state = data;
+  sigset_t original_mask = state->original_mask; // inside the lock!
   pthread_mutex_unlock(&state->mutex);
-  pthread_sigmask(SIG_SETMASK, &state->original_mask, NULL);
+  pthread_sigmask(SIG_SETMASK, &original_mask, NULL);
 }
 #endif
 
@@ -2673,10 +2674,11 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   static struct LockedState state = { 0 };
 
   // block all signals while locked. prevents deadlocks if signal interrupts in in mid-operation.
-  sigset_t all_signals;
+  sigset_t all_signals, original_mask;
   sigfillset(&all_signals);
-  pthread_sigmask(SIG_SETMASK, &all_signals, &state.original_mask);
+  pthread_sigmask(SIG_SETMASK, &all_signals, &original_mask);
   pthread_mutex_lock(&state.mutex);
+  state.original_mask = original_mask; // inside the lock!
   pthread_cleanup_push(pthread_cleanup_mutex_lock, &state);
 #endif
 
