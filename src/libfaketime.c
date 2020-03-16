@@ -2629,16 +2629,15 @@ static void remove_trailing_eols(char *line)
  * to freeze all but one thread. The frozen threads may be in faketime operations.)
  */
 struct LockedState {
-  pthread_mutex_t mutex;
+  pthread_mutex_t *mutex;
   sigset_t original_mask;
 };
 
 static void pthread_cleanup_mutex_lock(void *data)
 {
   struct LockedState *state = data;
-  sigset_t original_mask = state->original_mask; // inside the lock!
-  pthread_mutex_unlock(&state->mutex);
-  pthread_sigmask(SIG_SETMASK, &original_mask, NULL);
+  pthread_mutex_unlock(state->mutex);
+  pthread_sigmask(SIG_SETMASK, &state->original_mask, NULL);
 }
 #endif
 
@@ -2671,14 +2670,15 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   int ret = INT_MAX;
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
-  static struct LockedState state = { 0 };
+  static pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
   // block all signals while locked. prevents deadlocks if signal interrupts in in mid-operation.
   sigset_t all_signals, original_mask;
   sigfillset(&all_signals);
   pthread_sigmask(SIG_SETMASK, &all_signals, &original_mask);
-  pthread_mutex_lock(&state.mutex);
-  state.original_mask = original_mask; // inside the lock!
+  pthread_mutex_lock(&time_mutex);
+
+  struct LockedState state = { .mutex = &time_mutex, .original_mask = original_mask };
   pthread_cleanup_push(pthread_cleanup_mutex_lock, &state);
 #endif
 
