@@ -218,6 +218,7 @@ static int initialized = 0;
 /* prototypes */
 static int    fake_gettimeofday(struct timeval *tv);
 static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
+int           read_config_file();
 
 /** Semaphore protecting shared data */
 static sem_t *shared_sem = NULL;
@@ -2585,6 +2586,10 @@ static void ftpl_init(void)
     parse_config_file = false;
     parse_ft_string(tmp_env);
   }
+  else
+  {
+    read_config_file();
+  }
 
   dont_fake = dont_fake_final;
 }
@@ -2640,6 +2645,41 @@ static void pthread_cleanup_mutex_lock(void *data)
   pthread_sigmask(SIG_SETMASK, &state->original_mask, NULL);
 }
 #endif
+
+int read_config_file()
+{
+  static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+  static char custom_filename[BUFSIZ];
+  static char filename[BUFSIZ];
+  FILE *faketimerc;
+  /* check whether there's a .faketimerc in the user's home directory, or
+   * a system-wide /etc/faketimerc present.
+   * The /etc/faketimerc handling has been contributed by David Burley,
+   * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
+  (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
+  (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
+  if ((faketimerc = fopen(custom_filename, "rt")) != NULL ||
+      (faketimerc = fopen(filename, "rt")) != NULL ||
+      (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
+  {
+    static char line[BUFFERLEN];
+    while(fgets(line, BUFFERLEN, faketimerc) != NULL)
+    {
+      if ((strlen(line) > 1) && (line[0] != ' ') &&
+          (line[0] != '#') && (line[0] != ';'))
+      {
+        remove_trailing_eols(line);
+        strncpy(user_faked_time, line, BUFFERLEN-1);
+        user_faked_time[BUFFERLEN-1] = 0;
+        break;
+      }
+    }
+    fclose(faketimerc);
+    parse_ft_string(user_faked_time);
+    return 1;
+  }
+  return 0;
+}
 
 int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
@@ -2799,35 +2839,12 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     /* fake time supplied as environment variable? */
     if (parse_config_file)
     {
-      static char custom_filename[BUFSIZ];
-      static char filename[BUFSIZ];
-      FILE *faketimerc;
-      /* check whether there's a .faketimerc in the user's home directory, or
-       * a system-wide /etc/faketimerc present.
-       * The /etc/faketimerc handling has been contributed by David Burley,
-       * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
-      (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
-      (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
-      if ((faketimerc = fopen(custom_filename, "rt")) != NULL ||
-          (faketimerc = fopen(filename, "rt")) != NULL ||
-          (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
-      {
-        static char line[BUFFERLEN];
-        while(fgets(line, BUFFERLEN, faketimerc) != NULL)
-        {
-          if ((strlen(line) > 1) && (line[0] != ' ') &&
-              (line[0] != '#') && (line[0] != ';'))
-          {
-            remove_trailing_eols(line);
-            strncpy(user_faked_time, line, BUFFERLEN-1);
-            user_faked_time[BUFFERLEN-1] = 0;
-            break;
-          }
-        }
-        fclose(faketimerc);
-      }
+      if (read_config_file() == 0) parse_ft_string(user_faked_time);
     } /* read fake time from file */
-    parse_ft_string(user_faked_time);
+    else
+    {
+      parse_ft_string(user_faked_time);
+    }
     /* read monotonic faketime setting from envar */
     get_fake_monotonic_setting(&fake_monotonic_clock);
   } /* cache had expired */
