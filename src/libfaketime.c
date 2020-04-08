@@ -3209,6 +3209,17 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   clockid_t clock_id;
   int result;
 
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (NULL == real_pthread_cond_init_232)
+  { /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original pthread_cond_init (@@GLIBC_2.3.2, fallback) not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
   result = real_pthread_cond_init_232(cond, attr);
 
   if (result != 0 || attr == NULL)
