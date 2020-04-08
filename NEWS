@@ -1,3 +1,7 @@
+    - Additional link-time LDFLAGS can be passed via the
+      environment variable FAKETIME_LINK_FLAGS when
+      running 'make'.
+
 Since 0.9.8:
     - Compile-time CFLAG FAKE_SETTIME can be enabled to
       intercept calls to clock_settime(), settimeofday(), and
