@@ -42,7 +42,8 @@ variable, so for example
   FAKETIME_COMPILE_CFLAGS="-DFORCE_PTHREAD_NONVER" make test
 
 would create the libfaketime binaries and run the tests with the
-FORCE_PTHREAD_NONVER flag set in a single step.
+FORCE_PTHREAD_NONVER flag set in a single step. Likewise there is
+FAKETIME_LINK_FLAGS.
 
 Please do not use FORCE_MONOTONIC_FIX by default, as it would result
 in incorrect operations on platforms that do not need it.

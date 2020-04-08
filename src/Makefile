@@ -79,7 +79,7 @@ endif
 
 LIB_LDFLAGS += -shared
 
-LDFLAGS += -lpthread
+LDFLAGS += $(FAKETIME_LINK_FLAGS) -lpthread
 ifneq ($(PLATFORM),SunOS)
 LDFLAGS += -Wl,--version-script=libfaketime.map
 endif
