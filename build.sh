@@ -12,13 +12,15 @@ if [ "$LIBTOOLIZE" = "" ]; then
     LIBTOOLIZE=$(which glibtoolize)
 fi
 if [ "$LIBTOOLIZE" = "" ]; then
-    echo "CANNOT CONTINUE! MISSING (G)LIBTOOLIZE! Install libtool!"
-		exit 1
+    echo "CANNOT CONTINUE! MISSING (G)LIBTOOLIZE! Install libtool!" >&2
+    exit 2
 fi
 
 case "x$1" in
 xinit)
+        [ -d m4 ] || mkdir m4
         set -x
+        autoheader
         aclocal
         $LIBTOOLIZE --force --copy --automake
         autoconf --force

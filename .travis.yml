@@ -14,3 +14,4 @@ script:
   - FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
   - cd test
   - make test
+  - make distcheck

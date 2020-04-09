@@ -6,6 +6,8 @@
 # see README.testframe.txt for details.
 #
 
+testframedir="${BASH_SOURCE%/*}"
+
 # echo labelled error/warning message to stderr
 report()
 {
@@ -33,7 +35,7 @@ run_testsuite()
 	# add testsuite dir to PATH for convenience
 	typeset dir=$(dirname $testsuite)
 	PATH=$dir:$PATH
-	. testframe.inc
+	. $testframedir/testframe.inc
 	if [ -f $dir/common.inc ]; then
 		. $dir/common.inc
 	fi
