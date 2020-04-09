@@ -27,3 +27,4 @@ Makefile.in
 .libs/
 *.l[ao]
 compile
+test-driver
