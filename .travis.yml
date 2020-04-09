@@ -9,5 +9,8 @@ matrix:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
+  - sh ./build.sh init
+  - ./configure
   - FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
+  - cd test
   - make test
