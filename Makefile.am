@@ -1,3 +1,4 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS=-I m4
 SUBDIRS=src test man
+EXTRA_DIST=README.developers README.OSX README.packagers TODO
