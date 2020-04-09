@@ -1,3 +1,5 @@
+Since 0.9.9:
+    - Mike Stemle added GNU autotools
     - Additional link-time LDFLAGS can be passed via the
       environment variable FAKETIME_LINK_FLAGS when
       running 'make'.

@@ -44,6 +44,7 @@
 #include <netinet/in.h>
 #include <limits.h>
 
+#include "config.h"
 #include "uthash.h"
 
 #include "time_ops.h"

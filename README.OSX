@@ -39,18 +39,23 @@ Otherwise, you have to compile and install libfaketime manually; this
 will require a working installation of Xcode and its command line tools
 on your machine.
 
-You can compile libfaketime by running the command
+This library now supports GNU autotools, so you can build it using:
 
+    sh build.sh init
+    ./configure
     make
-
-in libfaketime's top-level directory.
 
 The resulting library will be named libfaketime.1.dylib ; to check
 whether it works properly, run the test suite and verify whether its
 output is correct:
 
     cd test
-    make -f Makefile.OSX
+    make test
+
+NOTE: When committing, be sure to clean up potentially
+system-dependent files by running:
+
+    sh build.sh clean
 
 
 2) Using libfaketime from the command line on macOS
