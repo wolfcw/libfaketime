@@ -1,4 +1,4 @@
-name: Run make test
+name: Run make test for automake branch
 
 on:
   push:
@@ -15,7 +15,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        ref: automake
     - name: init
       run: sh ./build.sh init
     - name: make
