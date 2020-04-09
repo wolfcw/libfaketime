@@ -187,19 +187,21 @@ linker configuration file, e.g., /etc/ld.so.conf.d/local.conf, and then run
 the "ldconfig" command. Afterwards, using LD_PRELOAD=libfaketime.so.1 suffices.
 
 However, also the faked time should be specified; otherwise, libfaketime will
-be loaded, but just report the real system time. There are three ways to
+be loaded, but just report the real system time. There are multiple ways to
 specify the faked time:
 
 a) By setting the environment variable FAKETIME.
 b) By using the file given in the environment variable FAKETIME_TIMESTAMP_FILE
 c) By using the file .faketimerc in your home directory.
 d) By using the file /etc/faketimerc for a system-wide default.
+e) By using FAKETIME_UPDATE_TIMESTAMP_FILE and date -s "<time>" or alike.
 
 If you want to use b) c) or d), $HOME/.faketimerc or /etc/faketimerc consist of
 only one line of text with exactly the same content as the FAKETIME environment
 variable, which is described below. Note that /etc/faketimerc will only be used
 if there is no $HOME/.faketimerc and no FAKETIME_TIMESTAMP_FILE file exists.
 Also, the FAKETIME environment variable _always_ has priority over the files.
+For FAKETIME_UPDATE_TIMESTAMP_FILE please see below.
 
 
 4b) Using absolute dates
@@ -368,7 +370,8 @@ may take up to 10 seconds before the new fake time is applied. If this is a
 problem in your scenario, you can change number of seconds before the file is read
 again with environment variable FAKETIME_CACHE_DURATION, or disable caching at all
 with FAKETIME_NO_CACHE=1. Remember that disabling the cache may negatively
-influence the performance.
+influence the performance (especially when not using FAKETIME environment
+but configuration files, such as FAKETIME_TIMESTAMP_FILE).
 
 
 Setting FAKETIME by means of a file timestamp
@@ -434,9 +437,14 @@ Cleaning up shared memory
 -------------------------
 
 libfaketime uses semaphores and shared memory on platforms that support it in
-order to sync faketime settings across parent-child processes. It will clean
-up when it exits properly. However, when processes are terminated (e.g., by
-Ctrl-C on command line), shared memory cannot be cleaned up properly. In such
+order to sync faketime settings across parent-child processes.
+
+Please note that this does not share the time set by settimeofday (for that
+see FAKETIME_UPDATE_TIMESTAMP_FILE below).
+
+libfaketime will clean up when it exits properly.
+However, when processes are terminated (e.g., by Ctrl-C on command line),
+shared memory cannot be cleaned up properly. In such
 cases, you should occasionally delete
 
   /dev/shm/faketime_shm_* and
@@ -461,9 +469,54 @@ Intercepting time-setting calls
 
 libfaketime can be compiled with the CFLAG "-DFAKE_SETTIME" in order
 to also intercept time-setting functions, i.e., clock_settime(),
-settimeofday(), and adjtime(). Instead of passing the timestamp a
-program sets through to the system, only the FAKETIME environment
-variable will be adjusted accordingly.
+settimeofday(), and adjtime(). The FAKETIME environment
+variable will be adjusted on each call.
+
+When the environment variable FAKETIME_TIMESTAMP_FILE is set, points to a
+writeable (creatable) custom config file and the environment variable
+FAKETIME_UPDATE_TIMESTAMP_FILE is "1", then the file also is updated on each
+call. By this, a common "virtual time" can be shared by several
+processes, where each can adjust the time for all.
+
+
+Sharing "virtual settable time" between independent processes
+-------------------------------------------------------------
+
+When libfaketime was compiled with FAKETIME_COMPILE_CFLAGS="-DFAKE_SETTIME",
+it can be configured to support a common time offset for multiple processes.
+This for example allows to use "ntpdate" as normal user without affecting
+system clock, interactively testing software with different dates or testing
+complex software with multiple independent processes that themself use
+settime internally.
+
+Examples:
+
+  $ export LD_PRELOAD=libfaketime.so.1
+  $ export FAKETIME_TIMESTAMP_FILE="/tmp/my-faketime.rc"
+  $ export FAKETIME_UPDATE_TIMESTAMP_FILE=1
+  $ export FAKETIME_CACHE_DURATION=1 # in seconds
+  # or: export FAKETIME_NO_CACHE=1
+
+  $ date -s "1999-12-24 16:00:00"
+  Fri Dec 24 16:00:00 CET 1999
+  $ LD_PRELOAD="" date
+  Thu Apr  9 15:19:38 CEST 2020
+  $ date
+  Fri Dec 24 16:00:02 CET 1999
+  $ /usr/sbin/ntpdate -u clock.isc.org
+   9 Apr 15:18:37 ntpdate[718]: step time server xx offset 640390517.057257 sec
+  $ date
+  Thu Apr  9 15:18:40 CEST 2020
+
+In another terminal, script or environmment the same variables could be set
+and the same time would be printed.
+This also avoid the need to directly update the rc config file to use
+different times, but of course only supports time offsets.
+
+Please note that this feature is not compatible with several other features,
+such as FAKETIME_FOLLOW_FILE, FAKETIME_XRESET and maybe others. After first
+settime, offsets will be used in FAKETIME_TIMESTAMP_FILE, even if it
+initially used advanced time specification options.
 
 
 4f) Faking the date and time system-wide
@@ -638,6 +691,11 @@ seconds.
 
 4k) Saving timestamps to file, loading them from file
 -----------------------------------------------------
+
+To store and load timestamp _offsets_ using _one and the same_ file allowing
+to share a common "virtual time" between independent processes, please see
+FAKETIME_UPDATE_TIMESTAMP_FILE above. The FAKETIME_SAVE_FILE feature is
+different.
 
 faketime can save faked timestamps to a file specified by FAKETIME_SAVE_FILE
 environment variable. It can also use the file specified by FAKETIME_LOAD_FILE

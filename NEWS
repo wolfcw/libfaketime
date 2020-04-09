@@ -1,3 +1,9 @@
+    - When the environment variable FAKETIME_TIMESTAMP_FILE is
+      set, points to a writeable (creatable) custom config file
+      and the environment variable FAKETIME_UPDATE_TIMESTAMP_FILE
+      is "1", then the file also is updated on each call. By
+      this, a common "virtual time" can be shared by several
+      processes, where each can adjust the time for all.
     - Additional link-time LDFLAGS can be passed via the
       environment variable FAKETIME_LINK_FLAGS when
       running 'make'.

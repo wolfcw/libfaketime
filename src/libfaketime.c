@@ -3408,6 +3408,42 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   setenv("FAKETIME", newenv_string, 1);
   force_cache_expiration = 1; /* make sure it becomes effective immediately */
 
+  /* If FAKETIME_TIMESTAMP_FILE was given in environment,
+   * and if FAKETIME_UPDATE_TIMESTAMP_FILE=1, then update it.
+   * This allows other process instances to share the same time. */
+  if (    (getenv("FAKETIME_TIMESTAMP_FILE") != NULL)
+       && (*getenv("FAKETIME_TIMESTAMP_FILE") != '\0')
+       && (getenv("FAKETIME_UPDATE_TIMESTAMP_FILE") != NULL)
+       && (strcmp(getenv("FAKETIME_UPDATE_TIMESTAMP_FILE"), "1") == 0))
+  {
+    const char *error = NULL;
+    FILE *envfile;
+    static char custom_filename[BUFSIZ];
+    (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
+
+    if ((envfile = fopen(custom_filename, "wt")) != NULL)
+    {
+      if (fprintf(envfile, "%+f\n", offset) < 0)
+      {
+        error = "to write to file";
+      }
+      if (fclose(envfile) != 0)
+      {
+        error = "to close file";
+      }
+    }
+    else
+    {
+      error = "to open file";
+    }
+    if (error)
+    {
+      fprintf(stderr, "libfaketime: In clock_settime(), failed to "
+        "%s while updating FAKETIME_TIMESTAMP_FILE (`%s'): %s\n",
+        error, getenv("FAKETIME_TIMESTAMP_FILE"), strerror(errno));
+    }
+  }
+
   return 0;
 }
 
