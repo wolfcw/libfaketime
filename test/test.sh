@@ -11,7 +11,7 @@ LIBFAKETIME_LA=$(find "$LIB_BUILD_PATH" | grep 'libfaketime\.\(dylib\|so\)$')
 
 set_libfaketime() {
 	the_path="$LIBFAKETIME_LA"
-	if [[ "$(uname)" = "Darwin" ]]; then
+	if [ "$(uname)" = "Darwin" ]; then
 		export DYLD_INSERT_LIBRARIES="$the_path"
 		export DYLD_FORCE_FLAT_NAMESPACE=1
 	else
