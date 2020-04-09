@@ -1,0 +1,24 @@
+name: Run make test
+
+on:
+  push:
+    branches:
+      - automake
+  schedule:
+    - cron:  '30 9 * * *'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: init
+      run: sh ./build.sh init
+    - name: make
+      run: make
+    - name: make test
+      run: cd test ; make test
