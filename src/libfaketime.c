@@ -3405,6 +3405,7 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   offset += (double) nsec_diff/SEC_TO_nSEC;
   snprintf(newenv_string, 255, "%+f", offset);
 
+  parse_config_file = false; /* #247: make sure environment takes precedence */
   setenv("FAKETIME", newenv_string, 1);
   force_cache_expiration = 1; /* make sure it becomes effective immediately */
 
