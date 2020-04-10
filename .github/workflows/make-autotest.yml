@@ -20,6 +20,8 @@ jobs:
         ref: automake
     - name: init
       run: sh ./build.sh init
+    - name: configure
+      run: ./configure
     - name: make
       run: make
     - name: make test
