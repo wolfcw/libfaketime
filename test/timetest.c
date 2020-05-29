@@ -216,7 +216,10 @@ printf("%s", 0 == 1 ? argv[0] : "");
     printf("time()         : Current date and time: %s", ctime(&now));
     printf("time(NULL)     : Seconds since Epoch  : %u\n", (unsigned int)time(NULL));
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     ftime(&tb);
+#pragma GCC diagnostic pop
     printf("ftime()        : Current date and time: %s", ctime(&tb.time));
 
     printf("(Intentionally sleeping 2 seconds...)\n");
