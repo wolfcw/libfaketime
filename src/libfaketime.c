@@ -111,6 +111,10 @@ typedef int clockid_t;
 #define CLOCK_MONOTONIC_RAW (CLOCK_MONOTONIC + 1)
 #endif
 
+#if defined FAKE_UTIME && !defined FAKE_FILE_TIMESTAMPS
+#define FAKE_FILE_TIMESTAMPS
+#endif
+
 #ifdef FAKE_FILE_TIMESTAMPS
 struct utimbuf {
   time_t actime;       /* access time */
@@ -211,6 +215,8 @@ static clock_serv_t clock_serv_real;
 #ifdef FAKE_FILE_TIMESTAMPS
 static int          (*real_utimes)          (const char *filename, const struct timeval times[2]);
 static int          (*real_utime)           (const char *filename, const struct utimbuf *times);
+static int          (*real_utimensat)       (int dirfd, const char *filename, const struct timespec times[2], int flags);
+static int          (*real_futimens)        (int fd, const struct timespec times[2]);
 #endif
 
 static int initialized = 0;
@@ -736,6 +742,7 @@ static bool load_time(struct timespec *tp)
 #include <sys/stat.h>
 
 static int fake_stat_disabled = 0;
+static int fake_utime_disabled = 1;
 static bool user_per_tick_inc_set_backup = false;
 
 void lock_for_stat()
@@ -1087,14 +1094,21 @@ int utime(const char *filename, const struct utimbuf *times)
 
   int result;
   struct utimbuf ntbuf;
-  ntbuf.actime = times->actime - user_offset.tv_sec;
-  ntbuf.modtime = times->modtime - user_offset.tv_sec;
-  DONT_FAKE_TIME(result = real_utime(filename, &ntbuf));
-  if (result == -1)
+  if (fake_utime_disabled)
   {
-    return -1;
+    if (times == NULL)
+    { /* The user wants their given fake times left alone but they requested NOW, so turn it into fake NOW */
+      ntbuf.actime = ntbuf.modtime = time(NULL);
+      times = &ntbuf;
+    }
   }
-
+  else if (times != NULL)
+  {
+    ntbuf.actime = times->actime - user_offset.tv_sec;
+    ntbuf.modtime = times->modtime - user_offset.tv_sec;
+    times = &ntbuf;
+  }
+  DONT_FAKE_TIME(result = real_utime(filename, times));
   return result;
 }
 
@@ -1114,17 +1128,105 @@ int utimes(const char *filename, const struct timeval times[2])
 
   int result;
   struct timeval tn[2];
-  struct timeval user_offset2;
-  user_offset2.tv_sec = user_offset.tv_sec;
-  user_offset2.tv_usec = 0;
-  timersub(&times[0], &user_offset2, &tn[0]);
-  timersub(&times[1], &user_offset2, &tn[1]);
-  DONT_FAKE_TIME(result = real_utimes(filename, tn));
-  if (result == -1)
+  if (fake_utime_disabled)
   {
-    return -1;
+    if (times == NULL)
+    { /* The user wants their given fake times left alone but they requested NOW, so turn it into fake NOW */
+      fake_gettimeofday(&tn[0]);
+      tn[1] = tn[0];
+      times = tn;
+    }
+  }
+  else if (times != NULL)
+  {
+    struct timeval user_offset2;
+    user_offset2.tv_sec = user_offset.tv_sec;
+    user_offset2.tv_usec = user_offset.tv_nsec / 1000;
+    timersub(&times[0], &user_offset2, &tn[0]);
+    timersub(&times[1], &user_offset2, &tn[1]);
+    times = tn;
+  }
+  DONT_FAKE_TIME(result = real_utimes(filename, times));
+  return result;
+}
+
+/* This conditionally offsets 2 timespec values. The caller's out_times array
+ * always contains valid translated values, even if in_times was NULL. */
+static void fake_two_timespec(const struct timespec in_times[2], struct timespec out_times[2])
+{
+  if (in_times == NULL) /* Translate NULL into 2 UTIME_NOW values */
+  {
+    out_times[0].tv_sec = out_times[1].tv_sec = 0;
+    out_times[0].tv_nsec = out_times[1].tv_nsec = UTIME_NOW;
+    in_times = out_times;
+  }
+  struct timespec now;
+  now.tv_nsec = UTIME_OMIT; /* Wait to grab the current time to see if it's actually needed */
+  int j;
+  for (j = 0; j <= 1; j++)
+  {
+    /* We need to preserve 2 special time values in addition to when the user disables utime offsets */
+    if (fake_utime_disabled || in_times[j].tv_nsec == UTIME_OMIT || in_times[j].tv_nsec == UTIME_NOW)
+    {
+      if (fake_utime_disabled && in_times[j].tv_nsec == UTIME_NOW)
+      { /* The user wants their given fake times left alone but they requested NOW, so turn it into fake NOW */
+        if (now.tv_nsec == UTIME_OMIT) /* did we grab "now" yet? */
+        {
+          DONT_FAKE_TIME(real_clock_gettime(CLOCK_REALTIME, &now));
+        }
+        timeradd2(&now, &user_offset, &out_times[j], n);
+      }
+      else if (out_times != in_times)
+      { /* Just preserve the input value */
+        out_times[j] = in_times[j];
+      }
+    }
+    else 
+    {
+      timersub2(&in_times[j], &user_offset, &out_times[j], n);
+    }
+  }
+}
+
+int utimensat(int dirfd, const char *filename, const struct timespec times[2], int flags)
+{
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (NULL == real_utimensat)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original utimensat() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
   }
 
+  int result;
+  struct timespec tn[2];
+  fake_two_timespec(times, tn);
+  DONT_FAKE_TIME(result = real_utimensat(dirfd, filename, tn, flags));
+  return result;
+}
+
+int futimens(int fd, const struct timespec times[2])
+{
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (NULL == real_futimens)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original futimens() not found.\n");
+#endif
+    return -1; /* propagate error to caller */
+  }
+
+  int result;
+  struct timespec tn[2];
+  fake_two_timespec(times, tn);
+  DONT_FAKE_TIME(result = real_futimens(fd, tn));
   return result;
 }
 #endif
@@ -2273,6 +2375,8 @@ static void ftpl_init(void)
 #ifdef FAKE_FILE_TIMESTAMPS
   real_utimes  =            dlsym(RTLD_NEXT, "utimes");
   real_utime   =            dlsym(RTLD_NEXT, "utime");
+  real_utimensat =          dlsym(RTLD_NEXT, "utimensat");
+  real_futimens =           dlsym(RTLD_NEXT, "futimens");
 #endif
 #if defined(__alpha__) && defined(__GLIBC__)
   real_gettimeofday =       dlvsym(RTLD_NEXT, "gettimeofday", "GLIBC_2.1");
@@ -2377,6 +2481,22 @@ static void ftpl_init(void)
   if (getenv("NO_FAKE_STAT")!=NULL)
   {
     fake_stat_disabled = 1;  //Note that this is NOT re-checked
+  }
+#endif
+#if defined FAKE_FILE_TIMESTAMPS
+#ifndef FAKE_UTIME
+  fake_utime_disabled = 0; // Defaults to enabled w/o FAKE_UTIME define
+#endif
+  if ((tmp_env = getenv("FAKE_UTIME")) != NULL) //Note that this is NOT re-checked
+  {
+    if (!*tmp_env || *tmp_env == 'y' || *tmp_env == 'Y' || *tmp_env == 't' || *tmp_env == 'T')
+    { /* an empty string or a yes/true value turns off disabling */
+      fake_utime_disabled = 0;
+    }
+    else
+    { /* Any other non-number disables the utime functions, but we also support FAKE_UTIME=1 to enable */
+      fake_utime_disabled = !atoi(tmp_env);
+    }
   }
 #endif
 
@@ -2687,6 +2807,9 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   static time_t last_data_fetch = 0;  /* not fetched previously at first call */
   static int cache_expired = 1;       /* considered expired at first call */
 
+  /* Karl Chan's v0.8 sanity check moved here for 0.9.9 */
+  if (tp == NULL) return -1;
+
   /* create a copy of the timespec containing the real system time for clk_id */
   struct timespec tp_save;
   tp_save.tv_sec = tp->tv_sec;
@@ -2702,9 +2825,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     }
     return 0;
   }
-
-  /* Sanity check by Karl Chan since v0.8 */
-  if (tp == NULL) return -1;
 
   // {ret = value; goto abort;} to call matching pthread_cleanup_pop and return value
   int ret = INT_MAX;
