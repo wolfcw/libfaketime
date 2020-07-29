@@ -6,6 +6,11 @@
 #     FAKE_STAT
 #         - Enables time faking also for files' timestamps.
 #
+#     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
+#         - Enables time faking for the utime* functions.  If enabled via
+#           FAKE_UTIME define instead of FAKE_FILE_TIMESTAMPS, the faking
+#           defaults to off without FAKE_UTIME in the environment.
+#
 #     NO_ATFILE
 #         - Disables support for the fstatat() group of functions
 #
@@ -41,7 +46,7 @@
 #           (This is a platform-specific issue we cannot handle at run-time.)
 #
 #     MULTI_ARCH
-#  	  - If MULTI_ARCH is set, the faketime wrapper program will put a literal
+#         - If MULTI_ARCH is set, the faketime wrapper program will put a literal
 #           $LIB into the LD_PRELOAD environment variable it creates, which makes
 #           ld automatically choose the correct library version to use for the
 #           target binary. Use for Linux platforms with Multi-Arch support only!
@@ -72,7 +77,7 @@ PREFIX ?= /usr/local
 LIBDIRNAME ?= /lib/faketime
 PLATFORM ?=$(shell uname)
 
-CFLAGS += -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"' $(FAKETIME_COMPILE_CFLAGS)
+CFLAGS += -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_UTIME -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"' $(FAKETIME_COMPILE_CFLAGS)
 ifeq ($(PLATFORM),SunOS)
 CFLAGS += -D__EXTENSIONS__ -D_XOPEN_SOURCE=600
 endif
