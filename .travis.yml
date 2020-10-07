@@ -3,11 +3,19 @@ language: c
 matrix:
   include:
     - os: linux
+      arch: amd64
+      compiler: gcc
+    - os: linux
+      arch: ppc64le
       compiler: gcc
     - os: osx
       osx_image: xcode11
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
+  - if [ "$TRAVIS_ARCH" = ppc64le ]; then
+       FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX -DFORCE_PTHREAD_NONVER" make;
+    else
+       FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make; 
+    fi
   - make test
