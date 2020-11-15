@@ -38,6 +38,9 @@
 #     FAKE_SETTIME
 #         - Intercept clock_settime(), settimeofday(), and adjtime()
 #
+#     FAKE_RANDOM
+#         - Intercept getrandom()
+#
 #     FORCE_MONOTONIC_FIX
 #         - If the test program hangs forever on
 #                  " pthread_cond_timedwait: CLOCK_MONOTONIC test

@@ -122,6 +122,10 @@ struct utimbuf {
 };
 #endif
 
+#ifdef FAKE_RANDOM
+#include <sys/random.h>
+#endif
+
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
@@ -217,6 +221,10 @@ static int          (*real_utimes)          (const char *filename, const struct 
 static int          (*real_utime)           (const char *filename, const struct utimbuf *times);
 static int          (*real_utimensat)       (int dirfd, const char *filename, const struct timespec times[2], int flags);
 static int          (*real_futimens)        (int fd, const struct timespec times[2]);
+#endif
+
+#ifdef FAKE_RANDOM
+static ssize_t     (*real_getrandom)        (void *buf, size_t buflen, unsigned int flags);
 #endif
 
 static int initialized = 0;
@@ -1181,7 +1189,7 @@ static void fake_two_timespec(const struct timespec in_times[2], struct timespec
         out_times[j] = in_times[j];
       }
     }
-    else 
+    else
     {
       timersub2(&in_times[j], &user_offset, &out_times[j], n);
     }
@@ -2412,6 +2420,11 @@ static void ftpl_init(void)
 #  endif
   real___clock_gettime  =     dlsym(RTLD_NEXT, "__clock_gettime");
 #endif
+
+#ifdef FAKE_RANDOM
+  real_getrandom = dlsym(RTLD_NEXT, "getrandom");
+#endif
+
 #ifdef FAKE_PTHREAD
 
 #ifdef __GLIBC__
@@ -3610,6 +3623,41 @@ int adjtime (const struct timeval *delta, struct timeval *olddelta)
     clock_settime(CLOCK_REALTIME, &tp);
   }
   return 0;
+}
+#endif
+
+#ifdef FAKE_RANDOM
+/*
+  Local copy of
+  Middle Square Weyl Sequence Random Number Generator
+  Copyright (c) 2014-2020 Bernard Widynski
+  License: GNU GPL v3
+  see https://mswsrng.wixsite.com/rand
+
+  adapted to take the seed s as a parameter and return only a byte
+*/
+inline static uint32_t fakerandom_msws(uint64_t s) {
+   static uint64_t x = 0, w = 0;
+   x *= x; x += (w += s);
+   x = (x>>32) | (x<<32);
+   return (char) x & 0xFF;
+}
+
+
+ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
+  char *seedstring = getenv("FAKERANDOM_SEED");
+  char *b = buf;
+
+  if (seedstring != NULL) {
+    long long int seed = strtoll(seedstring, NULL, 0);
+    for (size_t i = 0; i < buflen; i++) {
+      b[i] = fakerandom_msws(seed);
+    }
+    return buflen;
+  }
+  else { /* if no FAKERANDOM_SEED was given, use the original function */
+    return real_getrandom(buf, buflen, flags);
+  }
 }
 #endif
 
