@@ -47,7 +47,7 @@
 #include "uthash.h"
 
 #include "time_ops.h"
-#include "faketime_common.h"
+#include "faketime.h"
 
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */

@@ -101,6 +101,7 @@ BINS = faketime
 
 SONAME = 1
 LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
+HEADERS = faketime.h
 
 all: ${LIBS} ${BINS}
 
@@ -126,6 +127,8 @@ install: ${LIBS} ${BINS}
 	@echo "Copying the faketime libraries to ${DESTDIR}${PREFIX}${LIBDIRNAME} and the faketime wrapper script to ${DESTDIR}${PREFIX}/bin ..."
 	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}${LIBDIRNAME}/"
 	$(INSTALL) -m0644 ${LIBS} "${DESTDIR}${PREFIX}${LIBDIRNAME}/"
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/include/"
+	$(INSTALL) -m0644 ${HEADERS} "${DESTDIR}${PREFIX}/include/"
 	$(INSTALL) -Dm0755 faketime "${DESTDIR}${PREFIX}/bin/faketime"
 
 uninstall:
