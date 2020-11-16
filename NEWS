@@ -1,3 +1,14 @@
+Since 0.9.8:
+    - When compiled with the CFLAG FAKE_RANDOM set,
+      libfaketime will intercept calls to getrandom()
+      and return pseudorandom numbers for determinism.
+      The mechanism needs to be activated by setting
+      the environment variable FAKERANDOM_SEED to a
+      64-bit seed value, e.g., "0x12345678DEADBEEF".
+      Please note that this completely breaks the
+      security of random numbers for cryptographic
+      purposes and should only be used for deterministic
+      tests. Never use this in production!
     - When the environment variable FAKETIME_TIMESTAMP_FILE is
       set, points to a writeable (creatable) custom config file
       and the environment variable FAKETIME_UPDATE_TIMESTAMP_FILE
@@ -7,8 +18,6 @@
     - Additional link-time LDFLAGS can be passed via the
       environment variable FAKETIME_LINK_FLAGS when
       running 'make'.
-
-Since 0.9.8:
     - Compile-time CFLAG FAKE_SETTIME can be enabled to
       intercept calls to clock_settime(), settimeofday(), and
       adjtime(). (suggested and prototyped by @ojura)

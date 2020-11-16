@@ -20,6 +20,7 @@ Content of this file:
    i) "Limiting" libfaketime per process
    j) Spawning an external process
    k) Saving timestamps to file, loading them from file
+   l) Replacing random numbers with deterministic number sequences (experimental)
 5. License
 6. Contact
 
@@ -714,6 +715,41 @@ struct saved_timestamp {
 
 faketime needs to be run using the faketime wrapper to use these files. This
 functionality has been added by Balint Reczey in v0.9.5.
+
+
+4l) Replacing random numbers with deterministic number sequences (experimental)
+-------------------------------------------------------------------------------
+
+libfaketime can be compiled with the CFLAG FAKE_RANDOM set (see src/Makefile).
+
+When compiled this way, libfaketime additionally intercepts calls to the
+function getrandom(), which currently is Linux-specific.
+
+This functionality is intended to feed a sequence of deterministic, repeatable
+numbers to applications, which use getrandom(), instead of the random numbers
+provided by /dev/[u]random.
+
+For creating the deterministic number sequence, libfaketime internally
+uses Bernard Widynski's Middle Square Weyl Sequence Random Number Generator,
+see https://mswsrng.wixsite.com/rand.
+
+It requires a 64-bit seed value, which has to be passed via the environment
+variable FAKERANDOM_SEED, as in, for example
+
+  LD_PRELOAD=src/libfaketime.so.1 \
+  FAKERANDOM_SEED="0x12345678DEADBEEF" \
+  test/getrandom_test
+
+Whenever the same seed value is used, the same sequence of "random-looking"
+numbers is generated.
+
+Please be aware that this definitely breaks any security properties that
+may be attributed to random numbers delivered by getrandom(), e.g., in the
+context of cryptographic operations. Use it for deterministic testing
+purposes only. Never use it in production.
+
+For a discussion on why this apparently not date-/time-related function
+has been added to libfaketime and how it may evolve, see Github issue #275.
 
 
 5. License
