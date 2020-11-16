@@ -1,10 +1,17 @@
 README file for libfaketime on macOS
 ====================================
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! If you compiled libfaketime successfully but even the simple examples   !
+! with the "date" command do not seem to work, please see the notes about !
+! SIP (system integrity protection) in this document!                     !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 Support for macOS has meanwhile matured and many command line and
 GUI applications will run stable.
 
-Developments and tests are done on Mojave currently.
+Developments and tests are done on Catalina currently.
 
 Version 0.9.5 and higher no longer work with OSX <= 10.6 due to
 changes in the underlying system libraries. If you need libfaketime
@@ -137,6 +144,13 @@ However, there are two important aspects:
   programs like /bin/bash because the path /bin is SIP-protected. Copy your
   application to a non-SIP-protected path, and if libfaketime still does not
   work, feel free to report it.
+
+  Please note that this also applies to simple programs such as /bin/date,
+  which is used as an example in the libfaketime documentation and help texts.
+
+  Again, either disable SIP on your system (which might not be the best idea),
+  or copy the applications / programs you want to use with libfaketime to
+  a different path, which is not SIP-protected, e.g., within your home directory.
 
 - We cannot and will not help with using libfaketime for proprietary or
   commercial software unless you are its developer trying to integrate
