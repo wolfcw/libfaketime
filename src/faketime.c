@@ -93,11 +93,11 @@ static void cleanup_shobjs()
 {
   if (-1 == sem_unlink(sem_name))
   {
-    perror("sem_unlink");
+    perror("faketime: sem_unlink");
   }
   if (-1 == shm_unlink(shm_name))
   {
-    perror("shm_unlink");
+    perror("faketime: shm_unlink");
   }
 }
 
@@ -171,7 +171,7 @@ int main (int argc, char **argv)
       close(pfds[0]); /* we don't need this */
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {
-        perror("Running (g)date failed");
+        perror("faketime: Running (g)date failed");
         exit(EXIT_FAILURE);
       }
     }
@@ -223,7 +223,7 @@ int main (int argc, char **argv)
 
     if (SEM_FAILED == (sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
     {
-      perror("sem_open");
+      perror("faketime: sem_open");
       fprintf(stderr, "The faketime wrapper only works on platforms that support the sem_open()\nsystem call. However, you may LD_PRELOAD libfaketime without using this wrapper.\n");
       exit(EXIT_FAILURE);
     }
@@ -231,10 +231,10 @@ int main (int argc, char **argv)
     /* create shm */
     if (-1 == (shm_fd = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
     {
-      perror("shm_open");
+      perror("faketime: shm_open");
       if (-1 == sem_unlink(argv[2]))
       {
-        perror("sem_unlink");
+        perror("faketime: sem_unlink");
       }
       exit(EXIT_FAILURE);
     }
@@ -242,7 +242,7 @@ int main (int argc, char **argv)
     /* set shm size */
     if (-1 == ftruncate(shm_fd, sizeof(uint64_t)))
     {
-      perror("ftruncate");
+      perror("faketime: ftruncate");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
@@ -251,14 +251,14 @@ int main (int argc, char **argv)
     if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
                         MAP_SHARED, shm_fd, 0)))
     {
-      perror("mmap");
+      perror("faketime: mmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
 
     if (sem_wait(sem) == -1)
     {
-      perror("sem_wait");
+      perror("faketime: sem_wait");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
@@ -275,14 +275,14 @@ int main (int argc, char **argv)
 
     if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s))))
     {
-      perror("munmap");
+      perror("faketime: munmap");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
 
     if (sem_post(sem) == -1)
     {
-      perror("semop");
+      perror("faketime: semop");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
@@ -347,7 +347,7 @@ int main (int argc, char **argv)
     close(keepalive_fds[0]); /* only parent needs to read this */
     if (EXIT_SUCCESS != execvp(argv[curr_opt], &argv[curr_opt]))
     {
-      perror("Running specified command failed");
+      perror("faketime: Running specified command failed");
       exit(EXIT_FAILURE);
     }
   }
