@@ -1,6 +1,7 @@
 *.o
 *.so.1
 timetest
+test/getrandom_test
 
 src/libfaketime.dylib.1
 src/libfaketime.1.dylib
