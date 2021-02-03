@@ -48,7 +48,7 @@
 
 #include "faketime_common.h"
 
-const char version[] = "0.9.7";
+const char version[] = "0.9.8";
 
 #ifdef __APPLE__
 static const char *date_cmd = "gdate";
