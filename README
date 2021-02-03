@@ -327,7 +327,7 @@ the same global clock without restarting it at the start of each process.
 Please note that using "x" or "i" in FAKETIME still requires giving an offset
 (see section 4d). This means that "+1y x2" will work, but "x2" only will not.
 If you do not want to fake the time, but just modify clock speed, use something
-like "+0 x2", i.e., use an explizit zero offset as a prefix in your FAKETIME.
+like "+0 x2", i.e., use an explicit zero offset as a prefix in your FAKETIME.
 
 For testing, your should run a command like
 
