@@ -1,10 +1,12 @@
 #!/bin/sh
 
+FTPL="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}"
+
 error=0
 ./getrandom_test > run0
-FAKERANDOM_SEED=0x12345678DEADBEEF LD_PRELOAD=../src/libfaketime.so.1 ./getrandom_test > run1
-FAKERANDOM_SEED=0x12345678DEADBEEF LD_PRELOAD=../src/libfaketime.so.1 ./getrandom_test > run2
-FAKERANDOM_SEED=0x0000000000000000 LD_PRELOAD=../src/libfaketime.so.1 ./getrandom_test > run3
+FAKERANDOM_SEED=0x12345678DEADBEEF LD_PRELOAD="$FTPL" ./getrandom_test > run1
+FAKERANDOM_SEED=0x12345678DEADBEEF LD_PRELOAD="$FTPL" ./getrandom_test > run2
+FAKERANDOM_SEED=0x0000000000000000 LD_PRELOAD="$FTPL" ./getrandom_test > run3
 
 
 if diff -u run0 run1 > /dev/null; then
