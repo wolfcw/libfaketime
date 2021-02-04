@@ -39,7 +39,8 @@ sunos_fakecmd()
 linuxlike_fakecmd()
 {
 	typeset timestring="$1"; shift
-	typeset fakelib=../src/libfaketime.so.1
+	FTPL="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}"
+	typeset fakelib="$FTPL"
 	export LD_PRELOAD=$fakelib
 	FAKETIME="$timestring" \
 	"$@"

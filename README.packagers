@@ -14,6 +14,10 @@ src/Makefile, but sane defaults for stable operations have been chosen.
 Currently, libfaketime does not use autotools yet, so there is
 _no_ ./configure step, but "make" and "make test" will work as expected.
 
+For "make test", an optional environment variable FAKETIME_TESTLIB can
+be set, pointing to the path and filename of the libfaketime library
+to be used for tests; the default is "../src/libfaketime.so.1".
+
 
 However, one problem makes it somewhat difficult to get libfaketime
 working on different platforms:
