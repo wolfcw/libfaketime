@@ -2840,7 +2840,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   }
 
   // {ret = value; goto abort;} to call matching pthread_cleanup_pop and return value
-  int ret = INT_MAX;
+  volatile int ret = INT_MAX;
 
 #ifdef PTHREAD_SINGLETHREADED_TIME
   static pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
