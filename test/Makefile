@@ -22,8 +22,14 @@ test: timetest functest
 functest:
 	./testframe.sh functests
 
+getrandom_test: getrandom_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
+randomtest: getrandom_test
+	./randomtest.sh
+
 clean:
-	@rm -f ${OBJ} timetest
+	@rm -f ${OBJ} timetest getrandom_test
 
 distclean: clean
 	@echo

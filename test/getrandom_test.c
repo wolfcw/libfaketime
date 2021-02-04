@@ -2,13 +2,13 @@
 #include <sys/random.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
+int main() {
   char *buf = calloc(100, 1);
   size_t buflen = 100;
   unsigned flags = GRND_NONBLOCK;
 
   fprintf(stdout, "Before getrandom:\n");
-  for (int i=0; i < buflen; i++) { fprintf(stdout, "%hhu ", buf[i]); }
+  for (size_t i=0; i < buflen; i++) { fprintf(stdout, "%hhu ", buf[i]); }
   fprintf(stdout, "\n");
 
   int result = getrandom(buf, buflen, flags);
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 
 
   fprintf(stdout, "After getrandom:\n");
-  for (int i=0; i < buflen; i++) { fprintf(stdout, "%hhu ", buf[i]); }
+  for (size_t i=0; i < buflen; i++) { fprintf(stdout, "%hhu ", buf[i]); }
   fprintf(stdout, "\n");
 
   free(buf);
