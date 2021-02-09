@@ -614,8 +614,15 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
-      perror("libfaketime: In next_time(), sem_wait failed");
-      exit(1);
+      if (errno == EINTR)
+      {
+        return next_time(tp, ticklen);
+      }
+      else
+      {
+        perror("libfaketime: In next_time(), sem_wait failed");
+        exit(1);
+      }
     }
     /* calculate and update elapsed time */
     timespecmul(ticklen, ft_shared->ticks, &inc);
@@ -651,8 +658,15 @@ static void save_time(struct timespec *tp)
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
-      perror("libfaketime: In save_time(), sem_wait failed");
-      exit(1);
+      if (errno == EINTR)
+      {
+        return save_time(tp);
+      }
+      else
+      {
+        perror("libfaketime: In save_time(), sem_wait failed");
+        exit(1);
+      }
     }
 
     lseek(outfile, 0, SEEK_END);
@@ -689,8 +703,15 @@ static bool load_time(struct timespec *tp)
     /* lock */
     if (sem_wait(shared_sem) == -1)
     {
-      perror("libfaketime: In load_time(), sem_wait failed");
-      exit(1);
+      if (errno == EINTR)
+      {
+        return load_time(tp);
+      }
+      else
+      {
+        perror("libfaketime: In load_time(), sem_wait failed");
+        exit(1);
+      }
     }
 
     if ((sizeof(stss[0]) * (ft_shared->file_idx + 1)) > infile_size)
@@ -759,8 +780,15 @@ void lock_for_stat()
   {
     if (sem_wait(shared_sem) == -1)
     {
-      perror("libfaketime: In lock_for_stat(), sem_wait failed");
-      exit(1);
+      if (errno == EINTR)
+      {
+        return lock_for_stat();
+      }
+      else
+      {
+        perror("libfaketime: In lock_for_stat(), sem_wait failed");
+        exit(1);
+      }
     }
   }
   user_per_tick_inc_set_backup = user_per_tick_inc_set;
