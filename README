@@ -1,5 +1,5 @@
-libfaketime, version 0.9.8 (August 2019)
-========================================
+libfaketime, version 0.9.9 (February 2021)
+==========================================
 
 
 Content of this file:
@@ -20,7 +20,7 @@ Content of this file:
    i) "Limiting" libfaketime per process
    j) Spawning an external process
    k) Saving timestamps to file, loading them from file
-   l) Replacing random numbers with deterministic number sequences (experimental)
+   l) Replacing random numbers with deterministic number sequences
 5. License
 6. Contact
 
@@ -717,8 +717,8 @@ faketime needs to be run using the faketime wrapper to use these files. This
 functionality has been added by Balint Reczey in v0.9.5.
 
 
-4l) Replacing random numbers with deterministic number sequences (experimental)
--------------------------------------------------------------------------------
+4l) Replacing random numbers with deterministic number sequences
+----------------------------------------------------------------
 
 libfaketime can be compiled with the CFLAG FAKE_RANDOM set (see src/Makefile).
 
