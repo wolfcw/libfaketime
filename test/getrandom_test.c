@@ -2,7 +2,7 @@
 #include <sys/random.h>
 #include <stdlib.h>
 
-int main() {
+int base() {
   char *buf = calloc(100, 1);
   size_t buflen = 100;
   unsigned flags = GRND_NONBLOCK;
@@ -22,4 +22,8 @@ int main() {
 
   free(buf);
   return 0;
+}
+
+int main() {
+  return base() + base();
 }
