@@ -32,6 +32,14 @@ fi
 
 rm -f run-base run0 run1 run2 run3
 
+printf 'testing shared object with getrandom() in library constructor\n'
+LD_LIBRARY_PATH=. ./use_lib_random
+printf 'now with LD_PRELOAD and FAKERANDOM_SEED\n'
+FAKERANDOM_SEED=0x0000000000000000 LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_random
+# this demonstrates the crasher from https://github.com/wolfcw/libfaketime/issues/295
+printf 'now with LD_PRELOAD without FAKERANDOM_SEED\n'
+LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_random
+
 if [ 0 = $error ]; then
     printf 'getrandom interception test successful.\n'
 fi
