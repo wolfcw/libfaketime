@@ -17,3 +17,10 @@ if [ $output != 13 ]; then
     printf >&2 'Failed to enforce a rigid response to getpid()\n'
     exit 2
 fi
+
+printf 'testing shared object with getpid() in library constructor\n'
+LD_LIBRARY_PATH=. ./use_lib_getpid
+printf 'now with LD_PRELOAD and FAKETIME_FAKEPID\n'
+FAKETIME_FAKEPID=25 LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_getpid
+printf 'now with LD_PRELOAD without FAKETIME_FAKEPID\n'
+LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_getpid

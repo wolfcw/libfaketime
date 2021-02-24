@@ -22,23 +22,26 @@ test: timetest functest
 functest:
 	./testframe.sh functests
 
-getrandom_test: getrandom_test.c
+%_test: %_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-randomtest: getrandom_test use_lib_random
+randomtest: getrandom_test use_lib_random librandom.so
 	./randomtest.sh
 
-librandom.o: librandom.c
+getpidtest: use_lib_getpid libgetpid.so
+	./pidtest.sh
+
+lib%.o: lib%.c
 	${CC} -c -o $@ -fpic ${CFLAGS} $<
 
-librandom.so: librandom.o
+lib%.so: lib%.o
 	${CC} -o $@ -shared ${CFLAGS} $<
 
-use_lib_random: use_lib_random.c librandom.so
-	${CC} -L. -o $@ ${CFLAGS}  $< -lrandom
+use_lib_%: use_lib_%.c lib%.so
+	${CC} -L. -o $@ ${CFLAGS}  $< -l$*
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test librandom.o librandom.so use_lib_random
+	@rm -f ${OBJ} timetest getrandom_test lib*.o lib*.so use_lib_random use_lib_getpid
 
 distclean: clean
 	@echo
