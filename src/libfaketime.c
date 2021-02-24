@@ -43,6 +43,14 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <limits.h>
+#ifdef INTERCEPT_SYSCALL
+#ifdef __linux__
+#include <stdarg.h>
+#include <sys/syscall.h>
+#else
+#error INTERCEPT_SYSCALL should only be defined on GNU/Linux systems.
+#endif
+#endif
 
 #include "uthash.h"
 
@@ -228,6 +236,10 @@ static ssize_t     (*real_getrandom)        (void *buf, size_t buflen, unsigned 
 #endif
 #ifdef FAKE_PID
 static pid_t       (*real_getpid)        ();
+#endif
+
+#ifdef INTERCEPT_SYSCALL
+static long        (*real_syscall)        (long, ...);
 #endif
 
 static int initialized = 0;
@@ -2460,6 +2472,10 @@ static void ftpl_init(void)
   real_getpid = dlsym(RTLD_NEXT, "getpid");
 #endif
 
+#ifdef INTERCEPT_SYSCALL
+  real_syscall = dlsym(RTLD_NEXT, "syscall");
+#endif
+
 #ifdef FAKE_PTHREAD
 
 #ifdef __GLIBC__
@@ -3713,6 +3729,45 @@ pid_t getpid() {
       }
     return real_getpid();
   }
+}
+#endif
+
+#ifdef INTERCEPT_SYSCALL
+/* see https://github.com/wolfcw/libfaketime/issues/301 */
+long syscall(long number, ...) {
+  va_list ap;
+  va_start(ap, number);
+#ifdef FAKE_RANDOM
+  if (number == __NR_getrandom && getenv("FAKERANDOM_SEED")) {
+    void *buf;
+    size_t buflen;
+    unsigned int flags;
+    buf = va_arg(ap, void*);
+    buflen = va_arg(ap, size_t);
+    flags = va_arg(ap, unsigned int);
+    va_end(ap);
+    return getrandom(buf, buflen, flags);
+  }
+#endif
+/*
+   Invocations of C variadic arguments that are smaller than int are
+   promoted to int.  For larger arguments, it's likely that they are
+   chopped into int-sized pieces.
+
+   So the passthrough part of this code is attempting to reverse that
+   ABI so we can pass the arguments back into syscall().
+
+   Note that the Linux kernel appears to have baked-in 6 as the
+   maximum number of arguments for a syscall beyond the syscall number
+   itself.
+*/
+#define vararg_promotion_t int
+#define syscall_max_args 6
+  vararg_promotion_t a[syscall_max_args];
+  for (int i = 0; i < syscall_max_args; i++)
+    a[i] = va_arg(ap, vararg_promotion_t);
+  va_end(ap);
+  return real_syscall(number, a[0], a[1], a[2], a[3], a[4], a[5]);
 }
 #endif
 

@@ -31,6 +31,9 @@ randomtest: getrandom_test use_lib_random librandom.so
 getpidtest: use_lib_getpid libgetpid.so
 	./pidtest.sh
 
+syscalltest: syscall_test
+	./syscalltest.sh
+
 lib%.o: lib%.c
 	${CC} -c -o $@ -fpic ${CFLAGS} $<
 

@@ -44,6 +44,10 @@
 #     FAKE_PID
 #         - Intercept getpid()
 #
+#     INTERCEPT_SYSCALL
+#         - (On GNU/Linux only) intercept glibc's syscall() for known relevant syscalls.
+#           If enabled, this currently only works to divert the getrandom syscall.
+#
 #     FORCE_MONOTONIC_FIX
 #         - If the test program hangs forever on
 #                  " pthread_cond_timedwait: CLOCK_MONOTONIC test
