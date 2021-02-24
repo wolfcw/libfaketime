@@ -2,8 +2,8 @@
 *.so.1
 timetest
 test/getrandom_test
-test/librandom.o
-test/librandom.so
+test/lib*.o
+test/lib*.so
 test/use_lib_random
 
 src/libfaketime.dylib.1
