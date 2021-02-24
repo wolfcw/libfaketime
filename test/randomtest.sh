@@ -6,7 +6,7 @@ set -e
 
 error=0
 
-for iface in getrandom; do
+for iface in getrandom getentropy; do
     printf "Testing %s() interception...\n" "$iface"
 
     "./${iface}_test" > "${iface}.alone"
