@@ -25,7 +25,7 @@ functest:
 getrandom_test: getrandom_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-randomtest: getrandom_test use_lib_random
+randomtest: getrandom_test use_lib_random librandom.so
 	./randomtest.sh
 
 librandom.o: librandom.c
