@@ -3684,6 +3684,10 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
     return buflen;
   }
   else { /* if no FAKERANDOM_SEED was given, use the original function */
+    if (!initialized)
+      {
+        ftpl_init();
+      }
     return real_getrandom(buf, buflen, flags);
   }
 }
