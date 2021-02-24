@@ -5,6 +5,7 @@ test/getrandom_test
 test/lib*.o
 test/lib*.so
 test/use_lib_random
+test/use_lib_getpid
 
 src/libfaketime.dylib.1
 src/libfaketime.1.dylib
