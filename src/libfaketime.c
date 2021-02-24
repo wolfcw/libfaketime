@@ -226,6 +226,9 @@ static int          (*real_futimens)        (int fd, const struct timespec times
 #ifdef FAKE_RANDOM
 static ssize_t     (*real_getrandom)        (void *buf, size_t buflen, unsigned int flags);
 #endif
+#ifdef FAKE_PID
+static pid_t       (*real_getpid)        ();
+#endif
 
 static int initialized = 0;
 
@@ -2453,6 +2456,10 @@ static void ftpl_init(void)
   real_getrandom = dlsym(RTLD_NEXT, "getrandom");
 #endif
 
+#ifdef FAKE_PID
+  real_getpid = dlsym(RTLD_NEXT, "getpid");
+#endif
+
 #ifdef FAKE_PTHREAD
 
 #ifdef __GLIBC__
@@ -3685,6 +3692,22 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
   }
   else { /* if no FAKERANDOM_SEED was given, use the original function */
     return real_getrandom(buf, buflen, flags);
+  }
+}
+#endif
+
+#ifdef FAKE_PID
+pid_t getpid() {
+  const char *pidstring = getenv("FAKETIME_FAKEPID");
+  if (pidstring != NULL) {
+    long int pid = strtol(pidstring, NULL, 0);
+    return (pid_t)(pid);
+  } else {
+    if (!initialized)
+      {
+        ftpl_init();
+      }
+    return real_getpid();
   }
 }
 #endif

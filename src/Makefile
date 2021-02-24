@@ -41,6 +41,9 @@
 #     FAKE_RANDOM
 #         - Intercept getrandom()
 #
+#     FAKE_PID
+#         - Intercept getpid()
+#
 #     FORCE_MONOTONIC_FIX
 #         - If the test program hangs forever on
 #                  " pthread_cond_timedwait: CLOCK_MONOTONIC test
