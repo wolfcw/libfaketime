@@ -44,7 +44,7 @@ use_lib_%: use_lib_%.c lib%.so
 	${CC} -L. -o $@ ${CFLAGS}  $< -l$*
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test lib*.o lib*.so use_lib_random use_lib_getpid
+	@rm -f ${OBJ} timetest getrandom_test lib*.o lib*.so use_lib_random use_lib_getpid syscall_test
 
 distclean: clean
 	@echo

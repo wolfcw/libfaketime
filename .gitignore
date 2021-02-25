@@ -8,6 +8,7 @@ test/use_lib_random
 test/use_lib_getpid
 test/repeat_random
 test/getentropy_test
+test/syscall_test
 
 src/libfaketime.dylib.1
 src/libfaketime.1.dylib
