@@ -233,6 +233,7 @@ static int          (*real_futimens)        (int fd, const struct timespec times
 
 #ifdef FAKE_RANDOM
 static ssize_t     (*real_getrandom)        (void *buf, size_t buflen, unsigned int flags);
+static int         (*real_getentropy)       (void *buffer, size_t length);
 #endif
 #ifdef FAKE_PID
 static pid_t       (*real_getpid)        ();
@@ -2466,6 +2467,7 @@ static void ftpl_init(void)
 
 #ifdef FAKE_RANDOM
   real_getrandom = dlsym(RTLD_NEXT, "getrandom");
+  real_getentropy = dlsym(RTLD_NEXT, "getentropy");
 #endif
 
 #ifdef FAKE_PID
@@ -3694,8 +3696,8 @@ inline static uint32_t fakerandom_msws(uint64_t s) {
    return (char) x & 0xFF;
 }
 
-
-ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
+/* return 0 if no FAKERANDOM_SEED was seen */
+static int bypass_randomness(void* buf, size_t buflen) {
   char *seedstring = getenv("FAKERANDOM_SEED");
   char *b = buf;
 
@@ -3704,14 +3706,28 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
     for (size_t i = 0; i < buflen; i++) {
       b[i] = fakerandom_msws(seed);
     }
-    return buflen;
+    return 1;
   }
-  else { /* if no FAKERANDOM_SEED was given, use the original function */
+  return 0;
+}
+ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
+  if (bypass_randomness(buf, buflen)) {
+      return buflen;
+  } else {
     if (!initialized)
       {
         ftpl_init();
       }
     return real_getrandom(buf, buflen, flags);
+  }
+}
+int getentropy(void *buffer, size_t length) {
+  if (bypass_randomness(buffer, length)) {
+      return 0;
+  } else {
+    if (!initialized)
+      ftpl_init();
+    return real_getentropy(buffer, length);
   }
 }
 #endif

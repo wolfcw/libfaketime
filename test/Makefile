@@ -25,7 +25,7 @@ functest:
 %_test: %_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-randomtest: getrandom_test use_lib_random librandom.so
+randomtest: getrandom_test use_lib_random librandom.so repeat_random getentropy_test
 	./randomtest.sh
 
 getpidtest: use_lib_getpid libgetpid.so
