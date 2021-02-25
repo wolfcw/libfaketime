@@ -2,10 +2,8 @@
 *.so.1
 timetest
 test/getrandom_test
-test/lib*.o
 test/lib*.so
-test/use_lib_random
-test/use_lib_getpid
+test/use_lib_*
 test/repeat_random
 test/getentropy_test
 test/syscall_test

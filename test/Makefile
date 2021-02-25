@@ -6,6 +6,8 @@ LDFLAGS = -lrt -lpthread
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
+TESTFUNCS = $(notdir $(basename $(wildcard snippets/*.c)))
+
 all: timetest test
 
 .c.o:
@@ -25,7 +27,7 @@ functest:
 %_test: %_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-randomtest: getrandom_test use_lib_random librandom.so repeat_random getentropy_test
+randomtest: getrandom_test use_lib_getrandom libgetrandom.so repeat_random getentropy_test
 	./randomtest.sh
 
 getpidtest: use_lib_getpid libgetpid.so
@@ -34,17 +36,23 @@ getpidtest: use_lib_getpid libgetpid.so
 syscalltest: syscall_test
 	./syscalltest.sh
 
-lib%.o: lib%.c
-	${CC} -c -o $@ -fpic ${CFLAGS} $<
 
-lib%.so: lib%.o
-	${CC} -o $@ -shared ${CFLAGS} $<
+## testing when interception points get called in library constructors:
 
-use_lib_%: use_lib_%.c lib%.so
-	${CC} -L. -o $@ ${CFLAGS}  $< -l$*
+test_library_constructors: test_constructors.sh $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so)
+	true $(foreach f,${TESTFUNCS},&& ./test_constructors.sh ${f})
+
+lib%.so: _libtest.c snippets/%.c
+	sed s/FUNC_NAME/$*/g < _libtest.c | ${CC} -shared -o $@ -fpic ${CFLAGS} -x c -
+
+use_lib_%: _use_lib_test.c snippets/%.c lib%.so
+	sed s/FUNC_NAME/$*/g < _use_lib_test.c | ${CC} -L. -o $@ ${CFLAGS} -x c - -l$*
+
+
+## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test lib*.o lib*.so use_lib_random use_lib_getpid syscall_test
+	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so)
 
 distclean: clean
 	@echo

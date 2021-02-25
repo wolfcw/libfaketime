@@ -35,12 +35,12 @@ for iface in getrandom getentropy; do
 done
 
 printf 'testing shared object with getrandom() in library constructor\n'
-LD_LIBRARY_PATH=. ./use_lib_random
+LD_LIBRARY_PATH=. ./use_lib_getrandom
 printf 'now with LD_PRELOAD and FAKERANDOM_SEED\n'
-FAKERANDOM_SEED=0x0000000000000000 LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_random
+FAKERANDOM_SEED=0x0000000000000000 LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_getrandom
 # this demonstrates the crasher from https://github.com/wolfcw/libfaketime/issues/295
 printf 'now with LD_PRELOAD without FAKERANDOM_SEED\n'
-LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_random
+LD_PRELOAD="$FTPL" LD_LIBRARY_PATH=. ./use_lib_getrandom
 
 
 FAKERANDOM_SEED=0xDEADBEEFDEADBEEF LD_PRELOAD="$FTPL" ./repeat_random 3 5 > repeat3x5 
