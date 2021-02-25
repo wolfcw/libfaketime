@@ -3771,6 +3771,16 @@ long syscall(long number, ...) {
     return getrandom(buf, buflen, flags);
   }
 #endif
+// static int (*real_clock_gettime) (clockid_t clk_id, struct timespec *tp);
+  if (number == __NR_clock_gettime) {
+    clockid_t clk_id;
+    struct timespec *tp;
+    clk_id = va_arg(ap, clockid_t);
+    tp = va_arg(ap, struct timespec*);
+    va_end(ap);
+    return clock_gettime(clk_id, tp);
+  }
+
 /*
    Invocations of C variadic arguments that are smaller than int are
    promoted to int.  For larger arguments, it's likely that they are
