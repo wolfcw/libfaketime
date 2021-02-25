@@ -354,9 +354,15 @@ static void ft_shm_create(void) {
   struct ft_shared_s *ft_sharedN;
   char shared_objsN[513];
   sem_t *shared_semT = NULL;
+  pid_t pid;
 
-  snprintf(sem_name, 255, "/faketime_sem_%ld", (long)getpid());
-  snprintf(shm_name, 255, "/faketime_shm_%ld", (long)getpid());
+#ifdef FAKE_PID
+  pid = real_getpid();
+#else
+  pid = getpid();
+#endif
+  snprintf(sem_name, 255, "/faketime_sem_%ld", (long)pid);
+  snprintf(shm_name, 255, "/faketime_shm_%ld", (long)pid);
   if (SEM_FAILED == (semN = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
   { /* silently fail on platforms that do not support sem_open() */
     return;
