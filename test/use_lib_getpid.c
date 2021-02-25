@@ -7,6 +7,6 @@ int main() {
   pid_t pid;
   getpid_func();
   pid = getpid();
-  fprintf(stderr, " getpid() -> %d\n", pid);
+  printf(" getpid() -> %d\n", pid);
   return 0;
 }

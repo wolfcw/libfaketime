@@ -3,11 +3,11 @@
 #include <unistd.h>
 
 void getpid_func() {
-  fprintf(stderr, "  called getpid_func()\n");
+  printf("  called getpid_func()\n");
 }
 
 
 static __attribute__((constructor)) void getpid_init() {
   pid_t pid = getpid();
-  fprintf(stderr, "  getpid() yielded %d\n", pid);
+  printf("  getpid() yielded %d\n", pid);
 }
