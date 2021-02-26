@@ -7,6 +7,7 @@ SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
 TESTFUNCS = $(notdir $(basename $(wildcard snippets/*.c)))
+EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
 
 all: timetest test
 
@@ -37,6 +38,14 @@ syscalltest: syscall_test
 	./syscalltest.sh
 
 
+## test variables
+
+test_variable_data: test_variable_data.sh $(foreach f,${EXPECTATIONS},run_${f})
+	./test_variable_data.sh ${EXPECTATIONS}
+
+run_%: _run_test.c snippets/%.c
+	sed s/FUNC_NAME/$*/g < _run_test.c | ${CC} -o $@ ${CFLAGS} -x c - 
+
 ## testing when interception points get called in library constructors:
 
 test_library_constructors: test_constructors.sh $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so)
@@ -52,7 +61,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so)
+	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so run_${f})
 
 distclean: clean
 	@echo

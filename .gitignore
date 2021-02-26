@@ -4,6 +4,7 @@ timetest
 test/getrandom_test
 test/lib*.so
 test/use_lib_*
+test/run_*
 test/repeat_random
 test/getentropy_test
 test/syscall_test
