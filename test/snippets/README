@@ -1,0 +1,35 @@
+Bulk testing of function interception
+=====================================
+
+Faketime intercepts some C library functions.  We want to make it
+easier to apply certain generic tests across many different functions.
+
+Including a new function
+------------------------
+
+To test a function FOO, supply a C snippet in this directory named
+<FOO.c>.  This should be a small bit of code that exercises the
+function FOO.  It should be self-contained, and it should produce some
+kind of description of what happened to stdout.  Take a look at
+getpid.c for a simple example.
+
+The data sent to stdout should include the const char* "where" value
+(which is an indication of which test framework is using the snippet).
+
+If the output of the snippet is expected to be stable when the
+associated variable (e.g. FAKETIME, FAKETIME_FAKEPID, or
+FAKERANDOM_SEED) is set, and is likely to vary otherwise, especially
+across a delay of a second or more, add a single-line file
+FOO.variable that contains the name of the variable separated by a
+space and then the value of the variable.
+
+If the snippet needs to additional #include headers, please add them
+in include_headers.h. These #includes will be used by every snippet,
+so try to keep it minimal.
+
+Testing across functions
+------------------------
+
+If you want to test something systemically, autogenerate code that
+uses each snippet.  See test_variable_data or
+test_library_constructors in ../Makefile for an example.

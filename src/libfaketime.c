@@ -3799,6 +3799,8 @@ long syscall(long number, ...) {
   for (int i = 0; i < syscall_max_args; i++)
     a[i] = va_arg(ap, vararg_promotion_t);
   va_end(ap);
+  if (!initialized)
+    ftpl_init();
   return real_syscall(number, a[0], a[1], a[2], a[3], a[4], a[5]);
 }
 #endif
