@@ -75,6 +75,9 @@ void usage(const char *name)
   "  -m                  : Use the multi-threaded version of libfaketime\n"
   "  -f                  : Use the advanced timestamp specification format (see manpage)\n"
   "  --exclude-monotonic : Prevent monotonic clock from drifting (not the raw monotonic one)\n"
+#ifdef FAKE_PID
+  "  -p PID              : Pretend that the program's process ID is PID\n"
+#endif
   "\n"
   "Examples:\n"
   "%s 'last friday 5 pm' /bin/date\n"
@@ -107,6 +110,8 @@ int main (int argc, char **argv)
   int curr_opt = 1;
   bool use_mt = false, use_direct = false;
   long offset;
+  bool fake_pid = false;
+  const char *pid_val;
 
   while(curr_opt < argc)
   {
@@ -114,6 +119,16 @@ int main (int argc, char **argv)
     {
       use_mt = true;
       curr_opt++;
+      continue;
+    }
+    if (0 == strcmp(argv[curr_opt], "-p"))
+    {
+      fake_pid = true;
+      pid_val = argv[curr_opt + 1];
+      curr_opt += 2;
+#ifndef FAKE_PID
+      fprintf(stderr, "faketime: -p argument probably won't work (try rebuilding with -DFAKE_PID)\n");
+#endif
       continue;
     }
     else if (0 == strcmp(argv[curr_opt], "-f"))
@@ -198,6 +213,8 @@ int main (int argc, char **argv)
     /* simply pass format string along */
     setenv("FAKETIME", argv[curr_opt], true);
   }
+  if (fake_pid)
+    setenv("FAKETIME_FAKEPID", pid_val, true);
   int keepalive_fds[2];
   (void) (pipe(keepalive_fds) + 1);
 
