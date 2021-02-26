@@ -27,10 +27,10 @@ functest:
 %_test: %_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-randomtest: getrandom_test use_lib_getrandom libgetrandom.so repeat_random getentropy_test
+randomtest: getrandom_test repeat_random getentropy_test
 	./randomtest.sh
 
-getpidtest: use_lib_getpid libgetpid.so
+getpidtest:
 	./pidtest.sh
 
 syscalltest: syscall_test
