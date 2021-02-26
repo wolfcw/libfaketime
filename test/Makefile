@@ -28,15 +28,8 @@ functest:
 %_test: %_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-randomtest: getrandom_test repeat_random getentropy_test
+randomtest: repeat_random
 	./randomtest.sh
-
-getpidtest:
-	./pidtest.sh
-
-syscalltest: syscall_test
-	./syscalltest.sh
-
 
 ## test variables
 
