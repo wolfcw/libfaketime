@@ -41,8 +41,9 @@ run_%: _run_test.c snippets/%.c
 
 ## testing when interception points get called in library constructors:
 
-test_library_constructors: test_constructors.sh $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so)
-	true $(foreach f,${TEST_SNIPPETS},&& ./test_constructors.sh ${f})
+test_library_constructors: $(foreach f,${TEST_SNIPPETS},test_lib_${f})
+test_lib_%: test_constructors.sh use_lib_% lib%.so
+	./test_constructors.sh $*
 
 lib%.so: _libtest.c snippets/%.c
 	sed s/SNIPPET_NAME/$*/g < _libtest.c | ${CC} -shared -o $@ -fpic ${CFLAGS} -x c -
