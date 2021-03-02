@@ -1,5 +1,5 @@
 #include "snippets/include_headers.h"
-#define where "library"
+#define where "libSNIPPET_NAME"
 void SNIPPET_NAME_as_needed() {
   printf("  called SNIPPET_NAME_as_needed() \n");
 }
