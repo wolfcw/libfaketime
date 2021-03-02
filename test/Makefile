@@ -6,7 +6,7 @@ LDFLAGS = -lrt -lpthread
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
-TESTFUNCS = $(notdir $(basename $(wildcard snippets/*.c)))
+TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
 
 all: timetest test
@@ -31,32 +31,35 @@ functest:
 randomtest: repeat_random
 	./randomtest.sh
 
-## test variables
 
+# run snippet tests
+snippets: test_variable_data test_library_constructors
+
+## test snippet behavior across env var setting over time:
 test_variable_data: test_variable_data.sh $(foreach f,${EXPECTATIONS},run_${f})
 	./test_variable_data.sh ${EXPECTATIONS}
 
 run_%: _run_test.c snippets/%.c
-	sed s/FUNC_NAME/$*/g < _run_test.c | ${CC} -o $@ ${CFLAGS} -x c - 
+	sed s/SNIPPET_NAME/$*/g < _run_test.c | ${CC} -o $@ ${CFLAGS} -x c - 
 
-## testing when interception points get called in library constructors:
-
-test_library_constructors: test_constructors.sh $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so)
-	true $(foreach f,${TESTFUNCS},&& ./test_constructors.sh ${f})
+## test snippets in other library constructors:
+test_library_constructors: $(foreach f,${TEST_SNIPPETS},test_lib_${f})
+test_lib_%: test_constructors.sh use_lib_% lib%.so
+	./test_constructors.sh $*
 
 lib%.so: _libtest.c snippets/%.c
-	sed s/FUNC_NAME/$*/g < _libtest.c | ${CC} -shared -o $@ -fpic ${CFLAGS} -x c -
+	sed s/SNIPPET_NAME/$*/g < _libtest.c | ${CC} -shared -o $@ -fpic ${CFLAGS} -x c -
 
 use_lib_%: _use_lib_test.c snippets/%.c lib%.so
-	sed s/FUNC_NAME/$*/g < _use_lib_test.c | ${CC} -L. -o $@ ${CFLAGS} -x c - -l$*
+	sed s/SNIPPET_NAME/$*/g < _use_lib_test.c | ${CC} -L. -o $@ ${CFLAGS} -x c - -l$*
 
 
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TESTFUNCS},use_lib_${f} lib${f}.so run_${f})
+	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f})
 
 distclean: clean
 	@echo
 
-.PHONY: all test clean distclean randomtest
+.PHONY: all test clean distclean randomtest snippets test_variable_data test_library_constructors
