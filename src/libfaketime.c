@@ -3772,7 +3772,7 @@ long syscall(long number, ...) {
   }
 #endif
 // static int (*real_clock_gettime) (clockid_t clk_id, struct timespec *tp);
-  if (number == __NR_clock_gettime) {
+  if (number == __NR_clock_gettime && getenv("FAKETIME")) {
     clockid_t clk_id;
     struct timespec *tp;
     clk_id = va_arg(ap, clockid_t);
