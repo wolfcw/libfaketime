@@ -3793,7 +3793,7 @@ long syscall(long number, ...) {
    maximum number of arguments for a syscall beyond the syscall number
    itself.
 */
-#define vararg_promotion_t int
+#define vararg_promotion_t long
 #define syscall_max_args 6
   vararg_promotion_t a[syscall_max_args];
   for (int i = 0; i < syscall_max_args; i++)
