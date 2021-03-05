@@ -9,7 +9,9 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
 
-all: timetest test
+ALL_TESTS = timetest test
+
+all: $(ALL_TESTS)
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
