@@ -58,4 +58,43 @@ struct ft_shared_s
 #include <mach/mach_port.h>
 #endif
 
+/*
+   Variadic Argument Re-packing
+
+   Functions with variadic arguments typically have most arguments
+   passed on the stack, but it varies across ABIs.
+
+   C specifies that variadic arguments that are smaller than some
+   standard promotion size are promoted to "int or larger".  If your
+   platform's ABI only promotes to "int" and not "long" (and "int" and
+   "long" differ on your platform), you should probably add
+   -Dvariadic_promotion_t=int to CFLAGS.
+
+   Note that some ABIs do not put all the variadic arguments on the
+   stack.  For example, x86-64 puts float and double variadic
+   arguments into floating point registers, according to
+   https://www.uclibc.org/docs/psABI-x86_64.pdf
+
+   The only variadic function faketime cares about intercepting is
+   syscall.  But we don't believe that any syscalls expect float or
+   double arguments, so we hope all the rest will be on the stack.
+   tests/variadic/ attempts to confirm this if you are compiling
+   with -DINTERCEPT_SYSCALL.
+
+   If libc were capable of exposing a variadic form of syscall, we
+   could depend on that and drop this approach, which would be
+   preferable: https://sourceware.org/bugzilla/show_bug.cgi?id=27508
+*/
+#ifndef variadic_promotion_t
+#define variadic_promotion_t long
+#endif
+
+/*
+   The Linux kernel appears to have baked-in 6 as the maximum number
+   of arguments for a syscall beyond the syscall number itself.
+*/
+#ifndef syscall_max_args
+#define syscall_max_args 6
+#endif
+
 #endif
