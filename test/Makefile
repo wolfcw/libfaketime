@@ -11,6 +11,10 @@ EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
 
 ALL_TESTS = timetest test
 
+ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
+ALL_TESTS += confirm_variadic_promotion
+endif
+
 all: $(ALL_TESTS)
 
 .c.o:
