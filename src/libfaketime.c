@@ -3781,23 +3781,9 @@ long syscall(long number, ...) {
     return clock_gettime(clk_id, tp);
   }
 
-/*
-   Invocations of C variadic arguments that are smaller than int are
-   promoted to int.  For larger arguments, it's likely that they are
-   chopped into int-sized pieces.
-
-   So the passthrough part of this code is attempting to reverse that
-   ABI so we can pass the arguments back into syscall().
-
-   Note that the Linux kernel appears to have baked-in 6 as the
-   maximum number of arguments for a syscall beyond the syscall number
-   itself.
-*/
-#define vararg_promotion_t long
-#define syscall_max_args 6
-  vararg_promotion_t a[syscall_max_args];
+  variadic_promotion_t a[syscall_max_args];
   for (int i = 0; i < syscall_max_args; i++)
-    a[i] = va_arg(ap, vararg_promotion_t);
+    a[i] = va_arg(ap, variadic_promotion_t);
   va_end(ap);
   if (!initialized)
     ftpl_init();

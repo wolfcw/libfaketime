@@ -1,7 +1,7 @@
 CC = gcc
 
-CFLAGS = -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra $(FAKETIME_COMPILE_CFLAGS)
-LDFLAGS = -lrt -lpthread
+CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra $(FAKETIME_COMPILE_CFLAGS)
+LDFLAGS += -lrt -lpthread
 
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
@@ -9,7 +9,13 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
 
-all: timetest test
+ALL_TESTS = timetest test
+
+ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
+ALL_TESTS += confirm_variadic_promotion
+endif
+
+all: $(ALL_TESTS)
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
@@ -31,6 +37,13 @@ functest:
 randomtest: repeat_random
 	./randomtest.sh
 
+# ensure our variadic argument unpacking/repacking works as expected
+confirm_variadic_promotion: variadic_promotion
+	./variadic_promotion
+variadic_promotion: variadic/main.o variadic/outer.o variadic/inner.o
+	${CC} -o $@ ${CFLAGS} $^
+variadic/%.o: variadic/%.c
+	${CC} -c -o $@ ${CFLAGS} $<
 
 # run snippet tests
 snippets: test_variable_data test_library_constructors
@@ -57,7 +70,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f})
+	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o
 
 distclean: clean
 	@echo

@@ -48,6 +48,11 @@
 #         - (On GNU/Linux only) intercept glibc's syscall() for known relevant syscalls.
 #           If enabled, this currently only works to divert the getrandom syscall.
 #
+#         - note that on unusual architectures, if INTERCEPT_SYSCALL is set, you may
+#           need to explicitly define variadic_promotion_t (e.g. by putting
+#           -Dvariadic_promotion_t=int into CFLAGS).  See src/faketime_common.h for
+#           more info.
+#
 #     FORCE_MONOTONIC_FIX
 #         - If the test program hangs forever on
 #                  " pthread_cond_timedwait: CLOCK_MONOTONIC test
