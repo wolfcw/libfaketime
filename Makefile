@@ -2,6 +2,7 @@ INSTALL ?= install
 
 UNAME=$(shell uname)
 SELECTOR:=$(shell if test "${UNAME}" = "Darwin" ; then echo "-f Makefile.OSX" ; fi)
+PREFIX ?= /usr/local
 
 all:
 	$(MAKE) $(SELECTOR) -C src all
