@@ -50,7 +50,7 @@
 
 const char version[] = "0.9.9";
 
-#ifdef __APPLE__
+#if (defined __APPLE__) || (defined __sun)
 static const char *date_cmd = "gdate";
 #else
 static const char *date_cmd = "date";
