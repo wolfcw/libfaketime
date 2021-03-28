@@ -78,6 +78,7 @@ void usage(const char *name)
 #ifdef FAKE_PID
   "  -p PID              : Pretend that the program's process ID is PID\n"
 #endif
+  "  --date-prog PROG    : Use specified GNU-compatible implementation of 'date' program\n"
   "\n"
   "Examples:\n"
   "%s 'last friday 5 pm' /bin/date\n"
@@ -143,6 +144,20 @@ int main (int argc, char **argv)
       curr_opt++;
       continue;
     }
+    else if (0 == strcmp(argv[curr_opt], "--date-prog"))
+    {
+      curr_opt++;
+      if (curr_opt > argc) {
+        // At best this avoids a segfault reading beyond the argv[]
+        // Realistically there would be other args (e.g. program to call)
+        fprintf(stderr, "faketime: --date-prog requires a further argument\n");
+      } else {
+        date_cmd = argv[curr_opt];
+        curr_opt++;
+        //fprintf(stderr, "faketime: --date-prog assigned: %s\n", date_cmd);
+      }
+      continue;
+    }
     else if ((0 == strcmp(argv[curr_opt], "-v")) ||
              (0 == strcmp(argv[curr_opt], "--version")))
     {
@@ -184,6 +199,7 @@ int main (int argc, char **argv)
       close(1);       /* close normal stdout */
       (void) (dup(pfds[1]) + 1);   /* make stdout same as pfds[1] */
       close(pfds[0]); /* we don't need this */
+      // fprintf(stderr, "faketime: using --date-prog: %s\n", date_cmd);
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {
         perror("faketime: Running (g)date failed");
@@ -362,6 +378,7 @@ int main (int argc, char **argv)
   if (0 == (child_pid = fork()))
   {
     close(keepalive_fds[0]); /* only parent needs to read this */
+    // fprintf(stderr, "faketime: Executing: %s\n", argv[curr_opt]);
     if (EXIT_SUCCESS != execvp(argv[curr_opt], &argv[curr_opt]))
     {
       perror("faketime: Running specified command failed");
