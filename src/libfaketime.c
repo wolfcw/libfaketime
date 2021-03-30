@@ -51,6 +51,9 @@
 #error INTERCEPT_SYSCALL should only be defined on GNU/Linux systems.
 #endif
 #endif
+#ifdef __linux__
+#include <sys/timerfd.h>
+#endif
 
 #include "uthash.h"
 
@@ -188,6 +191,11 @@ static int          (*real_timer_settime_233)  (timer_t timerid, int flags,
 static int          (*real_timer_gettime_22)   (int timerid,
                                                 struct itimerspec *curr_value);
 static int          (*real_timer_gettime_233)  (timer_t timerid,
+                                                struct itimerspec *curr_value);
+static int          (*real_timerfd_settime)    (int fd, int flags,
+                                                const struct itimerspec *new_value,
+                                                struct itimerspec *old_value);
+static int          (*real_timerfd_gettime)    (int fd,
                                                 struct itimerspec *curr_value);
 #endif
 #endif
@@ -1799,7 +1807,11 @@ typedef union {
 /*
  * Faketime's function implementation's compatibility mode
  */
-typedef enum {FT_COMPAT_GLIBC_2_2, FT_COMPAT_GLIBC_2_3_3} ft_lib_compat_timer;
+typedef enum {
+  FT_COMPAT_GLIBC_2_2,
+  FT_COMPAT_GLIBC_2_3_3,
+  FT_FD,
+} ft_lib_compat_timer;
 
 
 /*
@@ -1809,7 +1821,8 @@ typedef enum {FT_COMPAT_GLIBC_2_2, FT_COMPAT_GLIBC_2_3_3} ft_lib_compat_timer;
 static int
 timer_settime_common(timer_t_or_int timerid, int flags,
          const struct itimerspec *new_value,
-         struct itimerspec *old_value, ft_lib_compat_timer compat)
+         struct itimerspec *old_value, ft_lib_compat_timer compat,
+         int abstime_flag)
 {
   int result;
   struct itimerspec new_real;
@@ -1834,7 +1847,7 @@ timer_settime_common(timer_t_or_int timerid, int flags,
     if ((new_value->it_value.tv_sec != 0) ||
         (new_value->it_value.tv_nsec != 0))
     {
-      if (flags & TIMER_ABSTIME)
+      if (flags & abstime_flag)
       {
         struct timespec tdiff, timeadj;
         timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
@@ -1887,6 +1900,10 @@ timer_settime_common(timer_t_or_int timerid, int flags,
        DONT_FAKE_TIME(result = (*real_timer_settime_233)(timerid.timer_t_member,
                     flags, new_real_pt, old_value));
        break;
+    case FT_FD:
+       DONT_FAKE_TIME(result = (*real_timerfd_settime)(timerid.int_member,
+                    flags, new_real_pt, old_value));
+       break;
     default:
       result = -1;
       break;
@@ -1934,7 +1951,7 @@ int timer_settime_22(int timerid, int flags,
   else
   {
     return (timer_settime_common((timer_t_or_int)timerid, flags, new_value, old_value,
-            FT_COMPAT_GLIBC_2_2));
+            FT_COMPAT_GLIBC_2_2, TIMER_ABSTIME));
   }
 }
 
@@ -1956,7 +1973,7 @@ int timer_settime_233(timer_t timerid, int flags,
   else
   {
     return (timer_settime_common((timer_t_or_int)timerid, flags, new_value, old_value,
-            FT_COMPAT_GLIBC_2_3_3));
+            FT_COMPAT_GLIBC_2_3_3, TIMER_ABSTIME));
   }
 }
 
@@ -1985,6 +2002,9 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
     case FT_COMPAT_GLIBC_2_3_3:
       DONT_FAKE_TIME(result = (*real_timer_gettime_233)(timerid.timer_t_member, curr_value));
       break;
+    case FT_FD:
+       DONT_FAKE_TIME(result = (*real_timerfd_gettime)(timerid.int_member, curr_value));
+       break;
     default:
       result = -1;
       break;
@@ -2052,6 +2072,49 @@ __asm__(".symver timer_gettime_22, timer_gettime@GLIBC_2.2");
 __asm__(".symver timer_gettime_233, timer_gettime@@GLIBC_2.3.3");
 __asm__(".symver timer_settime_22, timer_settime@GLIBC_2.2");
 __asm__(".symver timer_settime_233, timer_settime@@GLIBC_2.3.3");
+
+#ifdef __linux__
+/*
+ * Faked timerfd_settime
+ */
+int timerfd_settime(int fd, int flags,
+         const struct itimerspec *new_value,
+         struct itimerspec *old_value)
+{
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_timerfd_settime == NULL)
+  {
+    return -1;
+  }
+  else
+  {
+    return (timer_settime_common((timer_t_or_int)fd, flags, new_value, old_value, FT_FD,
+                                 TFD_TIMER_ABSTIME));
+  }
+}
+
+/*
+ * Faked timerfd_gettime()
+ */
+int timerfd_gettime(int fd, struct itimerspec *curr_value)
+{
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  if (real_timerfd_gettime == NULL)
+  {
+    return -1;
+  }
+  else
+  {
+    return (timer_gettime_common((timer_t_or_int)fd, curr_value, FT_FD));
+  }
+}
+#endif
 
 #endif
 #endif
@@ -2542,6 +2605,10 @@ static void ftpl_init(void)
   {
     real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");
   }
+#endif
+#ifdef __linux__
+  real_timerfd_gettime =  dlsym(RTLD_NEXT, "timerfd_gettime");
+  real_timerfd_settime =  dlsym(RTLD_NEXT, "timerfd_settime");
 #endif
 #endif
 #endif
