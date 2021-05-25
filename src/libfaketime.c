@@ -155,6 +155,15 @@ static __thread bool dont_fake = false;
     dont_fake = dont_fake_orig;       \
   } while (0)
 
+#ifdef JEMALLOC_COMPAT
+#define WITH_STATIC_ALLOCATOR(call)   \
+  {                                   \
+    use_static_allocator = 1;         \
+    call;                             \
+    use_static_allocator = 0;         \
+  } while (0)
+#endif
+
 /* pointers to real (not faked) functions */
 static int          (*real_stat)            (int, const char *, struct stat *);
 static int          (*real_fstat)           (int, int, struct stat *);
@@ -257,6 +266,14 @@ static int initialized = 0;
 static int    fake_gettimeofday(struct timeval *tv);
 static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 int           read_config_file();
+#ifdef JEMALLOC_COMPAT
+static void   ftpl_init_clock_gettime();
+static void   ftpl_init_calloc();
+static void   ftpl_init_pthread_cond_init_232();
+
+extern void *__libc_calloc(size_t nitems, size_t size);
+extern void __libc_free(void *ptr);
+#endif
 
 /** Semaphore protecting shared data */
 static sem_t *shared_sem = NULL;
@@ -342,6 +359,14 @@ enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
 /* Time to fake is not provided through FAKETIME env. var. */
 static bool parse_config_file = true;
+
+/* Jemalloc compatibility */
+#ifdef JEMALLOC_COMPAT
+int use_static_allocator = 0;
+char calloc_buffer[1024];
+void* (*real_calloc) (size_t nitems, size_t size);
+void (*real_free) (void *ptr);
+#endif
 
 static void ft_cleanup (void) __attribute__ ((destructor));
 static void ftpl_init (void) __attribute__ ((constructor));
@@ -2254,7 +2279,13 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
       return -1;
     }
     else {
+#ifdef JEMALLOC_COMPAT
+      WITH_STATIC_ALLOCATOR(ftpl_init_clock_gettime());
+      recursion_depth--;
+      return real_clock_gettime(clk_id, tp);
+#else
       ftpl_init();
+#endif
     }
     recursion_depth--;
   }
@@ -2853,6 +2884,44 @@ static void ftpl_init(void)
   dont_fake = dont_fake_final;
 }
 
+#ifdef JEMALLOC_COMPAT
+static void ftpl_init_calloc()
+{
+  if (NULL != real_calloc) return;
+  real_calloc = dlsym(RTLD_NEXT, "calloc");
+  real_free = dlsym(RTLD_NEXT, "free");
+}
+
+static void ftpl_init_clock_gettime()
+{
+  if (NULL != real_clock_gettime) return;
+  ftpl_init_calloc();
+#ifdef __APPLEOSX__
+  real_clock_get_time  = dlsym(RTLD_NEXT, "clock_get_time");
+  real_clock_gettime   = apple_clock_gettime;
+#else
+  real_clock_gettime   = dlsym(RTLD_NEXT, "__clock_gettime");
+  if (NULL == real_clock_gettime)
+  {
+    real_clock_gettime = dlsym(RTLD_NEXT, "clock_gettime");
+  }
+#endif
+}
+
+static void ftpl_init_pthread_cond_init_232()
+{
+  if (NULL != real_pthread_cond_init_232) return;
+  ftpl_init_calloc();
+#ifdef __GLIBC__
+  real_pthread_cond_init_232 = dlvsym(RTLD_NEXT, "pthread_cond_init", "GLIBC_2.3.2");
+#endif
+
+  if (NULL == real_pthread_cond_init_232)
+  {
+    real_pthread_cond_init_232 =  dlsym(RTLD_NEXT, "pthread_cond_init");
+  }
+}
+#endif
 
 /*
  *      =======================================================================
@@ -3470,7 +3539,11 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
 
   if (!initialized)
   {
+#ifdef JEMALLOC_COMPAT
+    WITH_STATIC_ALLOCATOR(ftpl_init_pthread_cond_init_232());
+#else
     ftpl_init();
+#endif
   }
   if (NULL == real_pthread_cond_init_232)
   { /* dlsym() failed */
@@ -3855,6 +3928,40 @@ long syscall(long number, ...) {
   if (!initialized)
     ftpl_init();
   return real_syscall(number, a[0], a[1], a[2], a[3], a[4], a[5]);
+}
+#endif
+
+/*
+ *      =======================================================================
+ *      Faked allocation functions (Jemalloc compat)
+ *      =======================================================================
+ */
+
+#ifdef JEMALLOC_COMPAT
+void *calloc(size_t nitems, size_t size)
+{
+  if (use_static_allocator)
+  {
+    return calloc_buffer;
+  }
+  if (NULL != real_calloc)
+  {
+    return real_calloc(nitems, size);
+  }
+  return __libc_calloc(nitems, size);
+}
+
+void free(void *ptr)
+{
+  if (use_static_allocator)
+  {
+    return;
+  }
+  if (NULL != real_free)
+  {
+    return real_free(ptr);
+  }
+  return __libc_free(ptr);
 }
 #endif
 
