@@ -907,7 +907,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
    {
      if (!fake_stat_disabled)
      {
-       fake_statbuf(buf);
+       (!dont_fake) fake_statbuf(buf);
      }
    }
 
