@@ -907,7 +907,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
    {
      if (!fake_stat_disabled)
      {
-       (!dont_fake) fake_statbuf(buf);
+       if (!dont_fake) fake_statbuf(buf);
      }
    }
 
@@ -2308,8 +2308,9 @@ static void parse_ft_string(const char *user_faked_time)
 
   if (!strncmp(user_faked_time, user_faked_time_saved, BUFFERLEN))
   {
-      /* No change */
-      return;
+      /* No change but eventually when using FAKETIME_FOLLOW_FILE */
+      if (user_faked_time[0] != '%')
+        return;
   }
 
   /* check whether the user gave us an absolute time to fake */
