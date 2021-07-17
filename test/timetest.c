@@ -83,6 +83,7 @@ void* pthread_test(void* args)
   if (rt != ETIMEDOUT)
   {
     printf("pthread_cond_timedwait failed\n");
+    pthread_mutex_unlock(&fakeMutex);
     exit(EXIT_FAILURE);
   }
   pthread_mutex_unlock(&fakeMutex);
@@ -105,6 +106,7 @@ void* pthread_test(void* args)
   if (rt != ETIMEDOUT)
   {
     printf("pthread_cond_timedwait failed\n");
+    pthread_mutex_unlock(&fakeMutex);
     exit(EXIT_FAILURE);
   }
   pthread_mutex_unlock(&fakeMutex);
