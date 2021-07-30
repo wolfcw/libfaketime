@@ -168,6 +168,7 @@ static time_t       (*real_time)            (time_t *);
 static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
 static int          (*real_clock_gettime)   (clockid_t clk_id, struct timespec *tp);
+static int          (*real_timespec_get)    (struct timespec *ts, int base);
 #ifdef FAKE_INTERNAL_CALLS
 static int          (*real___ftime)           (struct timeb *);
 static int          (*real___gettimeofday)    (struct timeval *, void *);
@@ -2294,6 +2295,40 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 }
 
 
+int timespec_get(struct timespec *ts, int base)
+{
+  int result;
+
+  if (!initialized)
+  {
+    ftpl_init();
+  }
+  /* sanity check */
+  if (ts == NULL)
+  {
+    return 0;
+  }
+
+  if (NULL == real_timespec_get)
+  {  /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original timespec_get() not found.\n");
+#endif
+    return 0; /* propagate error to caller */
+  }
+
+  /* initialize our result with the real current time */
+  DONT_FAKE_TIME(result = (*real_timespec_get)(ts, base));
+  if (result == 0) return result; /* original function failed */
+
+  /* pass the real current time to our faking version, overwriting it */
+  (void)fake_clock_gettime(CLOCK_REALTIME, ts);
+
+  /* return the result to the caller */
+  return result;
+}
+
+
 /*
  *      =======================================================================
  *      Parsing the user's faketime requests                          === PARSE
@@ -2494,6 +2529,7 @@ static void ftpl_init(void)
   real_lstat64 =            dlsym(RTLD_NEXT, "__lxstat64");
   real_time =               dlsym(RTLD_NEXT, "time");
   real_ftime =              dlsym(RTLD_NEXT, "ftime");
+  real_timespec_get =       dlsym(RTLD_NEXT, "timespec_get");
 #ifdef FAKE_FILE_TIMESTAMPS
   real_utimes  =            dlsym(RTLD_NEXT, "utimes");
   real_utime   =            dlsym(RTLD_NEXT, "utime");
