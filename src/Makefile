@@ -56,6 +56,17 @@
 #           -Dvariadic_promotion_t=int into CFLAGS).  See src/faketime_common.h for
 #           more info.
 #
+#     FAKE_STATELESS
+#         - Remove support for any functionality that requires sharing state across
+#           threads of a process, or different processes. This decreases the risk of
+#           interference with a program's normal execution, at the cost of supporting
+#           fewer ways of specifying the time.
+#           Concretely, this currently:
+#           - disables PTHREAD_SINGLETHREADED_TIME, which can cause deadlocks in
+#             multithreaded programs that fork due to making clock_gettime not
+#             async-signal-safe
+#           - disables all shared-memory across processes
+#
 #     FORCE_MONOTONIC_FIX
 #         - If the test program hangs forever on
 #                  " pthread_cond_timedwait: CLOCK_MONOTONIC test

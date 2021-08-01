@@ -60,6 +60,9 @@
 #include "time_ops.h"
 #include "faketime_common.h"
 
+#if defined PTHREAD_SINGLETHREADED_TIME && defined FAKE_STATELESS
+#undef PTHREAD_SINGLETHREADED_TIME
+#endif
 
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #if defined PTHREAD_SINGLETHREADED_TIME || defined FAKE_PTHREAD
@@ -2652,7 +2655,11 @@ static void ftpl_init(void)
 
   initialized = 1;
 
+#ifdef FAKE_STATELESS
+  if (0) ft_shm_init();
+#else
   ft_shm_init();
+#endif
 #ifdef FAKE_STAT
   if (getenv("NO_FAKE_STAT")!=NULL)
   {
