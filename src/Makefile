@@ -1,30 +1,10 @@
 #
 # Notes:
 #
-#   * Compilation Defines:
+#   * Compilation Defines that are set by default:
 #
 #     FAKE_STAT
-#         - Enables time faking also for files' timestamps.
-#
-#     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
-#         - Enables time faking for the utime* functions.  If enabled via
-#           FAKE_UTIME define instead of FAKE_FILE_TIMESTAMPS, the faking
-#           defaults to off without FAKE_UTIME in the environment.
-#
-#     NO_ATFILE
-#         - Disables support for the fstatat() group of functions
-#
-#     PTHREAD_SINGLETHREADED_TIME
-#         - Define this if you want to single-thread time() ... there ARE
-#           possible caching side-effects in a multithreaded environment
-#           without this, but the performance impact may require you to
-#           try it unsynchronized.
-#
-#     FAKE_INTERNAL_CALLS
-#         - Also intercept libc internal __functions, e.g. not just time(),
-#           but also __time(). Enhances compatibility with applications
-#           that make use of low-level system calls, such as Java Virtual
-#           Machines.
+#         - Enables time faking when reading files' timestamps.
 #
 #     FAKE_SLEEP
 #         - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
@@ -34,6 +14,29 @@
 #
 #     FAKE_PTHREAD
 #         - Intercept pthread_cond_timedwait
+#
+#     FAKE_INTERNAL_CALLS
+#         - Also intercept libc internal __functions, e.g. not just time(),
+#           but also __time(). Enhances compatibility with applications
+#           that make use of low-level system calls, such as Java Virtual
+#           Machines.
+#
+#     PTHREAD_SINGLETHREADED_TIME (only set in libfaketimeMT.so)
+#         - Define this if you want to single-thread time() ... there ARE
+#           possible caching side-effects in a multithreaded environment
+#           without this, but the performance impact may require you to
+#           try it unsynchronized.
+#
+#   * Compilation Defines that are unset by default:
+#
+#     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
+#         - Enables time faking for the utime* functions.  If enabled via
+#           FAKE_FILE_TIMESTAMPS, the faking is opt-in at runtime using
+#           with the FAKE_UTIME environment variable. If enabled via
+#           FAKE_UTIME, the faking is opt-out at runtime.
+#
+#     NO_ATFILE
+#         - Disables support for the fstatat() group of functions
 #
 #     FAKE_SETTIME
 #         - Intercept clock_settime(), settimeofday(), and adjtime()
@@ -52,6 +55,17 @@
 #           need to explicitly define variadic_promotion_t (e.g. by putting
 #           -Dvariadic_promotion_t=int into CFLAGS).  See src/faketime_common.h for
 #           more info.
+#
+#     FAKE_STATELESS
+#         - Remove support for any functionality that requires sharing state across
+#           threads of a process, or different processes. This decreases the risk of
+#           interference with a program's normal execution, at the cost of supporting
+#           fewer ways of specifying the time.
+#           Concretely, this currently:
+#           - disables PTHREAD_SINGLETHREADED_TIME, which can cause deadlocks in
+#             multithreaded programs that fork due to making clock_gettime not
+#             async-signal-safe
+#           - disables all shared-memory across processes
 #
 #     FORCE_MONOTONIC_FIX
 #         - If the test program hangs forever on
