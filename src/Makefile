@@ -1,30 +1,10 @@
 #
 # Notes:
 #
-#   * Compilation Defines:
+#   * Compilation Defines that are set by default:
 #
 #     FAKE_STAT
 #         - Enables time faking also for files' timestamps.
-#
-#     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
-#         - Enables time faking for the utime* functions.  If enabled via
-#           FAKE_UTIME define instead of FAKE_FILE_TIMESTAMPS, the faking
-#           defaults to off without FAKE_UTIME in the environment.
-#
-#     NO_ATFILE
-#         - Disables support for the fstatat() group of functions
-#
-#     PTHREAD_SINGLETHREADED_TIME
-#         - Define this if you want to single-thread time() ... there ARE
-#           possible caching side-effects in a multithreaded environment
-#           without this, but the performance impact may require you to
-#           try it unsynchronized.
-#
-#     FAKE_INTERNAL_CALLS
-#         - Also intercept libc internal __functions, e.g. not just time(),
-#           but also __time(). Enhances compatibility with applications
-#           that make use of low-level system calls, such as Java Virtual
-#           Machines.
 #
 #     FAKE_SLEEP
 #         - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
@@ -34,6 +14,28 @@
 #
 #     FAKE_PTHREAD
 #         - Intercept pthread_cond_timedwait
+#
+#     FAKE_INTERNAL_CALLS
+#         - Also intercept libc internal __functions, e.g. not just time(),
+#           but also __time(). Enhances compatibility with applications
+#           that make use of low-level system calls, such as Java Virtual
+#           Machines.
+#
+#     PTHREAD_SINGLETHREADED_TIME (only set in libfaketimeMT.so)
+#         - Define this if you want to single-thread time() ... there ARE
+#           possible caching side-effects in a multithreaded environment
+#           without this, but the performance impact may require you to
+#           try it unsynchronized.
+#
+#   * Compilation Defines that are unset by default:
+#
+#     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
+#         - Enables time faking for the utime* functions.  If enabled via
+#           FAKE_UTIME define instead of FAKE_FILE_TIMESTAMPS, the faking
+#           defaults to off without FAKE_UTIME in the environment.
+#
+#     NO_ATFILE
+#         - Disables support for the fstatat() group of functions
 #
 #     FAKE_SETTIME
 #         - Intercept clock_settime(), settimeofday(), and adjtime()
