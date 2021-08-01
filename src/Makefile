@@ -4,7 +4,7 @@
 #   * Compilation Defines that are set by default:
 #
 #     FAKE_STAT
-#         - Enables time faking also for files' timestamps.
+#         - Enables time faking when reading files' timestamps.
 #
 #     FAKE_SLEEP
 #         - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
@@ -31,8 +31,9 @@
 #
 #     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
 #         - Enables time faking for the utime* functions.  If enabled via
-#           FAKE_UTIME define instead of FAKE_FILE_TIMESTAMPS, the faking
-#           defaults to off without FAKE_UTIME in the environment.
+#           FAKE_FILE_TIMESTAMPS, the faking is opt-in at runtime using
+#           with the FAKE_UTIME environment variable. If enabled via
+#           FAKE_UTIME, the faking is opt-out at runtime.
 #
 #     NO_ATFILE
 #         - Disables support for the fstatat() group of functions
