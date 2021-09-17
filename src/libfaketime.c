@@ -148,7 +148,7 @@ static __thread bool dont_fake = false;
 
 /* Wrapper for function calls, which we want to return system time */
 #define DONT_FAKE_TIME(call)          \
-  {                                   \
+  do {                                \
     bool dont_fake_orig = dont_fake;  \
     if (!dont_fake)                   \
     {                                 \
