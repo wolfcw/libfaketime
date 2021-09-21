@@ -16,6 +16,6 @@ script:
   - if [ "$TRAVIS_ARCH" = ppc64le ]; then
        FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX -DFORCE_PTHREAD_NONVER" make;
     else
-       FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make; 
+       FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make;
     fi
   - make test
