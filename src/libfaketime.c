@@ -268,7 +268,7 @@ static sem_t *shared_sem = NULL;
 /** Data shared among faketime-spawned processes */
 static struct ft_shared_s *ft_shared = NULL;
 
-/** Storage format for timestamps written to file. Big endian.*/
+/** Storage format for timestamps written to file. Big endian. */
 struct saved_timestamp
 {
   int64_t sec;
@@ -335,7 +335,7 @@ static struct timespec user_faked_time_timespec = {0, -1};
 static bool user_faked_time_set = false;
 static char user_faked_time_saved[BUFFERLEN] = {0};
 
-/* Fractional user offset provided through FAKETIME env. var.*/
+/* Fractional user offset provided through FAKETIME env. var. */
 static struct timespec user_offset = {0, -1};
 /* Speed up or slow down clock */
 static double user_rate = 1.0;
@@ -1842,7 +1842,7 @@ timer_settime_common(timer_t_or_int timerid, int flags,
   }
   else if (dont_fake)
   {
-    /* cast away constness*/
+    /* cast away constness */
     new_real_pt = (struct itimerspec *)new_value;
   }
   else
@@ -2484,7 +2484,7 @@ parse_modifiers:
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
         double tick_inc = atof(tmp_time_fmt + 1);
-        /* increment time with every time() call*/
+        /* increment time with every time() call */
         user_per_tick_inc.tv_sec = floor(tick_inc);
         user_per_tick_inc.tv_nsec = (tick_inc - user_per_tick_inc.tv_sec) * SEC_TO_nSEC ;
         user_per_tick_inc_set = true;
@@ -2966,7 +2966,7 @@ int read_config_file()
       (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
   {
     static char line[BUFFERLEN];
-    while(fgets(line, BUFFERLEN, faketimerc) != NULL)
+    while (fgets(line, BUFFERLEN, faketimerc) != NULL)
     {
       if ((strlen(line) > 1) && (line[0] != ' ') &&
           (line[0] != '#') && (line[0] != ';'))
@@ -3174,7 +3174,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
     case FT_START_AT: /* User-specified offset */
       if (user_per_tick_inc_set)
       {
-        /* increment time with every time() call*/
+        /* increment time with every time() call */
         next_time(tp, &user_per_tick_inc);
       }
       else
@@ -3631,7 +3631,7 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
        CLOCK_MONOTONIC. */
 #ifndef __ARM_ARCH
 #ifndef FORCE_MONOTONIC_FIX
-    if(clk_id == CLOCK_MONOTONIC)
+    if (clk_id == CLOCK_MONOTONIC)
       timespecadd(&faketime, &tdiff_actual, &tp);
     else
 #endif
