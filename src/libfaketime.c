@@ -750,7 +750,7 @@ static bool load_time(struct timespec *tp)
 
     if ((sizeof(stss[0]) * (ft_shared->file_idx + 1)) > infile_size)
     {
-      /* we are out of timstamps to replay, return to faking time by rules
+      /* we are out of timestamps to replay, return to faking time by rules
        * using last timestamp from file as the user provided timestamp */
       timespec_from_saved(&user_faked_time_timespec, &stss[(infile_size / sizeof(stss[0])) - 1 ]);
 
@@ -2811,7 +2811,7 @@ static void ftpl_init(void)
     }
   }
 
-  /* load file only if reading timstamps from it is not finished yet */
+  /* load file only if reading timestamps from it is not finished yet */
   if ((tmp_env = getenv("FAKETIME_LOAD_FILE")) != NULL)
   {
     int infile = -1;
