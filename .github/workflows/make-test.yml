@@ -6,7 +6,7 @@ on:
       - master
       - develop
   schedule:
-    - cron:  '30 9 * * *'
+    - cron: '30 9 * * *'
 
 jobs:
   build:

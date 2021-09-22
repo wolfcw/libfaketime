@@ -45,7 +45,7 @@ struct ft_shared_s
    * When advancing time linearly with each time(), etc. call, the calls are
    * counted here */
   uint64_t ticks;
-  /* Index of timstamp to be loaded from file */
+  /* Index of timestamp to be loaded from file */
   uint64_t file_idx;
   /* System time Faketime started at */
   struct system_time_s start_time;

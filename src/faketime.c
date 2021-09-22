@@ -114,7 +114,7 @@ int main (int argc, char **argv)
   bool fake_pid = false;
   const char *pid_val;
 
-  while(curr_opt < argc)
+  while (curr_opt < argc)
   {
     if (0 == strcmp(argv[curr_opt], "-m"))
     {
