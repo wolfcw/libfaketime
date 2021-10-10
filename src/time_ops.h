@@ -61,7 +61,7 @@
   do                                                                \
   {                                                                 \
     int64_t tmp_time;                                             \
-    tmp_time = (c) * (int64_t) ((tvp)->tv_sec * SEC_TO_##prefix##SEC +        \
+    tmp_time = (c) * (int64_t) ((int64_t) (tvp)->tv_sec * SEC_TO_##prefix##SEC +        \
                (int64_t) (tvp)->tv_##prefix##sec);                            \
     (result)->tv_##prefix##sec = tmp_time % SEC_TO_##prefix##SEC;   \
     (result)->tv_sec = (tmp_time - (result)->tv_##prefix##sec) /    \
