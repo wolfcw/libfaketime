@@ -612,7 +612,7 @@ static void get_fake_monotonic_setting(int* current_value)
 static void system_time_from_system (struct system_time_s * systime)
 {
 #ifdef __APPLEOSX__
-  /* from http://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
+  /* from https://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
   clock_serv_t cclock;
   mach_timespec_t mts;
   host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &clock_serv_real);
