@@ -11,7 +11,7 @@ The given command will be tricked into believing that the current system time is
 Filesystem timestamps will also be reported relative to this timestamp.
 The wall clock will continue to run from this date and time unless specified otherwise (see advanced options).
 Actually, faketime is a simple wrapper for libfaketime, which uses the LD_PRELOAD mechanism to load a small library which intercepts system calls to functions such as \fItime(2)\fR and \fIfstat(2)\fR.
-This wrapper exposes only a subset of libfaketime's functionality; please refer to the README file that came with faketime for more details and advanced options, or have a look at http://github.com/wolfcw/libfaketime
+This wrapper exposes only a subset of libfaketime's functionality; please refer to the README file that came with faketime for more details and advanced options, or have a look at https://github.com/wolfcw/libfaketime
 .SH OPTIONS
 .TP
 \fB\-\-help\fR
@@ -57,20 +57,20 @@ If you want to specify an absolute point in time, exactly this format must be us
 Please note that freezing the clock is usually not what you want and may break the application.
 Only use if you know what you're doing!
 .TP
-Relative time offset: \fB"[+/-]123[m/h/d/y]\fR, e.g. "+60m", "+2y"
+Relative time offset: \fB"[+/-]123[m/h/d/y]"\fR, e.g., "+60m", "+2y"
 This is the most often used format and specifies the faked time relatively to the current real time.
 The first character of the format string \fBmust\fR be a + or a -.
 The numeric value by default represents seconds, but the modifiers m, h, d, and y can be used to specify minutes, hours, days, or years, respectively.
-For example, "-2y" means "two years ago". Fractional time offsets can be used, e.g. "+2,5y", which means "two and a half years in the future".
+For example, "-2y" means "two years ago". Fractional time offsets can be used, e.g., "+2,5y", which means "two and a half years in the future".
 Please note that the fraction delimiter depends on your locale settings, so if "+2,5y" does not work, you might want to try "+2.5y".
 .TP
 Start-at timestamps: \fB"@YYYY-MM-DD hh:mm:ss"\fR
 The wall clock will start counting at the given timestamp for the program.
 This can be used for specifying absolute timestamps without freezing the clock.
 .SH ADVANCED USAGE
-When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP FORMAT above and option \fB\-f\fR), the clock speed can be adjusted, i.e. time may run faster or slower for the executed program.
+When using relative time offsets or start-at timestamps (see ADVANCED TIMESTAMP FORMAT above and option \fB\-f\fR), the clock speed can be adjusted, i.e., time may run faster or slower for the executed program.
 For example, \fB"+5y x10"\fR will set the faked time 5 years into the future and make the time pass 10 times as fast (one real second equals 10 seconds measured by the program).
-Similarly, the flow of time can be slowed, e.g. using \fB"-7d x0,2"\fR, which will set the faked time 7 days in the past and set the clock speed to 20 percent, i.e. it takes five real world seconds for one second measured by the program.
+Similarly, the flow of time can be slowed, e.g., using \fB"-7d x0,2"\fR, which will set the faked time 7 days in the past and set the clock speed to 20 percent, i.e., it takes five real world seconds for one second measured by the program.
 Again, depending on your locale, either "x2.0" or "x2,0" may be required regarding the delimiter.
 You can also make faketime to advance the reported time by a preset interval upon each time() call independently from the system's time using \fB"-7d i2,0"\fR, where \fB"i"\fR is followed by the increase interval in seconds.
 .PP
