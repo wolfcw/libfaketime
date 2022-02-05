@@ -2374,8 +2374,8 @@ static void parse_ft_string(const char *user_faked_time)
       }
       else
       {
-        perror("libfaketime: In parse_ft_string(), failed to parse FAKETIME timestamp");
-        fprintf(stderr, "Please check specification %s with format %s\n", user_faked_time, user_faked_time_fmt);
+        fprintf(stderr, "libfaketime: In parse_ft_string(), failed to parse FAKETIME timestamp.\n"
+                "Please check specification %s with format %s\n", user_faked_time, user_faked_time_fmt);
         exit(EXIT_FAILURE);
       }
       break;
@@ -2418,7 +2418,7 @@ static void parse_ft_string(const char *user_faked_time)
       }
       else
       {
-        perror("libfaketime: In parse_ft_string(), failed to parse FAKETIME timestamp");
+        fprintf(stderr, "libfaketime: In parse_ft_string(), failed to parse FAKETIME timestamp.\n");
         exit(EXIT_FAILURE);
       }
 
