@@ -34,6 +34,9 @@
 #include <sys/epoll.h>
 #endif
 #include <time.h>
+#ifdef MACOS_DYLD_INTERPOSE
+#include <sys/time.h>
+#endif
 #include <math.h>
 #include <errno.h>
 #include <string.h>
@@ -118,6 +121,14 @@ typedef int clockid_t;
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
+
+#ifdef MACOS_DYLD_INTERPOSE
+void do_macos_dyld_interpose(void);
+#define DYLD_INTERPOSE(_new,_target) \
+   __attribute__((used)) static struct{ const void* new; const void* target; } _interpose_##_target \
+            __attribute__ ((section ("__DATA,__interpose"))) = { (const void*)(unsigned long)&_new, (const void*)(unsigned long)&_target };
+#endif
+
 #endif
 
 /* some systems lack raw clock */
@@ -1312,7 +1323,11 @@ int futimens(int fd, const struct timespec times[2])
 /*
  * Faked nanosleep()
  */
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_nanosleep(const struct timespec *req, struct timespec *rem)
+#else
 int nanosleep(const struct timespec *req, struct timespec *rem)
+#endif
 {
   int result;
   struct timespec real_req;
@@ -1341,7 +1356,11 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
     return -1;
   }
 
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = (*nanosleep)(&real_req, rem));
+#else
   DONT_FAKE_TIME(result = (*real_nanosleep)(&real_req, rem));
+#endif
   if (result == -1)
   {
     return result;
@@ -1441,7 +1460,11 @@ int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec *req, s
 /*
  * Faked usleep()
  */
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_usleep(useconds_t usec)
+#else
 int usleep(useconds_t usec)
+#endif
 {
   int result;
 
@@ -1460,18 +1483,30 @@ int usleep(useconds_t usec)
       {
         return -1;
       }
+#ifdef MACOS_DYLD_INTERPOSE
+      DONT_FAKE_TIME(result = (*usleep)((1.0 / user_rate) * usec));
+#else
       DONT_FAKE_TIME(result = (*real_usleep)((1.0 / user_rate) * usec));
+#endif
       return result;
     }
 
     real_req.tv_sec = usec / 1000000;
     real_req.tv_nsec = (usec % 1000000) * 1000;
     timespecmul(&real_req, 1.0 / user_rate, &real_req);
+#ifdef MACOS_DYLD_INTERPOSE
+    DONT_FAKE_TIME(result = (*nanosleep)(&real_req, NULL));
+#else
     DONT_FAKE_TIME(result = (*real_nanosleep)(&real_req, NULL));
+#endif
   }
   else
   {
+#ifdef MACOS_DYLD_INTERPOSE
+    DONT_FAKE_TIME(result = (*usleep)(usec));
+#else
     DONT_FAKE_TIME(result = (*real_usleep)(usec));
+#endif
   }
   return result;
 }
@@ -1479,7 +1514,11 @@ int usleep(useconds_t usec)
 /*
  * Faked sleep()
  */
+#ifdef MACOS_DYLD_INTERPOSE
+unsigned int macos_sleep(unsigned int seconds)
+#else
 unsigned int sleep(unsigned int seconds)
+#endif
 {
   if (!initialized)
   {
@@ -1495,7 +1534,11 @@ unsigned int sleep(unsigned int seconds)
       {
         return 0;
       }
+#ifdef MACOS_DYLD_INTERPOSE
+      DONT_FAKE_TIME(ret = (*sleep)((1.0 / user_rate) * seconds));
+#else
       DONT_FAKE_TIME(ret = (*real_sleep)((1.0 / user_rate) * seconds));
+#endif
       return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
     }
     else
@@ -1503,7 +1546,11 @@ unsigned int sleep(unsigned int seconds)
       int result;
       struct timespec real_req = {seconds, 0}, rem;
       timespecmul(&real_req, 1.0 / user_rate, &real_req);
+#ifdef MACOS_DYLD_INTERPOSE
+      DONT_FAKE_TIME(result = (*nanosleep)(&real_req, &rem));
+#else
       DONT_FAKE_TIME(result = (*real_nanosleep)(&real_req, &rem));
+#endif
       if (result == -1)
       {
         return 0;
@@ -1522,7 +1569,11 @@ unsigned int sleep(unsigned int seconds)
   {
     /* no need to fake anything */
     unsigned int ret;
+#ifdef MACOS_DYLD_INTERPOSE
+    DONT_FAKE_TIME(ret = (*sleep)(seconds));
+#else
     DONT_FAKE_TIME(ret = (*real_sleep)(seconds));
+#endif
     return ret;
   }
 }
@@ -1532,7 +1583,11 @@ unsigned int sleep(unsigned int seconds)
  * @note due to rounding alarm(2) with faketime -f '+0 x7' won't wait 2/7
  * wall clock seconds but 0 seconds
  */
+#ifdef MACOS_DYLD_INTERPOSE
+unsigned int macos_alarm(unsigned int seconds)
+#else
 unsigned int alarm(unsigned int seconds)
+#endif
 {
   unsigned int ret;
   unsigned int seconds_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * seconds):seconds;
@@ -1546,7 +1601,11 @@ unsigned int alarm(unsigned int seconds)
     return -1;
   }
 
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(ret = (*alarm)(seconds_real));
+#else
   DONT_FAKE_TIME(ret = (*real_alarm)(seconds_real));
+#endif
   return (user_rate_set && !dont_fake)?(user_rate * ret):ret;
 }
 
@@ -1648,7 +1707,11 @@ int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout
 /*
  * Faked poll()
  */
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_poll(struct pollfd *fds, nfds_t nfds, int timeout)
+#else
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
+#endif
 {
   int ret, timeout_real = (user_rate_set && !dont_fake && (timeout > 0))?(timeout / user_rate):timeout;
 
@@ -1661,17 +1724,28 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
     return -1;
   }
 
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(ret = (*poll)(fds, nfds, timeout_real));
+#else
   DONT_FAKE_TIME(ret = (*real_poll)(fds, nfds, timeout_real));
+#endif
   return ret;
 }
 
 /*
  * Faked select()
  */
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_select(int nfds, fd_set *readfds,
+           fd_set *writefds,
+           fd_set *errorfds,
+           struct timeval *timeout)
+#else
 int select(int nfds, fd_set *readfds,
            fd_set *writefds,
            fd_set *errorfds,
            struct timeval *timeout)
+#endif
 {
   int ret;
   struct timeval timeout_real;
@@ -1707,7 +1781,11 @@ int select(int nfds, fd_set *readfds,
     }
   }
 
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(ret = (*select)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real));
+#else
   DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real));
+#endif
   return ret;
 }
 
@@ -2134,7 +2212,11 @@ int timerfd_gettime(int fd, struct itimerspec *curr_value)
  * time() implementation using clock_gettime()
  * @note Does not check for EFAULT, see man 2 time
  */
+#ifdef MACOS_DYLD_INTERPOSE
+time_t macos_time(time_t *time_tptr)
+#else
 time_t time(time_t *time_tptr)
+#endif
 {
   struct timespec tp;
   time_t result;
@@ -2143,7 +2225,11 @@ time_t time(time_t *time_tptr)
   {
     ftpl_init();
   }
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = (*clock_gettime)(CLOCK_REALTIME, &tp));
+#else
   DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_REALTIME, &tp));
+#endif
   if (result == -1) return -1;
 
   /* pass the real current time to our faking version, overwriting it */
@@ -2156,7 +2242,11 @@ time_t time(time_t *time_tptr)
   return tp.tv_sec;
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_ftime(struct timeb *tb)
+#else
 int ftime(struct timeb *tb)
+#endif
 {
   struct timespec tp;
   int result;
@@ -2179,7 +2269,11 @@ int ftime(struct timeb *tb)
   }
 
   /* initialize our TZ result with the real current time */
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = (*ftime)(tb));
+#else
   DONT_FAKE_TIME(result = (*real_ftime)(tb));
+#endif
   if (result == -1)
   {
     return result;
@@ -2198,7 +2292,11 @@ int ftime(struct timeb *tb)
   return result; /* will always be 0 (see manpage) */
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_gettimeofday(struct timeval *tv, void *tz)
+#else
 int gettimeofday(struct timeval *tv, void *tz)
+#endif
 {
   int result;
 
@@ -2222,7 +2320,11 @@ int gettimeofday(struct timeval *tv, void *tz)
   }
 
   /* initialize our result with the real current time */
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = (*gettimeofday)(tv, tz));
+#else
   DONT_FAKE_TIME(result = (*real_gettimeofday)(tv, tz));
+#endif
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
@@ -2232,7 +2334,11 @@ int gettimeofday(struct timeval *tv, void *tz)
   return result;
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_clock_gettime(clockid_t clk_id, struct timespec *tp)
+#else
 int clock_gettime(clockid_t clk_id, struct timespec *tp)
+#endif
 {
   int result;
   static int recursion_depth = 0;
@@ -2277,7 +2383,11 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   }
 
   /* initialize our result with the real current time */
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = (*clock_gettime)(clk_id, tp));
+#else
   DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, tp));
+#endif
   if (result == -1) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
@@ -2298,7 +2408,11 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 }
 
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_timespec_get(struct timespec *ts, int base)
+#else
 int timespec_get(struct timespec *ts, int base)
+#endif
 {
   int result;
 
@@ -2321,7 +2435,11 @@ int timespec_get(struct timespec *ts, int base)
   }
 
   /* initialize our result with the real current time */
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = (*timespec_get)(ts, base));
+#else
   DONT_FAKE_TIME(result = (*real_timespec_get)(ts, base));
+#endif
   if (result == 0) return result; /* original function failed */
 
   /* pass the real current time to our faking version, overwriting it */
@@ -2651,6 +2769,10 @@ static void ftpl_init(void)
   real_timerfd_settime =  dlsym(RTLD_NEXT, "timerfd_settime");
 #endif
 #endif
+#endif
+
+#ifdef MACOS_DYLD_INTERPOSE
+  do_macos_dyld_interpose();
 #endif
 
   initialized = 1;
@@ -3899,6 +4021,22 @@ long syscall(long number, ...) {
   if (!initialized)
     ftpl_init();
   return real_syscall(number, a[0], a[1], a[2], a[3], a[4], a[5]);
+}
+#endif
+
+#ifdef MACOS_DYLD_INTERPOSE
+void do_macos_dyld_interpose(void) {
+  DYLD_INTERPOSE(macos_alarm, alarm);
+  DYLD_INTERPOSE(macos_clock_gettime, clock_gettime);
+  DYLD_INTERPOSE(macos_gettimeofday, gettimeofday);
+  DYLD_INTERPOSE(macos_time, time);
+  DYLD_INTERPOSE(macos_ftime, ftime);
+  DYLD_INTERPOSE(macos_sleep, sleep);
+  DYLD_INTERPOSE(macos_usleep, usleep);
+  DYLD_INTERPOSE(macos_nanosleep, nanosleep);
+  DYLD_INTERPOSE(macos_poll, poll);
+  DYLD_INTERPOSE(macos_select, select);
+  DYLD_INTERPOSE(macos_timespec_get, timespec_get);
 }
 #endif
 
