@@ -3802,7 +3802,11 @@ __asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2");
  *  Based on suggestion and prototype by @ojura, see https://github.com/wolfcw/libfaketime/issues/179
  */
 #ifdef FAKE_SETTIME
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_clock_settime(clockid_t clk_id, const struct timespec *tp) {
+#else
 int clock_settime(clockid_t clk_id, const struct timespec *tp) {
+#endif
 
   /* only CLOCK_REALTIME can be set */
   if (clk_id != CLOCK_REALTIME) {
@@ -3820,7 +3824,11 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
      we do not have to care about 'x' or 'i' modifiers given previously,
      as they are not erased when parsing them. */
   struct timespec current_time;
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(macos_clock_gettime(clk_id, &current_time))
+#else
   DONT_FAKE_TIME(clock_gettime(clk_id, &current_time))
+#endif
    ;
 
   time_t sec_diff = tp->tv_sec - current_time.tv_sec;
@@ -3873,7 +3881,11 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   return 0;
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_settimeofday(const struct timeval *tv, void *tz)
+#else
 int settimeofday(const struct timeval *tv, void *tz)
+#endif
 {
   /* The use of timezone *tz is obsolete and simply ignored here. */
   if (tz == NULL) tz = NULL;
@@ -3888,12 +3900,20 @@ int settimeofday(const struct timeval *tv, void *tz)
     struct timespec tp;
     tp.tv_sec = tv->tv_sec;
     tp.tv_nsec = tv->tv_usec * 1000;
+#ifdef MACOS_DYLD_INTERPOSE
+    macos_clock_settime(CLOCK_REALTIME, &tp);
+#else
     clock_settime(CLOCK_REALTIME, &tp);
+#endif
   }
   return 0;
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_adjtime (const struct timeval *delta, struct timeval *olddelta)
+#else
 int adjtime (const struct timeval *delta, struct timeval *olddelta)
+#endif
 {
   /* Always signal true full success when olddelta is requested. */
   if (olddelta != NULL)
@@ -3905,14 +3925,22 @@ int adjtime (const struct timeval *delta, struct timeval *olddelta)
   if (delta != NULL)
   {
     struct timespec tp;
+#ifdef MACOS_DYLD_INTERPOSE
+    macos_clock_gettime(CLOCK_REALTIME, &tp);
+#else
     clock_gettime(CLOCK_REALTIME, &tp);
+#endif
     tp.tv_sec += delta->tv_sec;
     tp.tv_nsec += delta->tv_usec * 1000;
     /* This actually will make the clock jump instead of gradually
        adjusting it, but we fulfill the caller's intention and an
        additional thread just for the gradual changes does not seem
        to be worth the effort presently. */
+#ifdef MACOS_DYLD_INTERPOSE
     clock_settime(CLOCK_REALTIME, &tp);
+#else
+    clock_settime(CLOCK_REALTIME, &tp);
+#endif
   }
   return 0;
 }
@@ -3960,19 +3988,31 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
     return real_getrandom(buf, buflen, flags);
   }
 }
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_getentropy(void *buffer, size_t length) {
+#else
 int getentropy(void *buffer, size_t length) {
+#endif
   if (bypass_randomness(buffer, length)) {
       return 0;
   } else {
     if (!initialized)
       ftpl_init();
+#ifdef MACOS_DYLD_INTERPOSE
+    return getentropy(buffer, length);
+#else
     return real_getentropy(buffer, length);
+#endif
   }
 }
 #endif
 
 #ifdef FAKE_PID
+#ifdef MACOS_DYLD_INTERPOSE
+pid_t macos_getpid() {
+#else
 pid_t getpid() {
+#endif
   const char *pidstring = getenv("FAKETIME_FAKEPID");
   if (pidstring != NULL) {
     long int pid = strtol(pidstring, NULL, 0);
@@ -4026,17 +4066,30 @@ long syscall(long number, ...) {
 
 #ifdef MACOS_DYLD_INTERPOSE
 void do_macos_dyld_interpose(void) {
-  DYLD_INTERPOSE(macos_alarm, alarm);
   DYLD_INTERPOSE(macos_clock_gettime, clock_gettime);
   DYLD_INTERPOSE(macos_gettimeofday, gettimeofday);
   DYLD_INTERPOSE(macos_time, time);
   DYLD_INTERPOSE(macos_ftime, ftime);
+#ifdef FAKE_SLEEP
+  DYLD_INTERPOSE(macos_alarm, alarm);
   DYLD_INTERPOSE(macos_sleep, sleep);
   DYLD_INTERPOSE(macos_usleep, usleep);
   DYLD_INTERPOSE(macos_nanosleep, nanosleep);
   DYLD_INTERPOSE(macos_poll, poll);
-  DYLD_INTERPOSE(macos_select, select);
+#endif
   DYLD_INTERPOSE(macos_timespec_get, timespec_get);
+  DYLD_INTERPOSE(macos_select, select);
+#ifdef FAKE_RANDOM
+  DYLD_INTERPOSE(macos_getentropy, getentropy);
+#endif
+#ifdef FAKE_SETTIME
+  DYLD_INTERPOSE(macos_clock_settime, clock_settime);
+  DYLD_INTERPOSE(macos_settimeofday, settimeofday);
+  DYLD_INTERPOSE(macos_adjtime, adjtime);
+#endif
+#ifdef FAKE_PID
+  DYLD_INTERPOSE(macos_getpid, getpid);
+#endif
 }
 #endif
 
