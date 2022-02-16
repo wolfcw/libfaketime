@@ -266,6 +266,22 @@ static pid_t       (*real_getpid)        ();
 static long        (*real_syscall)        (long, ...);
 #endif
 
+static bool check_missing_real(const char *name, bool missing)
+{
+  if (missing)
+  { /* dlsym() failed */
+#ifdef DEBUG
+    (void) fprintf(stderr, "faketime problem: original %s not found.\n", name);
+#else
+    (void) name; /* unused */
+#endif
+    return false;
+  }
+  return true;
+}
+#define CHECK_MISSING_REAL(name) \
+  check_missing_real(#name, (NULL == real_##name))
+
 static int initialized = 0;
 
 /* prototypes */
@@ -903,13 +919,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_xstat)
-  { /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(xstat)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_xstat(ver, path, buf));
@@ -936,13 +946,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_fxstat)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(fxstat)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_fxstat(ver, fildes, buf));
@@ -969,13 +973,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
   {
     ftpl_init();
   }
-  if (NULL == real_fxstatat)
-  { /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original fstatat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(fxstatat)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_fxstatat(ver, fildes, filename, buf, flag));
@@ -1002,13 +1000,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_lxstat)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(lxstat)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_lxstat(ver, path, buf));
@@ -1034,13 +1026,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_xstat64)
-  { /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(xstat64)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_xstat64(ver, path, buf));
@@ -1066,13 +1052,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_fxstat64)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(fxstat64)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_fxstat64(ver, fildes, buf));
@@ -1099,13 +1079,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   {
     ftpl_init();
   }
-  if (NULL == real_fxstatat64)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original fstatat64() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(fxstatat64)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_fxstatat64(ver, fildes, filename, buf, flag));
@@ -1132,13 +1106,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_lxstat64)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(lxstat64)) return -1;
 
   int result;
   DONT_FAKE_TIME(result = real_lxstat64(ver, path, buf));
@@ -1165,13 +1133,7 @@ int utime(const char *filename, const struct utimbuf *times)
   {
     ftpl_init();
   }
-  if (NULL == real_utime)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original utime() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(utime)) return -1;
 
   int result;
   struct utimbuf ntbuf;
@@ -1199,13 +1161,7 @@ int utimes(const char *filename, const struct timeval times[2])
   {
     ftpl_init();
   }
-  if (NULL == real_utimes)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original utimes() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(utimes)) return -1;
 
   int result;
   struct timeval tn[2];
@@ -1275,13 +1231,7 @@ int utimensat(int dirfd, const char *filename, const struct timespec times[2], i
   {
     ftpl_init();
   }
-  if (NULL == real_utimensat)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original utimensat() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(utimensat)) return -1;
 
   int result;
   struct timespec tn[2];
@@ -1296,13 +1246,7 @@ int futimens(int fd, const struct timespec times[2])
   {
     ftpl_init();
   }
-  if (NULL == real_futimens)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original futimens() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(futimens)) return -1;
 
   int result;
   struct timespec tn[2];
@@ -1841,13 +1785,7 @@ int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
     return -1;
   }
 
-  if (NULL == real_sem_timedwait)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original sem_timedwait() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(sem_timedwait)) return -1;
 
   if (!dont_fake)
   {
@@ -2260,13 +2198,7 @@ int ftime(struct timeb *tb)
     return 0;               /* ftime() always returns 0, see manpage */
 
   /* Check whether we've got a pointer to the real ftime() function yet */
-  if (NULL == real_ftime)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
-#endif
-    return 0; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(ftime)) return 0;
 
   /* initialize our TZ result with the real current time */
 #ifdef MACOS_DYLD_INTERPOSE
@@ -2311,13 +2243,7 @@ int gettimeofday(struct timeval *tv, void *tz)
   }
 
   /* Check whether we've got a pointer to the real ftime() function yet */
-  if (NULL == real_gettimeofday)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original gettimeofday() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(gettimeofday)) return -1;
 
   /* initialize our result with the real current time */
 #ifdef MACOS_DYLD_INTERPOSE
@@ -2374,13 +2300,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
     return -1;
   }
 
-  if (NULL == real_clock_gettime)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original clock_gettime() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(clock_gettime)) return -1;
 
   /* initialize our result with the real current time */
 #ifdef MACOS_DYLD_INTERPOSE
@@ -2426,13 +2346,7 @@ int timespec_get(struct timespec *ts, int base)
     return 0;
   }
 
-  if (NULL == real_timespec_get)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original timespec_get() not found.\n");
-#endif
-    return 0; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(timespec_get)) return 0;
 
   /* initialize our result with the real current time */
 #ifdef MACOS_DYLD_INTERPOSE
@@ -3421,13 +3335,7 @@ static int apple_clock_gettime(clockid_t clk_id, struct timespec *tp)
   mach_timespec_t cur_timeclockid_t;
   (void) clk_id; /* unused */
 
-  if (NULL == real_clock_get_time)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original clock_get_time() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(clock_get_time)) return -1;
 
   DONT_FAKE_TIME(result = (*real_clock_get_time)(clock_serv_real, &cur_timeclockid_t));
   tp->tv_sec =  cur_timeclockid_t.tv_sec;
@@ -3477,13 +3385,7 @@ int __gettimeofday(struct timeval *tv, void *tz)
   }
 
   /* Check whether we've got a pointer to the real ftime() function yet */
-  if (NULL == real___gettimeofday)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original __gettimeofday() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(__gettimeofday)) return -1;
 
   /* initialize our result with the real current time */
   DONT_FAKE_TIME(result = (*real___gettimeofday)(tv, tz));
@@ -3506,13 +3408,7 @@ int __clock_gettime(clockid_t clk_id, struct timespec *tp)
     return -1;
   }
 
-  if (NULL == real___clock_gettime)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original __clock_gettime() not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(__clock_gettime)) return -1;
 
   /* initialize our result with the real current time */
   DONT_FAKE_TIME(result = (*real___clock_gettime)(clk_id, tp));
@@ -3564,13 +3460,7 @@ int __ftime(struct timeb *tb)
     return 0;               /* ftime() always returns 0, see manpage */
 
   /* Check whether we've got a pointer to the real ftime() function yet */
-  if (NULL == real___ftime)
-  {  /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original ftime() not found.\n");
-#endif
-    return 0; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(__ftime)) return 0;
 
   /* initialize our TZ result with the real current time */
   DONT_FAKE_TIME(result = (*real___ftime)(tb));
@@ -3638,13 +3528,7 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   {
     ftpl_init();
   }
-  if (NULL == real_pthread_cond_init_232)
-  { /* dlsym() failed */
-#ifdef DEBUG
-    (void) fprintf(stderr, "faketime problem: original pthread_cond_init (@@GLIBC_2.3.2, fallback) not found.\n");
-#endif
-    return -1; /* propagate error to caller */
-  }
+  if (!CHECK_MISSING_REAL(pthread_cond_init_232)) return -1;
   result = real_pthread_cond_init_232(cond, attr);
 
   if (result != 0 || attr == NULL)
