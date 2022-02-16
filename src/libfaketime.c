@@ -955,7 +955,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
   {
     if (!fake_stat_disabled)
     {
-      fake_statbuf(buf);
+      if (!dont_fake) fake_statbuf(buf);
     }
   }
   return result;
@@ -988,7 +988,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
   {
     if (!fake_stat_disabled)
     {
-      fake_statbuf(buf);
+      if (!dont_fake) fake_statbuf(buf);
     }
   }
   return result;
@@ -1021,7 +1021,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
   {
     if (!fake_stat_disabled)
     {
-      fake_statbuf(buf);
+      if (!dont_fake) fake_statbuf(buf);
     }
   }
   return result;
@@ -1053,7 +1053,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
   {
     if (!fake_stat_disabled)
     {
-      fake_stat64buf(buf);
+      if (!dont_fake) fake_stat64buf(buf);
     }
   }
   return result;
@@ -1085,7 +1085,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
   {
     if (!fake_stat_disabled)
     {
-      fake_stat64buf(buf);
+      if (!dont_fake) fake_stat64buf(buf);
     }
   }
   return result;
@@ -1118,7 +1118,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   {
     if (!fake_stat_disabled)
     {
-      fake_stat64buf(buf);
+      if (!dont_fake) fake_stat64buf(buf);
     }
   }
   return result;
@@ -1151,7 +1151,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
   {
     if (!fake_stat_disabled)
     {
-      fake_stat64buf(buf);
+      if (!dont_fake) fake_stat64buf(buf);
     }
   }
   return result;
