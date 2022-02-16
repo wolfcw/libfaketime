@@ -170,14 +170,14 @@ static __thread bool dont_fake = false;
   } while (0)
 
 /* pointers to real (not faked) functions */
-static int          (*real_stat)            (int, const char *, struct stat *);
-static int          (*real_fstat)           (int, int, struct stat *);
-static int          (*real_fstatat)         (int, int, const char *, struct stat *, int);
-static int          (*real_lstat)           (int, const char *, struct stat *);
-static int          (*real_stat64)          (int, const char *, struct stat64 *);
-static int          (*real_fstat64)         (int, int , struct stat64 *);
-static int          (*real_fstatat64)       (int, int , const char *, struct stat64 *, int);
-static int          (*real_lstat64)         (int, const char *, struct stat64 *);
+static int          (*real_xstat)           (int, const char *, struct stat *);
+static int          (*real_fxstat)          (int, int, struct stat *);
+static int          (*real_fxstatat)        (int, int, const char *, struct stat *, int);
+static int          (*real_lxstat)          (int, const char *, struct stat *);
+static int          (*real_xstat64)         (int, const char *, struct stat64 *);
+static int          (*real_fxstat64)        (int, int , struct stat64 *);
+static int          (*real_fxstatat64)      (int, int , const char *, struct stat64 *, int);
+static int          (*real_lxstat64)        (int, const char *, struct stat64 *);
 static time_t       (*real_time)            (time_t *);
 static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
@@ -903,7 +903,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_stat)
+  if (NULL == real_xstat)
   { /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
@@ -912,7 +912,7 @@ int __xstat (int ver, const char *path, struct stat *buf)
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_stat(ver, path, buf));
+  DONT_FAKE_TIME(result = real_xstat(ver, path, buf));
   if (result == -1)
   {
     return -1;
@@ -936,7 +936,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_fstat)
+  if (NULL == real_fxstat)
   {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
@@ -945,7 +945,7 @@ int __fxstat (int ver, int fildes, struct stat *buf)
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_fstat(ver, fildes, buf));
+  DONT_FAKE_TIME(result = real_fxstat(ver, fildes, buf));
   if (result == -1)
   {
     return -1;
@@ -969,7 +969,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
   {
     ftpl_init();
   }
-  if (NULL == real_fstatat)
+  if (NULL == real_fxstatat)
   { /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat() not found.\n");
@@ -978,7 +978,7 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_fstatat(ver, fildes, filename, buf, flag));
+  DONT_FAKE_TIME(result = real_fxstatat(ver, fildes, filename, buf, flag));
   if (result == -1)
   {
     return -1;
@@ -1002,7 +1002,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_lstat)
+  if (NULL == real_lxstat)
   {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
@@ -1011,7 +1011,7 @@ int __lxstat (int ver, const char *path, struct stat *buf)
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_lstat(ver, path, buf));
+  DONT_FAKE_TIME(result = real_lxstat(ver, path, buf));
   if (result == -1)
   {
     return -1;
@@ -1034,7 +1034,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_stat64)
+  if (NULL == real_xstat64)
   { /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original stat() not found.\n");
@@ -1043,7 +1043,7 @@ int __xstat64 (int ver, const char *path, struct stat64 *buf)
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_stat64(ver, path, buf));
+  DONT_FAKE_TIME(result = real_xstat64(ver, path, buf));
   if (result == -1)
   {
     return -1;
@@ -1066,7 +1066,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_fstat64)
+  if (NULL == real_fxstat64)
   {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstat() not found.\n");
@@ -1075,7 +1075,7 @@ int __fxstat64 (int ver, int fildes, struct stat64 *buf)
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_fstat64(ver, fildes, buf));
+  DONT_FAKE_TIME(result = real_fxstat64(ver, fildes, buf));
   if (result == -1)
   {
     return -1;
@@ -1099,7 +1099,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   {
     ftpl_init();
   }
-  if (NULL == real_fstatat64)
+  if (NULL == real_fxstatat64)
   {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original fstatat64() not found.\n");
@@ -1108,7 +1108,7 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_fstatat64(ver, fildes, filename, buf, flag));
+  DONT_FAKE_TIME(result = real_fxstatat64(ver, fildes, filename, buf, flag));
   if (result == -1)
   {
     return -1;
@@ -1132,7 +1132,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
   {
     ftpl_init();
   }
-  if (NULL == real_lstat64)
+  if (NULL == real_lxstat64)
   {  /* dlsym() failed */
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original lstat() not found.\n");
@@ -1141,7 +1141,7 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
   }
 
   int result;
-  DONT_FAKE_TIME(result = real_lstat64(ver, path, buf));
+  DONT_FAKE_TIME(result = real_lxstat64(ver, path, buf));
   if (result == -1)
   {
     return -1;
@@ -2640,14 +2640,14 @@ static void ftpl_init(void)
 #endif
 
   /* Look up all real_* functions. NULL will mark missing ones. */
-  real_stat =               dlsym(RTLD_NEXT, "__xstat");
-  real_fstat =              dlsym(RTLD_NEXT, "__fxstat");
-  real_fstatat =            dlsym(RTLD_NEXT, "__fxstatat");
-  real_lstat =              dlsym(RTLD_NEXT, "__lxstat");
-  real_stat64 =             dlsym(RTLD_NEXT,"__xstat64");
-  real_fstat64 =            dlsym(RTLD_NEXT, "__fxstat64");
-  real_fstatat64 =          dlsym(RTLD_NEXT, "__fxstatat64");
-  real_lstat64 =            dlsym(RTLD_NEXT, "__lxstat64");
+  real_xstat =              dlsym(RTLD_NEXT, "__xstat");
+  real_fxstat =             dlsym(RTLD_NEXT, "__fxstat");
+  real_fxstatat =           dlsym(RTLD_NEXT, "__fxstatat");
+  real_lxstat =             dlsym(RTLD_NEXT, "__lxstat");
+  real_xstat64 =            dlsym(RTLD_NEXT,"__xstat64");
+  real_fxstat64 =           dlsym(RTLD_NEXT, "__fxstat64");
+  real_fxstatat64 =         dlsym(RTLD_NEXT, "__fxstatat64");
+  real_lxstat64 =           dlsym(RTLD_NEXT, "__lxstat64");
   real_time =               dlsym(RTLD_NEXT, "time");
   real_ftime =              dlsym(RTLD_NEXT, "ftime");
   real_timespec_get =       dlsym(RTLD_NEXT, "timespec_get");
