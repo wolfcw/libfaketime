@@ -170,6 +170,9 @@ static __thread bool dont_fake = false;
   } while (0)
 
 /* pointers to real (not faked) functions */
+static int          (*real_stat)            (const char *, struct stat *);
+static int          (*real_fstat)           (int, struct stat *);
+static int          (*real_lstat)           (const char *, struct stat *);
 static int          (*real_xstat)           (int, const char *, struct stat *);
 static int          (*real_fxstat)          (int, int, struct stat *);
 static int          (*real_fxstatat)        (int, int, const char *, struct stat *, int);
@@ -940,6 +943,21 @@ static inline void fake_stat64buf (struct stat64 *buf) {
   STAT_HANDLER_COMMON(name, buf, fake_statbuf, __VA_ARGS__)
 #define STAT64_HANDLER(name, buf, ...) \
   STAT_HANDLER_COMMON(name, buf, fake_stat64buf, __VA_ARGS__)
+
+int stat (const char *path, struct stat *buf)
+{
+  STAT_HANDLER(stat, buf, path, buf);
+}
+
+int fstat (int fildes, struct stat *buf)
+{
+  STAT_HANDLER(fstat, buf, fildes, buf);
+}
+
+int lstat (const char *path, struct stat *buf)
+{
+  STAT_HANDLER(lstat, buf, path, buf);
+}
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf)
@@ -2422,6 +2440,9 @@ static void ftpl_init(void)
 #endif
 
   /* Look up all real_* functions. NULL will mark missing ones. */
+  real_stat =               dlsym(RTLD_NEXT, "stat");
+  real_lstat =              dlsym(RTLD_NEXT, "lstat");
+  real_fstat =              dlsym(RTLD_NEXT, "fstat");
   real_xstat =              dlsym(RTLD_NEXT, "__xstat");
   real_fxstat =             dlsym(RTLD_NEXT, "__fxstat");
   real_fxstatat =           dlsym(RTLD_NEXT, "__fxstatat");
