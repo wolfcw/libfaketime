@@ -912,217 +912,85 @@ static inline void fake_stat64buf (struct stat64 *buf) {
 #endif
 }
 
+#define STAT_HANDLER_COMMON(name, buf, fake_statbuf, ...) \
+  if (!initialized) \
+  { \
+    ftpl_init(); \
+  } \
+  if (!CHECK_MISSING_REAL(name)) return -1; \
+  \
+  int result; \
+  DONT_FAKE_TIME(result = real_##name(__VA_ARGS__)); \
+  if (result == -1) \
+  { \
+    return -1; \
+  } \
+  \
+  if (buf != NULL) \
+  { \
+    if (!fake_stat_disabled) \
+    { \
+      if (!dont_fake) fake_statbuf(buf); \
+    } \
+  } \
+  \
+  return result;
+
+#define STAT_HANDLER(name, buf, ...) \
+  STAT_HANDLER_COMMON(name, buf, fake_statbuf, __VA_ARGS__)
+#define STAT64_HANDLER(name, buf, ...) \
+  STAT_HANDLER_COMMON(name, buf, fake_stat64buf, __VA_ARGS__)
+
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(xstat)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_xstat(ver, path, buf));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-   if (buf != NULL)
-   {
-     if (!fake_stat_disabled)
-     {
-       if (!dont_fake) fake_statbuf(buf);
-     }
-   }
-
-  return result;
+  STAT_HANDLER(xstat, buf, ver, path, buf);
 }
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat (int ver, int fildes, struct stat *buf)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(fxstat)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_fxstat(ver, fildes, buf));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_statbuf(buf);
-    }
-  }
-  return result;
+  STAT_HANDLER(fxstat, buf, ver, fildes, buf);
 }
 
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int flag)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(fxstatat)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_fxstatat(ver, fildes, filename, buf, flag));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_statbuf(buf);
-    }
-  }
-  return result;
+  STAT_HANDLER(fxstatat, buf, ver, fildes, filename, buf, flag);
 }
 #endif
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat (int ver, const char *path, struct stat *buf)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(lxstat)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_lxstat(ver, path, buf));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_statbuf(buf);
-    }
-  }
-  return result;
+  STAT_HANDLER(lxstat, buf, ver, path, buf);
 }
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat64 (int ver, const char *path, struct stat64 *buf)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(xstat64)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_xstat64(ver, path, buf));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_stat64buf(buf);
-    }
-  }
-  return result;
+  STAT64_HANDLER(xstat64, buf, ver, path, buf);
 }
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat64 (int ver, int fildes, struct stat64 *buf)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(fxstat64)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_fxstat64(ver, fildes, buf));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_stat64buf(buf);
-    }
-  }
-  return result;
+  STAT64_HANDLER(fxstat64, buf, ver, fildes, buf);
 }
 
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf, int flag)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(fxstatat64)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_fxstatat64(ver, fildes, filename, buf, flag));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_stat64buf(buf);
-    }
-  }
-  return result;
+  STAT64_HANDLER(fxstatat64, buf, ver, fildes, filename, buf, flag);
 }
 #endif
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat64 (int ver, const char *path, struct stat64 *buf)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
-  if (!CHECK_MISSING_REAL(lxstat64)) return -1;
-
-  int result;
-  DONT_FAKE_TIME(result = real_lxstat64(ver, path, buf));
-  if (result == -1)
-  {
-    return -1;
-  }
-
-  if (buf != NULL)
-  {
-    if (!fake_stat_disabled)
-    {
-      if (!dont_fake) fake_stat64buf(buf);
-    }
-  }
-  return result;
+  STAT64_HANDLER(lxstat64, buf, ver, path, buf);
 }
 #endif
 
