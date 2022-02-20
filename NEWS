@@ -1,3 +1,11 @@
+Since 0.9.9:
+    - improved macOS Monterey support through dyld interposing
+    - changed interception hooks for stat() and similar functions,
+      refactored to use a common handler (@sirainen)
+    - added support for timespec_get, timerfd_{get,set} (@sliquister)
+    - generic syscall() interception for selected syscalls (@dkg)
+    - improved testing system (@dkg)
+
 Since 0.9.8:
     - When compiled with the CFLAG FAKE_RANDOM set,
       libfaketime will intercept calls to getrandom()
