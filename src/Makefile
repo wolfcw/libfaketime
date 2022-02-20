@@ -80,6 +80,10 @@
 #           ld automatically choose the correct library version to use for the
 #           target binary. Use for Linux platforms with Multi-Arch support only!
 #
+#     SILENT
+#         - avoid that the faketime wrapper complains when running within a
+#           libfaketime environment
+#
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
 #

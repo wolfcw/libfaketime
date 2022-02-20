@@ -114,6 +114,12 @@ int main (int argc, char **argv)
   bool fake_pid = false;
   const char *pid_val;
 
+#ifndef SILENT
+  if (getenv("FAKETIME") || getenv("FAKETIME_SHARED") || getenv("FAKETIME_FAKEPID") || getenv("FAKERANDOM_SEED")) {
+    fprintf(stderr, "faketime: You appear to be running faketime within a libfaketime environment. Proceeding, but check for unexpected results...\n");
+  }
+#endif
+
   while (curr_opt < argc)
   {
     if (0 == strcmp(argv[curr_opt], "-m"))
