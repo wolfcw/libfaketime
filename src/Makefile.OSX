@@ -3,11 +3,31 @@
 #
 #   * Compilation Defines:
 #
+#     MACOS_DYLD_INTERPOSE
+#         - Use dlyd interposing instead of name-based function interception
+#           (required since macOS Monterey)
+#
+#     FAKE_SLEEP
+#         - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
+#
+#     FAKE_SETTIME
+#         - Intercept clock_settime(), settimeofday(), and adjtime()
+#
+#     FAKE_PID
+#         - Enable faked values for getpid() calls through FAKETIME_FAKEPID
+#
+#     FAKE_RANDOM
+#         - Intercept getentropy(). Dangerous for production use.
+#           See README about FAKE_RANDOM.
+#
 #     FAKE_STAT
 #         - Enables time faking also for files' timestamps.
 #
-#     NO_ATFILE
-#         - Disables support for the fstatat() group of functions
+#     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
+#         - Enables time faking for the utime* functions.  If enabled via
+#           FAKE_FILE_TIMESTAMPS, the faking is opt-in at runtime using
+#           with the FAKE_UTIME environment variable. If enabled via
+#           FAKE_UTIME, the faking is opt-out at runtime. Requires FAKE_STAT.
 #
 #     PTHREAD
 #         - Define this to enable multithreading support.
@@ -17,23 +37,6 @@
 #           possible caching side-effects in a multithreaded environment
 #           without this, but the performance impact may require you to
 #           try it unsynchronized.
-#
-#     FAKE_SLEEP
-#         - Also intercept sleep(), nanosleep(), usleep(), alarm(), [p]poll()
-#
-#     MACOS_DYLD_INTERPOSE
-#         - Use dlyd interposing instead of name-based function interception
-#           (required since macOS Monterey)
-#
-#     FAKE_RANDOM
-#         - Intercept getentropy(). Dangerous for production use.
-#           See README about FAKE_RANDOM.
-#
-#     FAKE_SETTIME
-#         - Intercept clock_settime(), settimeofday(), and adjtime()
-#
-#     FAKE_PID
-#         - Enable faked values for getpid() calls through FAKETIME_FAKEPID
 #
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library

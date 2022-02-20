@@ -36,6 +36,7 @@
 #include <time.h>
 #ifdef MACOS_DYLD_INTERPOSE
 #include <sys/time.h>
+#include <utime.h>
 #endif
 #include <math.h>
 #include <errno.h>
@@ -141,10 +142,12 @@ void do_macos_dyld_interpose(void);
 #endif
 
 #ifdef FAKE_FILE_TIMESTAMPS
+#ifndef __APPLE__
 struct utimbuf {
   time_t actime;       /* access time */
   time_t modtime;      /* modification time */
 };
+#endif
 #endif
 
 #ifdef FAKE_RANDOM
@@ -892,9 +895,15 @@ static inline void fake_statbuf (struct stat *buf) {
   unlock_for_stat();
 #else
   lock_for_stat();
+#ifndef __APPLE__
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+#else
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctimespec);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atimespec);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtimespec);
+#endif
   unlock_for_stat();
 #endif
 }
@@ -908,13 +917,45 @@ static inline void fake_stat64buf (struct stat64 *buf) {
   unlock_for_stat();
 #else
   lock_for_stat();
+#ifndef __APPLE__
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
+#else
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctimespec);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atimespec);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtimespec);
+#endif
   unlock_for_stat();
 #endif
 }
 
+/* macOS dyld interposing uses the function's real name instead of real_name */
+#ifdef MACOS_DYLD_INTERPOSE
+#define STAT_HANDLER_COMMON(name, buf, fake_statbuf, ...) \
+  if (!initialized) \
+  { \
+    ftpl_init(); \
+  } \
+  if (!CHECK_MISSING_REAL(name)) return -1; \
+  \
+  int result; \
+  DONT_FAKE_TIME(result = name(__VA_ARGS__)); \
+  if (result == -1) \
+  { \
+    return -1; \
+  } \
+  \
+  if (buf != NULL) \
+  { \
+    if (!fake_stat_disabled) \
+    { \
+      if (!dont_fake) fake_statbuf(buf); \
+    } \
+  } \
+  \
+  return result;
+#else
 #define STAT_HANDLER_COMMON(name, buf, fake_statbuf, ...) \
   if (!initialized) \
   { \
@@ -938,39 +979,56 @@ static inline void fake_stat64buf (struct stat64 *buf) {
   } \
   \
   return result;
-
+#endif
 #define STAT_HANDLER(name, buf, ...) \
   STAT_HANDLER_COMMON(name, buf, fake_statbuf, __VA_ARGS__)
 #define STAT64_HANDLER(name, buf, ...) \
   STAT_HANDLER_COMMON(name, buf, fake_stat64buf, __VA_ARGS__)
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_stat (const char *path, struct stat *buf)
+#else
 int stat (const char *path, struct stat *buf)
+#endif
 {
   STAT_HANDLER(stat, buf, path, buf);
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_fstat (int fildes, struct stat *buf)
+#else
 int fstat (int fildes, struct stat *buf)
+#endif
 {
   STAT_HANDLER(fstat, buf, fildes, buf);
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_lstat (const char *path, struct stat *buf)
+#else
 int lstat (const char *path, struct stat *buf)
+#endif
 {
   STAT_HANDLER(lstat, buf, path, buf);
 }
 
+#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat (int ver, const char *path, struct stat *buf)
 {
   STAT_HANDLER(xstat, buf, ver, path, buf);
 }
+#endif
 
+#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat (int ver, int fildes, struct stat *buf)
 {
   STAT_HANDLER(fxstat, buf, ver, fildes, buf);
 }
+#endif
 
+#ifndef __APPLE__
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int flag)
@@ -978,25 +1036,33 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
   STAT_HANDLER(fxstatat, buf, ver, fildes, filename, buf, flag);
 }
 #endif
+#endif
 
+#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat (int ver, const char *path, struct stat *buf)
 {
   STAT_HANDLER(lxstat, buf, ver, path, buf);
 }
+#endif
 
+#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat64 (int ver, const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(xstat64, buf, ver, path, buf);
 }
+#endif
 
+#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat64 (int ver, int fildes, struct stat64 *buf)
 {
   STAT64_HANDLER(fxstat64, buf, ver, fildes, buf);
 }
+#endif
 
+#ifndef __APPLE__
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf, int flag)
@@ -1004,16 +1070,23 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   STAT64_HANDLER(fxstatat64, buf, ver, fildes, filename, buf, flag);
 }
 #endif
+#endif
 
+#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat64 (int ver, const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(lxstat64, buf, ver, path, buf);
 }
 #endif
+#endif
 
 #ifdef FAKE_FILE_TIMESTAMPS
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_utime(const char *filename, const struct utimbuf *times)
+#else
 int utime(const char *filename, const struct utimbuf *times)
+#endif
 {
   if (!initialized)
   {
@@ -1037,11 +1110,19 @@ int utime(const char *filename, const struct utimbuf *times)
     ntbuf.modtime = times->modtime - user_offset.tv_sec;
     times = &ntbuf;
   }
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = utime(filename, times));
+#else
   DONT_FAKE_TIME(result = real_utime(filename, times));
+#endif
   return result;
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_utimes(const char *filename, const struct timeval times[2])
+#else
 int utimes(const char *filename, const struct timeval times[2])
+#endif
 {
   if (!initialized)
   {
@@ -1069,7 +1150,11 @@ int utimes(const char *filename, const struct timeval times[2])
     timersub(&times[1], &user_offset2, &tn[1]);
     times = tn;
   }
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = utimes(filename, times));
+#else
   DONT_FAKE_TIME(result = real_utimes(filename, times));
+#endif
   return result;
 }
 
@@ -1111,7 +1196,11 @@ static void fake_two_timespec(const struct timespec in_times[2], struct timespec
   }
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_utimensat(int dirfd, const char *filename, const struct timespec times[2], int flags)
+#else
 int utimensat(int dirfd, const char *filename, const struct timespec times[2], int flags)
+#endif
 {
   if (!initialized)
   {
@@ -1122,11 +1211,19 @@ int utimensat(int dirfd, const char *filename, const struct timespec times[2], i
   int result;
   struct timespec tn[2];
   fake_two_timespec(times, tn);
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = utimensat(dirfd, filename, tn, flags));
+#else
   DONT_FAKE_TIME(result = real_utimensat(dirfd, filename, tn, flags));
+#endif
   return result;
 }
 
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_futimens(int fd, const struct timespec times[2])
+#else
 int futimens(int fd, const struct timespec times[2])
+#endif
 {
   if (!initialized)
   {
@@ -1137,7 +1234,11 @@ int futimens(int fd, const struct timespec times[2])
   int result;
   struct timespec tn[2];
   fake_two_timespec(times, tn);
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = futimens(fd, tn));
+#else
   DONT_FAKE_TIME(result = real_futimens(fd, tn));
+#endif
   return result;
 }
 #endif
@@ -3862,6 +3963,17 @@ void do_macos_dyld_interpose(void) {
 #endif
 #ifdef FAKE_PID
   DYLD_INTERPOSE(macos_getpid, getpid);
+#endif
+#ifdef FAKE_STAT
+  DYLD_INTERPOSE(macos_stat, stat);
+//  DYLD_INTERPOSE(macos_fstat, fstat);
+  DYLD_INTERPOSE(macos_lstat, lstat);
+#endif
+#ifdef FAKE_FILE_TIMESTAMPS
+  DYLD_INTERPOSE(macos_utime, utime);
+  DYLD_INTERPOSE(macos_utimes, utimes);
+  DYLD_INTERPOSE(macos_utimensat, utimensat);
+  DYLD_INTERPOSE(macos_futimens, futimens);
 #endif
 }
 #endif
