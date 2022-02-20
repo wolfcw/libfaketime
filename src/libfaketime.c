@@ -3562,7 +3562,7 @@ int pthread_cond_destroy_232(pthread_cond_t *cond)
 
 //where init in pthread methods????
 
-int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat)
+int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat, clockid_t forced_clock_id)
 {
   struct timespec tp, tdiff_actual, realtime, faketime;
   struct timespec *tf = NULL;
@@ -3584,6 +3584,11 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
       clk_id = CLOCK_MONOTONIC;
     else
       clk_id = CLOCK_REALTIME;
+
+    if (forced_clock_id != -1)
+    {
+      clk_id = forced_clock_id;
+    }
 
     DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, &realtime));
     if (result == -1)
@@ -3651,12 +3656,17 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
 int pthread_cond_timedwait_225(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
 {
-  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_2_5);
+  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_2_5, -1);
 }
 
 int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
 {
-  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2);
+  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2, -1);
+}
+
+int pthread_cond_clockwait(pthread_cond_t *cond, pthread_mutex_t *mutex, clockid_t clockid, const struct timespec *abstime)
+{
+  return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2, clockid);
 }
 
 __asm__(".symver pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5");
