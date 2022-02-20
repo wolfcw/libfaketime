@@ -2397,6 +2397,7 @@ static void parse_ft_string(const char *user_faked_time)
                 "Please check specification %s with format %s\n", user_faked_time, user_faked_time_fmt);
         exit(EXIT_FAILURE);
       }
+      goto parse_modifiers;
       break;
 
     case '+':
