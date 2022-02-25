@@ -98,7 +98,8 @@ void* pthread_test(void* args)
   timeToWait.tv_nsec = now.tv_nsec;
 
   printf("pthread_cond_timedwait: CLOCK_MONOTONIC test\n");
-  printf("(Intentionally sleeping 1 second..., see docs about CLOCK_MONOTONIC test)\n");
+  printf("(Intentionally sleeping 1 second...)\n");
+  printf("(If this test hangs for more than a few seconds, please report\n your glibc version and system details as FORCE_MONOTONIC_FIX\n issue at https://github.com/wolfcw/libfaketime)\n");
   fflush(stdout);
 
   pthread_mutex_lock(&fakeMutex);
