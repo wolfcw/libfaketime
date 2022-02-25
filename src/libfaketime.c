@@ -3560,7 +3560,40 @@ int pthread_cond_destroy_232(pthread_cond_t *cond)
   return real_pthread_cond_destroy_232(cond);
 }
 
-//where init in pthread methods????
+/*
+ * Check whether we need a run-time activation of the
+ * forced monotonic fix to avoid faked / unfaked timestamp
+ * confusion between the application and glibc internals.
+ */
+bool needs_forced_monotonic_fix(char *function_name)
+{
+  bool result = false;
+  char *env_var;
+
+  if (function_name == NULL) return false;
+
+  /* The forced monotonic fix can be activated by setting an
+   * environment variable to 1, or disabled by setting it to 0 */
+  if ((env_var = getenv("FAKETIME_FORCE_MONOTONIC_FIX")) != NULL)
+  {
+    if (env_var[0] == '0') 
+      result = false; 
+    else 
+      result = true; 
+  }
+  else
+  { 
+    /* Here we try to derive the necessity for a forced monotonic fix * 
+     * based on glibc version. What could possibly go wrong?          */
+
+    result = false; // chosen by unfair coin flip
+  }
+
+  if (getenv("FAKETIME_DEBUG") != NULL)
+    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s\n", function_name, result?"yes":"no");
+
+  return result;
+}
 
 int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat)
 {
@@ -3628,8 +3661,14 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
        CLOCK_MONOTONIC. */
 #ifndef __ARM_ARCH
 #ifndef FORCE_MONOTONIC_FIX
-    if (clk_id == CLOCK_MONOTONIC)
-      timespecadd(&faketime, &tdiff_actual, &tp);
+    if (clk_id == CLOCK_MONOTONIC) {
+      if (needs_forced_monotonic_fix("pthread_cond_timedwait") == true) {
+        timespecadd(&realtime, &tdiff_actual, &tp);
+      }
+      else {
+        timespecadd(&faketime, &tdiff_actual, &tp);
+      }
+    }
     else
 #endif
 #endif
