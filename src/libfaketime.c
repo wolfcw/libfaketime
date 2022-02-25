@@ -32,6 +32,7 @@
 #include <poll.h>
 #ifdef __linux__
 #include <sys/epoll.h>
+#include <gnu/libc-version.h>
 #endif
 #include <time.h>
 #ifdef MACOS_DYLD_INTERPOSE
@@ -3569,6 +3570,7 @@ bool needs_forced_monotonic_fix(char *function_name)
 {
   bool result = false;
   char *env_var;
+  const char *glibc_version_string = gnu_get_libc_version();
 
   if (function_name == NULL) return false;
 
@@ -3586,11 +3588,24 @@ bool needs_forced_monotonic_fix(char *function_name)
     /* Here we try to derive the necessity for a forced monotonic fix * 
      * based on glibc version. What could possibly go wrong?          */
 
-    result = false; // chosen by unfair coin flip
+    int glibc_major, glibc_minor;
+    sscanf(glibc_version_string, "%d.%d", &glibc_major, &glibc_minor);
+
+    /* The following decision logic is yet purely based on experiences
+     * with pthread_cond_timedwait(). The used boundaries may still be
+     * imprecise. */
+    if ( (glibc_major == 2) &&
+         ((glibc_minor <= 17) || (glibc_minor >= 30)) )
+    {
+      result = true;
+    }
+    else
+      result = false; // avoid forced monotonic fixes unless really necessary
   }
 
   if (getenv("FAKETIME_DEBUG") != NULL)
-    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s\n", function_name, result?"yes":"no");
+    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n", 
+		    function_name, result ? "yes":"no", glibc_version_string);
 
   return result;
 }
