@@ -32,6 +32,8 @@
 #include <poll.h>
 #ifdef __linux__
 #include <sys/epoll.h>
+#endif
+#ifndef __APPLE__
 #include <gnu/libc-version.h>
 #endif
 #include <time.h>
@@ -3578,14 +3580,14 @@ bool needs_forced_monotonic_fix(char *function_name)
    * environment variable to 1, or disabled by setting it to 0 */
   if ((env_var = getenv("FAKETIME_FORCE_MONOTONIC_FIX")) != NULL)
   {
-    if (env_var[0] == '0') 
-      result = false; 
-    else 
-      result = true; 
+    if (env_var[0] == '0')
+      result = false;
+    else
+      result = true;
   }
   else
-  { 
-    /* Here we try to derive the necessity for a forced monotonic fix * 
+  {
+    /* Here we try to derive the necessity for a forced monotonic fix *
      * based on glibc version. What could possibly go wrong?          */
 
     int glibc_major, glibc_minor;
@@ -3595,7 +3597,7 @@ bool needs_forced_monotonic_fix(char *function_name)
      * with pthread_cond_timedwait(). The used boundaries may still be
      * imprecise. */
     if ( (glibc_major == 2) &&
-         ((glibc_minor <= 17) || (glibc_minor >= 30)) )
+         ((glibc_minor <= 24) || (glibc_minor >= 30)) )
     {
       result = true;
     }
@@ -3604,7 +3606,7 @@ bool needs_forced_monotonic_fix(char *function_name)
   }
 
   if (getenv("FAKETIME_DEBUG") != NULL)
-    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n", 
+    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n",
 		    function_name, result ? "yes":"no", glibc_version_string);
 
   return result;
