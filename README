@@ -103,6 +103,28 @@ documentation whether it can be achieved by using libfaketime directly.
   FORCE_MONOTONIC_FIX alone does not solve the hang on the MONOTONIC_CLOCK
   test.
 
+  If FORCE_MONOTONIC_FIX was not set as a compile-time flag, you can also
+  set an environment variable FAKETIME_FORCE_MONOTONIC_FIX=1 if you want
+  to enable the fix at run-time, or to 0 if you explicitly want to disable
+  it. The fix is automatically enabled if libfaketime was compiled on a
+  system with glibc as the underlying libc implementation, and a glibc
+  version is detected at run-time that is assumed to need this workaround.
+  Please use Github issues at https://github.com/wolfcw/libfaketime/issues
+  to report any observed hangs during CLOCK_MONOTONIC tests and report
+  your CPU architecture, libc implementation (e.g., glibc 2.30) and any
+  other details that might help (e.g., Linux distribution, use within, e.g.,
+  Docker containers etc.).
+
+  Please try to avoid compiling with FORCE_MONOTONIC_FIX on platforms that
+  do not need it. While it won't make a difference in most cases, depending
+  on the specific FAKETIME settings in use, it would cause certain
+  intercepted functions such as pthread_cond_timedwait() return with a
+  time-out too early or too late, which could break some applications.
+  Try compiling without FORCE_MONOTONIC_FIX first and check whether the
+  tests appear to hang. If they do, you can either set the
+  FAKETIME_FORCE_MONOTONIC_FIX environment variable to 1, or re-compile
+  with FORCE_MONOTONIC_FIX set.
+
 
 3. Installation
 ---------------
