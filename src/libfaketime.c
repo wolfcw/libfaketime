@@ -32,6 +32,8 @@
 #include <poll.h>
 #ifdef __linux__
 #include <sys/epoll.h>
+#endif
+#ifdef __GLIBC__
 #include <gnu/libc-version.h>
 #endif
 #include <time.h>
@@ -3570,7 +3572,9 @@ bool needs_forced_monotonic_fix(char *function_name)
 {
   bool result = false;
   char *env_var;
+#ifdef __GLIBC__
   const char *glibc_version_string = gnu_get_libc_version();
+#endif
 
   if (function_name == NULL) return false;
 
@@ -3585,6 +3589,7 @@ bool needs_forced_monotonic_fix(char *function_name)
   }
   else
   { 
+#ifdef __GLIBC__
     /* Here we try to derive the necessity for a forced monotonic fix * 
      * based on glibc version. What could possibly go wrong?          */
 
@@ -3600,12 +3605,18 @@ bool needs_forced_monotonic_fix(char *function_name)
       result = true;
     }
     else
+#endif
       result = false; // avoid forced monotonic fixes unless really necessary
   }
 
   if (getenv("FAKETIME_DEBUG") != NULL)
+#ifdef __GLIBC__
     fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n", 
 		    function_name, result ? "yes":"no", glibc_version_string);
+#else
+    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (not glibc-compiled)\n", 
+		    function_name, result ? "yes":"no");
+#endif
 
   return result;
 }
