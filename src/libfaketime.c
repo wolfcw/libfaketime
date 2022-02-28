@@ -34,7 +34,9 @@
 #include <sys/epoll.h>
 #endif
 #ifdef __GLIBC__
+#ifndef __APPLE__
 #include <gnu/libc-version.h>
+#endif
 #endif
 #include <time.h>
 #ifdef MACOS_DYLD_INTERPOSE
@@ -3582,10 +3584,10 @@ bool needs_forced_monotonic_fix(char *function_name)
    * environment variable to 1, or disabled by setting it to 0 */
   if ((env_var = getenv("FAKETIME_FORCE_MONOTONIC_FIX")) != NULL)
   {
-    if (env_var[0] == '0') 
-      result = false; 
-    else 
-      result = true; 
+    if (env_var[0] == '0')
+      result = false;
+    else
+      result = true;
   }
   else
   { 
@@ -3600,7 +3602,7 @@ bool needs_forced_monotonic_fix(char *function_name)
      * with pthread_cond_timedwait(). The used boundaries may still be
      * imprecise. */
     if ( (glibc_major == 2) &&
-         ((glibc_minor <= 17) || (glibc_minor >= 30)) )
+         ((glibc_minor <= 24) || (glibc_minor >= 30)) )
     {
       result = true;
     }
@@ -3611,7 +3613,7 @@ bool needs_forced_monotonic_fix(char *function_name)
 
   if (getenv("FAKETIME_DEBUG") != NULL)
 #ifdef __GLIBC__
-    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n", 
+    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n",
 		    function_name, result ? "yes":"no", glibc_version_string);
 #else
     fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (not glibc-compiled)\n", 
