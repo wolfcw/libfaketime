@@ -1,4 +1,6 @@
 Since 0.9.9:
+    - automatically try to decide about FORCE_MONOTONIC_FIX
+      at run-time when not set as a compile-time flag
     - improved macOS Monterey support through dyld interposing
     - changed interception hooks for stat() and similar functions,
       refactored to use a common handler (@sirainen)
