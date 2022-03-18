@@ -830,6 +830,10 @@ static bool load_time(struct timespec *tp)
  *      Faked system functions: file related                     === FAKE(FILE)
  *      =======================================================================
  */
+#ifdef FAKE_UTIME
+static int fake_utime_disabled = 0;
+#endif
+
 
 #ifdef FAKE_STAT
 
@@ -843,7 +847,6 @@ static bool load_time(struct timespec *tp)
 #include <sys/stat.h>
 
 static int fake_stat_disabled = 0;
-static int fake_utime_disabled = 1;
 static bool user_per_tick_inc_set_backup = false;
 
 void lock_for_stat()
@@ -2699,9 +2702,8 @@ static void ftpl_init(void)
   }
 #endif
 #if defined FAKE_FILE_TIMESTAMPS
-#ifndef FAKE_UTIME
-  fake_utime_disabled = 0; // Defaults to enabled w/o FAKE_UTIME define
-#endif
+#ifdef FAKE_UTIME
+  // fake_utime_disabled is 0 by default
   if ((tmp_env = getenv("FAKE_UTIME")) != NULL) //Note that this is NOT re-checked
   {
     if (!*tmp_env || *tmp_env == 'y' || *tmp_env == 'Y' || *tmp_env == 't' || *tmp_env == 'T')
@@ -2713,6 +2715,10 @@ static void ftpl_init(void)
       fake_utime_disabled = !atoi(tmp_env);
     }
   }
+#else
+  // compiled without FAKE_UTIME support, so don't allow it to be controlled by the env var
+  fake_utime_disabled = 1;
+#endif
 #endif
 
   if ((tmp_env = getenv("FAKETIME_CACHE_DURATION")) != NULL)
