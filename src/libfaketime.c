@@ -1725,6 +1725,21 @@ int select(int nfds, fd_set *readfds,
 #else
   DONT_FAKE_TIME(ret = (*real_select)(nfds, readfds, writefds, errorfds, timeout == NULL ? timeout : &timeout_real));
 #endif
+
+  /* scale timeout back if user rate is set, #382 */
+  if (user_rate_set && (timeout != NULL)) 
+  {
+    struct timespec ts;
+
+    ts.tv_sec = timeout_real.tv_sec;
+    ts.tv_nsec = timeout_real.tv_usec * 1000;
+
+    timespecmul(&ts, user_rate, &ts);
+
+    timeout->tv_sec = ts.tv_sec;
+    timeout->tv_usec = ts.tv_nsec / 1000;
+  } 
+
   return ret;
 }
 
