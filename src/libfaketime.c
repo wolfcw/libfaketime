@@ -1567,7 +1567,7 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
   }
   if (timeout_ts != NULL)
   {
-    if (user_rate_set && !dont_fake && (timeout_ts->tv_sec > 0))
+    if (user_rate_set && !dont_fake && ((timeout_ts->tv_sec > 0) || (timeout_ts->tv_nsec > 0)))
     {
       timespecmul(timeout_ts, 1.0 / user_rate, &real_timeout);
       real_timeout_pt = &real_timeout;
