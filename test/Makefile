@@ -7,12 +7,15 @@ SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
-EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
+EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
 ALL_TESTS = timetest test
 
 ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
 ALL_TESTS += confirm_variadic_promotion
+else
+TEST_SNIPPETS := $(filter-out syscall%,${TEST_SNIPPETS})
+EXPECTATIONS := $(filter-out syscall%,${EXPECTATIONS})
 endif
 
 all: $(ALL_TESTS)
