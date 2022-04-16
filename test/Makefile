@@ -7,7 +7,7 @@ SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
-EXPECTATIONS= $(notdir $(basename $(wildcard snippets/*.variable)))
+EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
 ALL_TESTS = timetest test
 
