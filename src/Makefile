@@ -27,6 +27,11 @@
 #           without this, but the performance impact may require you to
 #           try it unsynchronized.
 #
+#     FAIL_PRE_INIT_CALLS
+#         - If the time is queried before the library was initialised, let the
+#           call fail instead of trying to initialise on-the-fly. This fixes /
+#           works around hangs that were seen with address sanitizer.
+#
 #   * Compilation Defines that are unset by default:
 #
 #     FAKE_FILE_TIMESTAMPS, FAKE_UTIME
@@ -110,7 +115,7 @@ PREFIX ?= /usr/local
 LIBDIRNAME ?= /lib/faketime
 PLATFORM ?=$(shell uname)
 
-CFLAGS += -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_UTIME -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"' $(FAKETIME_COMPILE_CFLAGS)
+CFLAGS += -std=gnu99 -Wall -Wextra -Werror -Wno-nonnull-compare -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_UTIME -DFAKE_SLEEP -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -DFAIL_PRE_INIT_CALLS -fPIC -DPREFIX='"'$(PREFIX)'"' -DLIBDIRNAME='"'$(LIBDIRNAME)'"' $(FAKETIME_COMPILE_CFLAGS)
 ifeq ($(PLATFORM),SunOS)
 CFLAGS += -D__EXTENSIONS__ -D_XOPEN_SOURCE=600
 endif

@@ -2282,6 +2282,16 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   if (!initialized)
   {
     recursion_depth++;
+#ifdef FAIL_PRE_INIT_CALLS
+      fprintf(stderr, "libfaketime: clock_gettime() was called before initialization.\n");
+      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime().\n");
+      if (tp != NULL)
+      {
+        tp->tv_sec = 0;
+        tp->tv_nsec = 0;
+      }
+      return -1;
+#else
     if (recursion_depth == 2)
     {
       fprintf(stderr, "libfaketime: Unexpected recursive calls to clock_gettime() without proper initialization. Trying alternative.\n");
@@ -2302,6 +2312,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
     else {
       ftpl_init();
     }
+#endif
     recursion_depth--;
   }
   /* sanity check */
