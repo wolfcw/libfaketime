@@ -1,6 +1,7 @@
 #!/bin/sh
 
 FTPL="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}"
+MALLOC_INTERCEPT=./libmallocintercept.so
 
 if [ -f /etc/faketimerc ] ; then
 	echo "Running the test program with your system-wide default in /etc/faketimerc"
@@ -60,6 +61,14 @@ echo
 echo "Running the 'date' command with 15 days negative offset specified"
 echo "\$ LD_PRELOAD=$FTPL FAKETIME=\"-15d\" date"
 LD_PRELOAD="$FTPL" FAKETIME="-15d" date
+echo
+
+echo "============================================================================="
+echo
+
+echo "Running the test program with malloc interception"
+echo "\$ LD_PRELOAD=./libmallocintercept.so:$FTPL ./timetest"
+LD_PRELOAD="./libmallocintercept.so:$FTPL" ./timetest
 echo
 
 echo "============================================================================="
