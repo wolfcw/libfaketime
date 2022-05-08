@@ -73,11 +73,11 @@ void *malloc(size_t size) {
 	return actual_malloc(size);
 }
 
-void free(void *) {
+void free(void *ptr) {
+  void *ptr2 = ptr + 1;
 	print_msg("Called free() from libmallocintercept...");
 	poke_faketime();
 	print_msg("successfully\n");
 
 	/* We cannot actually free memory */
 }
-
