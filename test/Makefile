@@ -26,7 +26,7 @@ all: $(ALL_TESTS)
 timetest: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
-test: timetest functest
+test: timetest functest libmallocintercept.so
 	@echo
 	@./test.sh
 
@@ -39,6 +39,9 @@ functest:
 
 randomtest: repeat_random
 	./randomtest.sh
+
+libmallocintercept.so: libmallocintercept.c
+	${CC} -shared -o $@ -fpic ${CFLAGS} $<
 
 # ensure our variadic argument unpacking/repacking works as expected
 confirm_variadic_promotion: variadic_promotion
@@ -73,7 +76,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random
+	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo

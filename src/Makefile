@@ -84,6 +84,11 @@
 #         - avoid that the faketime wrapper complains when running within a
 #           libfaketime environment
 #
+#     FAIL_PRE_INIT_CALLS
+#         - If the time is queried before the library was initialised, let the
+#           call fail instead of trying to initialise on-the-fly. This fixes /
+#           works around hangs that were seen with address sanitizer.
+#
 #   * Compilation addition: second libMT target added for building the pthread-
 #     enabled library as a separate library
 #
