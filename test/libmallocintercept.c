@@ -50,6 +50,7 @@ static void* actual_malloc(size_t size) {
 }
 
 static void poke_faketime(void) {
+#ifdef FAIL_PRE_INIT_CALLS
 	/* To complicate things for libfaketime, this calls clock_gettime()
 	 * while holding a lock. This should simulate problems that occurred
 	 * with address sanitizer.
@@ -60,6 +61,9 @@ static void poke_faketime(void) {
 	pthread_mutex_lock(&time_mutex);
 	clock_gettime(CLOCK_REALTIME, &timespec);
 	pthread_mutex_unlock(&time_mutex);
+#else
+	print_msg("FAIL_PRE_INIT_CALLS not defined, skipping poke_faketime() ");
+#endif
 }
 
 void *malloc(size_t size) {
