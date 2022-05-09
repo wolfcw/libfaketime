@@ -2968,20 +2968,40 @@ static void ftpl_init(void)
  *      =======================================================================
  */
 
-static void remove_trailing_eols(char *line)
+static void prepare_config_contents(char *contents)
 {
-  char *endp = line + strlen(line);
-  /*
-   * erase the last char if it's a newline
-   * or carriage return, and back up.
-   * keep doing this, but don't back up
-   * past the beginning of the string.
+  /* This function
+   * - removes line separators (\r and \n)
+   * - removes lines beginning with a comment character (# or ;)
    */
-# define is_eolchar(c) ((c) == '\n' || (c) == '\r')
-  while (endp > line && is_eolchar(endp[-1]))
-  {
-    *--endp = '\0';
+  char *read_position = contents;
+  char *write_position = contents;
+  bool in_comment = false;
+  bool beginning_of_line = true;
+
+  while (*read_position != '\0') {
+    if (beginning_of_line && (*read_position == '#' || *read_position == ';')) {
+      /* The line begins with a comment character and should be completely ignored */
+      in_comment = true;
+    }
+    beginning_of_line = false;
+
+    if (*read_position == '\n') {
+      /* We reached the end of the line that should be ignored (if any is ignored) */
+      in_comment = false;
+      /* The next character begins a new line */
+      beginning_of_line = true;
+    }
+
+    /* If we are not in a comment and are not looking at a line break, copy the
+     * character from the read position to the write position. */
+    if (!in_comment && *read_position != '\r' && *write_position != '\n') {
+      *write_position = *read_position;
+      write_position++;
+    }
+    read_position++;
   }
+  *write_position = '\0';
 }
 
 
@@ -3018,30 +3038,25 @@ int read_config_file()
   static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
   static char custom_filename[BUFSIZ];
   static char filename[BUFSIZ];
-  FILE *faketimerc;
+  int faketimerc;
   /* check whether there's a .faketimerc in the user's home directory, or
    * a system-wide /etc/faketimerc present.
    * The /etc/faketimerc handling has been contributed by David Burley,
    * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
   (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
   (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
-  if ((faketimerc = fopen(custom_filename, "rt")) != NULL ||
-      (faketimerc = fopen(filename, "rt")) != NULL ||
-      (faketimerc = fopen("/etc/faketimerc", "rt")) != NULL)
+  if ((faketimerc = open(custom_filename, O_RDONLY)) != -1 ||
+      (faketimerc = open(filename, O_RDONLY)) != -1 ||
+      (faketimerc = open("/etc/faketimerc", O_RDONLY)) != -1)
   {
-    static char line[BUFFERLEN];
-    while (fgets(line, BUFFERLEN, faketimerc) != NULL)
-    {
-      if ((strlen(line) > 1) && (line[0] != ' ') &&
-          (line[0] != '#') && (line[0] != ';'))
-      {
-        remove_trailing_eols(line);
-        strncpy(user_faked_time, line, BUFFERLEN-1);
-        user_faked_time[BUFFERLEN-1] = 0;
-        break;
-      }
+    ssize_t length = read(faketimerc, user_faked_time, sizeof(user_faked_time) - 1);
+    close(faketimerc);
+    if (length < 0) {
+      length = 0;
     }
-    fclose(faketimerc);
+    user_faked_time[length] = 0;
+
+    prepare_config_contents(user_faked_time);
     parse_ft_string(user_faked_time);
     return 1;
   }
