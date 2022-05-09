@@ -72,6 +72,16 @@ LD_PRELOAD="./libmallocintercept.so:$FTPL" ./timetest
 echo
 
 echo "============================================================================="
+echo
+
+echo "@2005-03-29 14:14:14" > .faketimerc-for-test
+echo "Running the test program with malloc interception and file faketimerc"
+echo "\$ FAKETIME_NO_CACHE=1 FAKETIME_TIMESTAMP_FILE=.faketimerc-for-test LD_PRELOAD=./libmallocintercept.so:$FTPL ./timetest"
+FAKETIME_NO_CACHE=1 FAKETIME_TIMESTAMP_FILE=.faketimerc-for-test LD_PRELOAD="./libmallocintercept.so:$FTPL" ./timetest
+rm .faketimerc-for-test
+echo
+
+echo "============================================================================="
 echo "Testing finished."
 
 exit 0
