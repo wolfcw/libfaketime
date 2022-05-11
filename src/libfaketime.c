@@ -251,6 +251,7 @@ static int          (*real_pselect)         (int nfds, fd_set *restrict readfds,
                                              const sigset_t *sigmask);
 #endif
 static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
+static int          (*real_sem_clockwait)   (sem_t *sem, clockid_t clockid, const struct timespec *abstime);
 #endif
 #ifdef __APPLEOSX__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
@@ -1823,6 +1824,54 @@ int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
   DONT_FAKE_TIME(result = (*real_sem_timedwait)(sem, real_abs_timeout_pt));
   return result;
 }
+
+/* EXPERIMENTAL */
+int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
+{
+  int result;
+  struct timespec real_abstime, *real_abstime_pt;
+
+  /* sanity check */
+  if (abstime == NULL)
+  {
+    return -1;
+  }
+
+  if (!CHECK_MISSING_REAL(sem_clockwait)) return -1;
+
+  if (!dont_fake)
+  {
+    struct timespec tdiff, timeadj;
+
+    timespecsub(abstime, &user_faked_time_timespec, &tdiff);
+
+    if (user_rate_set)
+    {
+      timespecmul(&tdiff, user_rate, &timeadj);
+    }
+    else
+    {
+        timeadj = tdiff;
+    }
+    if (clockid == CLOCK_REALTIME)
+    {
+      timespecadd(&ftpl_starttime.real, &timeadj, &real_abstime);
+    }
+    if (clockid == CLOCK_MONOTONIC)
+    {
+      timespecadd(&ftpl_starttime.mon, &timeadj, &real_abstime);
+    }
+    real_abstime_pt = &real_abstime;
+  }
+  else
+  {
+    /* cast away constness */
+    real_abstime_pt = (struct timespec *)abstime;
+  }
+
+  DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, clockid, real_abstime_pt));
+  return result;
+}
 #endif
 
 #ifndef __APPLE__
@@ -2620,6 +2669,7 @@ static void ftpl_init(void)
   real_pselect =            dlsym(RTLD_NEXT, "pselect");
 #endif
   real_sem_timedwait =      dlsym(RTLD_NEXT, "sem_timedwait");
+  real_sem_clockwait =      dlsym(RTLD_NEXT, "sem_clockwait");
 #endif
 #ifdef FAKE_INTERNAL_CALLS
   real___ftime =              dlsym(RTLD_NEXT, "__ftime");
