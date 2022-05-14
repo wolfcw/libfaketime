@@ -1728,7 +1728,7 @@ int select(int nfds, fd_set *readfds,
 #endif
 
   /* scale timeout back if user rate is set, #382 */
-  if (user_rate_set && (timeout != NULL)) 
+  if (user_rate_set && (timeout != NULL))
   {
     struct timespec ts;
 
@@ -1739,7 +1739,7 @@ int select(int nfds, fd_set *readfds,
 
     timeout->tv_sec = ts.tv_sec;
     timeout->tv_usec = ts.tv_nsec / 1000;
-  } 
+  }
 
   return ret;
 }
@@ -1847,7 +1847,7 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
 
     if (user_rate_set)
     {
-      timespecmul(&tdiff, user_rate, &timeadj);
+      timespecmul(&tdiff, 1.0 / user_rate, &timeadj);
     }
     else
     {
@@ -3687,9 +3687,9 @@ bool needs_forced_monotonic_fix(char *function_name)
       result = true;
   }
   else
-  { 
+  {
 #ifdef __GLIBC__
-    /* Here we try to derive the necessity for a forced monotonic fix * 
+    /* Here we try to derive the necessity for a forced monotonic fix *
      * based on glibc version. What could possibly go wrong?          */
 
     int glibc_major, glibc_minor;
@@ -3713,7 +3713,7 @@ bool needs_forced_monotonic_fix(char *function_name)
     fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (glibc version %s)\n",
 		    function_name, result ? "yes":"no", glibc_version_string);
 #else
-    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (not glibc-compiled)\n", 
+    fprintf(stderr, "libfaketime: forced monotonic fix for %s = %s (not glibc-compiled)\n",
 		    function_name, result ? "yes":"no");
 #endif
 
