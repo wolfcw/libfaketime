@@ -1831,6 +1831,12 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
   int result;
   struct timespec real_abstime, *real_abstime_pt;
 
+  if ((!fake_monotonic_clock) && (clockid == CLOCK_MONOTONIC))
+  {
+    DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, clockid, abstime));
+    return result;
+  }
+
   /* sanity check */
   if (abstime == NULL)
   {
