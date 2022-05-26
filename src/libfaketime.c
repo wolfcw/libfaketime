@@ -689,7 +689,8 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
     {
       if (errno == EINTR)
       {
-        return next_time(tp, ticklen);
+        next_time(tp, ticklen);
+        return;
       }
       else
       {
@@ -733,7 +734,8 @@ static void save_time(struct timespec *tp)
     {
       if (errno == EINTR)
       {
-        return save_time(tp);
+        save_time(tp);
+        return;
       }
       else
       {
@@ -858,7 +860,8 @@ void lock_for_stat()
     {
       if (errno == EINTR)
       {
-        return lock_for_stat();
+        lock_for_stat();
+        return;
       }
       else
       {
@@ -2035,7 +2038,9 @@ int timer_settime_22(int timerid, int flags,
   }
   else
   {
-    return (timer_settime_common((timer_t_or_int)timerid, flags, new_value, old_value,
+    timer_t_or_int temp;
+    temp.int_member = timerid;
+    return (timer_settime_common(temp, flags, new_value, old_value,
             FT_COMPAT_GLIBC_2_2, TIMER_ABSTIME));
   }
 }
@@ -2057,7 +2062,9 @@ int timer_settime_233(timer_t timerid, int flags,
   }
   else
   {
-    return (timer_settime_common((timer_t_or_int)timerid, flags, new_value, old_value,
+    timer_t_or_int temp;
+    temp.timer_t_member = timerid;
+    return (timer_settime_common(temp, flags, new_value, old_value,
             FT_COMPAT_GLIBC_2_3_3, TIMER_ABSTIME));
   }
 }
@@ -2128,7 +2135,9 @@ int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
   }
   else
   {
-    return (timer_gettime_common((timer_t_or_int)timerid, curr_value,
+    timer_t_or_int temp;
+    temp.timer_t_member = timerid;
+    return (timer_gettime_common(temp, curr_value,
          FT_COMPAT_GLIBC_2_2));
   }
 }
@@ -2148,7 +2157,9 @@ int timer_gettime_233(timer_t timerid, struct itimerspec *curr_value)
   }
   else
   {
-    return (timer_gettime_common((timer_t_or_int)timerid, curr_value,
+    timer_t_or_int temp;
+    temp.timer_t_member = timerid;
+    return (timer_gettime_common(temp, curr_value,
             FT_COMPAT_GLIBC_2_3_3));
   }
 }
@@ -2176,7 +2187,9 @@ int timerfd_settime(int fd, int flags,
   }
   else
   {
-    return (timer_settime_common((timer_t_or_int)fd, flags, new_value, old_value, FT_FD,
+    timer_t_or_int temp;
+    temp.int_member = fd;
+    return (timer_settime_common(temp, flags, new_value, old_value, FT_FD,
                                  TFD_TIMER_ABSTIME));
   }
 }
@@ -2196,7 +2209,9 @@ int timerfd_gettime(int fd, struct itimerspec *curr_value)
   }
   else
   {
-    return (timer_gettime_common((timer_t_or_int)fd, curr_value, FT_FD));
+    timer_t_or_int temp;
+    temp.int_member = fd;
+    return (timer_gettime_common(temp, curr_value, FT_FD));
   }
 }
 #endif
