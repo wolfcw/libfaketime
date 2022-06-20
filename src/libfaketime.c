@@ -710,6 +710,25 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
   }
 }
 
+static void reset_time()
+{
+  system_time_from_system(&ftpl_starttime);
+  if (shared_sem != NULL)
+  {
+    if (sem_wait(shared_sem) == -1)
+    {
+      perror("libfaketime: In reset_time(), sem_wait failed");
+      exit(1);
+    }
+    ft_shared->start_time = ftpl_starttime;
+    if (sem_post(shared_sem) == -1)
+    {
+      perror("libfaketime: In reset_time(), sem_post failed");
+      exit(1);
+    }
+  }
+}
+
 
 /*
  *      =======================================================================
@@ -2533,7 +2552,7 @@ static void parse_ft_string(const char *user_faked_time)
 
       /* Reset starttime */
       if (NULL == getenv("FAKETIME_DONT_RESET"))
-        system_time_from_system(&ftpl_starttime);
+        reset_time();
       goto parse_modifiers;
       break;
 
@@ -2561,7 +2580,7 @@ static void parse_ft_string(const char *user_faked_time)
         }
       }
       if (NULL == getenv("FAKETIME_DONT_RESET"))
-        system_time_from_system(&ftpl_starttime);
+        reset_time();
       goto parse_modifiers;
       break;
 
