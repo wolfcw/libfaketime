@@ -76,6 +76,9 @@
 /* pthread-handling contributed by David North, TDI in version 0.7 */
 #if defined PTHREAD_SINGLETHREADED_TIME || defined FAKE_PTHREAD
 #include <pthread.h>
+#ifdef __aarch64__
+#define _SYS_TIME_H 1
+#endif
 #include <signal.h>
 #endif
 
