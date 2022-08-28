@@ -122,13 +122,13 @@ endif
 
 LIB_LDFLAGS += -shared
 
-LDFLAGS += $(FAKETIME_LINK_FLAGS) -lpthread
+LDFLAGS += $(FAKETIME_LINK_FLAGS)
 ifneq ($(PLATFORM),SunOS)
 LDFLAGS += -Wl,--version-script=libfaketime.map
 endif
 
-LDADD += -ldl -lm -lrt
-BIN_LDFLAGS += -lrt
+LDADD += -ldl -lm -lrt -lpthread
+BIN_LDFLAGS += -lrt -lpthread
 
 SRC = libfaketime.c
 LIBS_OBJ = libfaketime.o libfaketimeMT.o
