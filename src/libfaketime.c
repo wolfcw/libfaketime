@@ -3142,9 +3142,13 @@ int read_config_file()
       (faketimerc = open(filename, O_RDONLY)) != -1 ||
       (faketimerc = open("/etc/faketimerc", O_RDONLY)) != -1)
   {
-    ssize_t length = read(faketimerc, user_faked_time, sizeof(user_faked_time) - 1);
+    ssize_t bytes;
+    ssize_t length = 0;
+    while ((bytes = read(faketimerc, user_faked_time + length, sizeof(user_faked_time) - 1 - length)) > 0) {
+      length += bytes;
+    }
     close(faketimerc);
-    if (length < 0) {
+    if (bytes < 0) {
       length = 0;
     }
     user_faked_time[length] = 0;
