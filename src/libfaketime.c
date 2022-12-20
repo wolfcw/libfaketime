@@ -196,7 +196,9 @@ static time_t       (*real_time)            (time_t *);
 static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
 static int          (*real_clock_gettime)   (clockid_t clk_id, struct timespec *tp);
+#ifdef TIME_UTC
 static int          (*real_timespec_get)    (struct timespec *ts, int base);
+#endif
 #ifdef FAKE_INTERNAL_CALLS
 static int          (*real___ftime)           (struct timeb *);
 static int          (*real___gettimeofday)    (struct timeval *, void *);
@@ -2441,6 +2443,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 }
 
 
+#ifdef TIME_UTC
 #ifdef MACOS_DYLD_INTERPOSE
 int macos_timespec_get(struct timespec *ts, int base)
 #else
@@ -2475,6 +2478,7 @@ int timespec_get(struct timespec *ts, int base)
   /* return the result to the caller */
   return result;
 }
+#endif
 
 
 /*
@@ -2681,7 +2685,9 @@ static void ftpl_init(void)
   real_lxstat64 =           dlsym(RTLD_NEXT, "__lxstat64");
   real_time =               dlsym(RTLD_NEXT, "time");
   real_ftime =              dlsym(RTLD_NEXT, "ftime");
+#ifdef TIME_UTC
   real_timespec_get =       dlsym(RTLD_NEXT, "timespec_get");
+#endif
 #ifdef FAKE_FILE_TIMESTAMPS
   real_utimes  =            dlsym(RTLD_NEXT, "utimes");
   real_utime   =            dlsym(RTLD_NEXT, "utime");
@@ -4163,7 +4169,9 @@ void do_macos_dyld_interpose(void) {
   DYLD_INTERPOSE(macos_nanosleep, nanosleep);
   DYLD_INTERPOSE(macos_poll, poll);
 #endif
+#ifdef TIME_UTC
   DYLD_INTERPOSE(macos_timespec_get, timespec_get);
+#endif
   DYLD_INTERPOSE(macos_select, select);
 #ifdef FAKE_RANDOM
   DYLD_INTERPOSE(macos_getentropy, getentropy);
