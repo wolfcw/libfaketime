@@ -969,10 +969,7 @@ static inline void fake_stat64buf (struct stat64 *buf) {
 /* macOS dyld interposing uses the function's real name instead of real_name */
 #ifdef MACOS_DYLD_INTERPOSE
 #define STAT_HANDLER_COMMON(name, buf, fake_statbuf, ...) \
-  if (!initialized) \
-  { \
-    ftpl_init(); \
-  } \
+  ftpl_init(); \
   if (!CHECK_MISSING_REAL(name)) return -1; \
   \
   int result; \
@@ -993,10 +990,7 @@ static inline void fake_stat64buf (struct stat64 *buf) {
   return result;
 #else
 #define STAT_HANDLER_COMMON(name, buf, fake_statbuf, ...) \
-  if (!initialized) \
-  { \
-    ftpl_init(); \
-  } \
+  ftpl_init(); \
   if (!CHECK_MISSING_REAL(name)) return -1; \
   \
   int result; \
@@ -1124,10 +1118,7 @@ int macos_utime(const char *filename, const struct utimbuf *times)
 int utime(const char *filename, const struct utimbuf *times)
 #endif
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (!CHECK_MISSING_REAL(utime)) return -1;
 
   int result;
@@ -1160,10 +1151,7 @@ int macos_utimes(const char *filename, const struct timeval times[2])
 int utimes(const char *filename, const struct timeval times[2])
 #endif
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (!CHECK_MISSING_REAL(utimes)) return -1;
 
   int result;
@@ -1238,10 +1226,7 @@ int macos_utimensat(int dirfd, const char *filename, const struct timespec times
 int utimensat(int dirfd, const char *filename, const struct timespec times[2], int flags)
 #endif
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (!CHECK_MISSING_REAL(utimensat)) return -1;
 
   int result;
@@ -1261,10 +1246,7 @@ int macos_futimens(int fd, const struct timespec times[2])
 int futimens(int fd, const struct timespec times[2])
 #endif
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (!CHECK_MISSING_REAL(futimens)) return -1;
 
   int result;
@@ -1299,10 +1281,7 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
   int result;
   struct timespec real_req;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_nanosleep == NULL)
   {
     return -1;
@@ -1354,10 +1333,7 @@ int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec *req, s
   int result;
   struct timespec real_req;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_clock_nanosleep == NULL)
   {
     return -1;
@@ -1435,10 +1411,7 @@ int usleep(useconds_t usec)
 {
   int result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (user_rate_set && !dont_fake)
   {
     struct timespec real_req;
@@ -1487,10 +1460,7 @@ unsigned int macos_sleep(unsigned int seconds)
 unsigned int sleep(unsigned int seconds)
 #endif
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (user_rate_set && !dont_fake)
   {
     if (real_nanosleep == NULL)
@@ -1559,10 +1529,7 @@ unsigned int alarm(unsigned int seconds)
   unsigned int ret;
   unsigned int seconds_real = (user_rate_set && !dont_fake)?((1.0 / user_rate) * seconds):seconds;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_alarm == NULL)
   {
     return -1;
@@ -1585,10 +1552,7 @@ int ppoll(struct pollfd *fds, nfds_t nfds,
   struct timespec real_timeout, *real_timeout_pt;
   int ret;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_ppoll == NULL)
   {
     return -1;
@@ -1623,10 +1587,7 @@ int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
   int ret, real_timeout;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_epoll_wait == NULL)
   {
     return -1;
@@ -1650,10 +1611,7 @@ int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout
 {
   int ret, real_timeout;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_epoll_pwait == NULL)
   {
     return -1;
@@ -1682,10 +1640,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
   int ret, timeout_real = (user_rate_set && !dont_fake && (timeout > 0))?(timeout / user_rate):timeout;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_poll == NULL)
   {
     return -1;
@@ -1717,10 +1672,7 @@ int select(int nfds, fd_set *readfds,
   int ret;
   struct timeval timeout_real;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
 
   if (real_select == NULL)
   {
@@ -1784,10 +1736,7 @@ int pselect(int nfds, fd_set *readfds,
   int ret;
   struct timespec timeout_real;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
 
   if (real_pselect == NULL)
   {
@@ -1940,10 +1889,7 @@ timer_settime_common(timer_t_or_int timerid, int flags,
   struct itimerspec new_real;
   struct itimerspec *new_real_pt = &new_real;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (new_value == NULL)
   {
     new_real_pt = NULL;
@@ -2052,10 +1998,7 @@ int timer_settime_22(int timerid, int flags,
          const struct itimerspec *new_value,
          struct itimerspec *old_value)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timer_settime_22 == NULL)
   {
     return -1;
@@ -2076,10 +2019,7 @@ int timer_settime_233(timer_t timerid, int flags,
       const struct itimerspec *new_value,
       struct itimerspec *old_value)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timer_settime_233 == NULL)
   {
     return -1;
@@ -2101,10 +2041,7 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
 {
   int result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timer_gettime_233 == NULL)
   {
     return -1;
@@ -2149,10 +2086,7 @@ int timer_gettime_common(timer_t_or_int timerid, struct itimerspec *curr_value, 
  */
 int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timer_gettime_22 == NULL)
   {
     return -1;
@@ -2171,10 +2105,7 @@ int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
  */
 int timer_gettime_233(timer_t timerid, struct itimerspec *curr_value)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timer_gettime_233 == NULL)
   {
     return -1;
@@ -2201,10 +2132,7 @@ int timerfd_settime(int fd, int flags,
          const struct itimerspec *new_value,
          struct itimerspec *old_value)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timerfd_settime == NULL)
   {
     return -1;
@@ -2223,10 +2151,7 @@ int timerfd_settime(int fd, int flags,
  */
 int timerfd_gettime(int fd, struct itimerspec *curr_value)
 {
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (real_timerfd_gettime == NULL)
   {
     return -1;
@@ -2263,10 +2188,7 @@ time_t time(time_t *time_tptr)
   struct timespec tp;
   time_t result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
 #ifdef MACOS_DYLD_INTERPOSE
   DONT_FAKE_TIME(result = (*clock_gettime)(CLOCK_REALTIME, &tp));
 #else
@@ -2293,10 +2215,7 @@ int ftime(struct timeb *tb)
   struct timespec tp;
   int result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   /* sanity check */
   if (tb == NULL)
     return 0;               /* ftime() always returns 0, see manpage */
@@ -2336,10 +2255,7 @@ int gettimeofday(struct timeval *tv, void *tz)
 {
   int result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   /* sanity check */
   if (tv == NULL)
   {
@@ -2452,10 +2368,7 @@ int timespec_get(struct timespec *ts, int base)
 {
   int result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   /* sanity check */
   if (ts == NULL)
   {
@@ -2656,7 +2569,7 @@ parse_modifiers:
  *      =======================================================================
  */
 
-static void ftpl_init(void)
+static void ftpl_really_init(void)
 {
   char *tmp_env;
   bool dont_fake_final;
@@ -3060,6 +2973,12 @@ static void ftpl_init(void)
   dont_fake = dont_fake_final;
 }
 
+inline static void ftpl_init(void) {
+  if (!initialized)
+  {
+    ftpl_really_init();
+  }
+}
 
 /*
  *      =======================================================================
@@ -3670,10 +3589,7 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   clockid_t clock_id;
   int result;
 
-  if (!initialized)
-  {
-    ftpl_init();
-  }
+  ftpl_init();
   if (!CHECK_MISSING_REAL(pthread_cond_init_232)) return -1;
   result = real_pthread_cond_init_232(cond, attr);
 
@@ -4073,10 +3989,7 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
   if (bypass_randomness(buf, buflen)) {
       return buflen;
   } else {
-    if (!initialized)
-      {
-        ftpl_init();
-      }
+    ftpl_init();
     return real_getrandom(buf, buflen, flags);
   }
 }
@@ -4088,8 +4001,7 @@ int getentropy(void *buffer, size_t length) {
   if (bypass_randomness(buffer, length)) {
       return 0;
   } else {
-    if (!initialized)
-      ftpl_init();
+    ftpl_init();
 #ifdef MACOS_DYLD_INTERPOSE
     return getentropy(buffer, length);
 #else
@@ -4110,10 +4022,7 @@ pid_t getpid() {
     long int pid = strtol(pidstring, NULL, 0);
     return (pid_t)(pid);
   } else {
-    if (!initialized)
-      {
-        ftpl_init();
-      }
+    ftpl_init();
     return real_getpid();
   }
 }
@@ -4150,8 +4059,7 @@ long syscall(long number, ...) {
   for (int i = 0; i < syscall_max_args; i++)
     a[i] = va_arg(ap, variadic_promotion_t);
   va_end(ap);
-  if (!initialized)
-    ftpl_init();
+  ftpl_init();
   return real_syscall(number, a[0], a[1], a[2], a[3], a[4], a[5]);
 }
 #endif
