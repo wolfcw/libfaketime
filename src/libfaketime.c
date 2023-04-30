@@ -3184,7 +3184,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
       /* check whether we should spawn an external command */
       if (spawned == 0)
       { /* exec external command once only */
-        if (((tmp_ts.tv_sec == ft_spawn_secs) || (callcounter == ft_spawn_ncalls)) && (spawned == 0))
+        if ((((ft_spawn_secs > -1) && (tmp_ts.tv_sec >= ft_spawn_secs)) || (callcounter == ft_spawn_ncalls)) && (spawned == 0))
         {
           spawned = 1;
           (void) (system(ft_spawn_target) + 1);
