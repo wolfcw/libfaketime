@@ -1358,7 +1358,9 @@ int clock_nanosleep(clockid_t clock_id, int flags, const struct timespec *req, s
       }
       else if (clock_id == CLOCK_MONOTONIC)
       {
-        timespecadd(&ftpl_starttime.mon, &tdiff, &real_req);
+        if (fake_monotonic_clock) {
+          timespecadd(&ftpl_starttime.mon, &tdiff, &real_req);
+        }
       }
       else /* presumably only CLOCK_PROCESS_CPUTIME_ID, leave untouched */
       {
