@@ -520,6 +520,10 @@ static void ft_shm_init (void)
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
   sem_t *shared_semR = NULL;
   static int nt=1;
+  static int ft_shm_initialized = 0;
+
+  /* do all of this once only */
+  if (ft_shm_initialized > 0) return;
 
   /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
@@ -595,6 +599,12 @@ static void ft_shm_init (void)
       exit(1);
     }
   }
+  if (getenv("FAKETIME_FLSHM") != NULL)
+  { /* force the deletion of the shm sync env variable */
+    unsetenv("FAKETIME_SHARED");
+  }
+
+  ft_shm_initialized = 1;
 }
 
 static void ft_cleanup (void)
