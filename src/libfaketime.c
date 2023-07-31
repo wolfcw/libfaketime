@@ -192,6 +192,9 @@ static int          (*real_xstat64)         (int, const char *, struct stat64 *)
 static int          (*real_fxstat64)        (int, int , struct stat64 *);
 static int          (*real_fxstatat64)      (int, int , const char *, struct stat64 *, int);
 static int          (*real_lxstat64)        (int, const char *, struct stat64 *);
+#ifdef STATX_TYPE
+static int          (*real_statx)           (int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf);
+#endif
 static time_t       (*real_time)            (time_t *);
 static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
@@ -1119,6 +1122,38 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
   STAT64_HANDLER(lxstat64, buf, ver, path, buf);
 }
 #endif
+#endif
+
+#ifdef STATX_TYPE
+static inline void fake_statx_timestamp(struct statx_timestamp* p)
+{
+  struct timespec t = {p->tv_sec,p->tv_nsec};
+  fake_clock_gettime(CLOCK_REALTIME, &t);
+  p->tv_sec = t.tv_sec;
+  p->tv_nsec = t.tv_nsec;
+}
+
+static inline void fake_statxbuf (struct statx *buf) {
+  lock_for_stat();
+  if (buf->stx_mask & STATX_ATIME) {
+    fake_statx_timestamp(&buf->stx_atime);
+  }
+  if (buf->stx_mask & STATX_CTIME) {
+    fake_statx_timestamp(&buf->stx_ctime);
+  }
+  if (buf->stx_mask & STATX_MTIME) {
+    fake_statx_timestamp(&buf->stx_mtime);
+  }
+  if (buf->stx_mask & STATX_BTIME) {
+    fake_statx_timestamp(&buf->stx_btime);
+  }
+  unlock_for_stat();
+}
+
+int statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf)
+{
+  STAT_HANDLER_COMMON(statx, statxbuf, fake_statxbuf, dirfd, pathname, flags, mask, statxbuf)
+}
 #endif
 
 #ifdef FAKE_FILE_TIMESTAMPS
@@ -2615,6 +2650,9 @@ static void ftpl_really_init(void)
   real_fxstat64 =           dlsym(RTLD_NEXT, "__fxstat64");
   real_fxstatat64 =         dlsym(RTLD_NEXT, "__fxstatat64");
   real_lxstat64 =           dlsym(RTLD_NEXT, "__lxstat64");
+#ifdef STATX_TYPE
+  real_statx =              dlsym(RTLD_NEXT, "statx");
+#endif
   real_time =               dlsym(RTLD_NEXT, "time");
   real_ftime =              dlsym(RTLD_NEXT, "ftime");
 #ifdef TIME_UTC
