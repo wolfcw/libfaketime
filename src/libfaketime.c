@@ -23,6 +23,8 @@
 
 #define _GNU_SOURCE             /* required to get RTLD_NEXT defined */
 
+#define _LARGEFILE64_SOURCE 1   /* required for stat64 on musl */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
