@@ -1166,6 +1166,20 @@ static long long faketime_offset_ns()
   return ((long long)user_offset.tv_sec) * 1000000000 + (long long)user_offset.tv_nsec;
 }
 
+// figure out what combination of ifdefs is appropriate, or use
+// this unconditionally
+#if 1
+
+static long long mult_div_avoid_overflow(long long a, long long b, long long d)
+{
+  __int128_t acc = a;
+  acc *= b;
+  acc /= d;
+  return (long long)acc;
+}
+
+#else
+
 // (a * b + c) / d, but do something to avoid multiplication overflow
 // (only "mostly" prevents overflow, not if the values are already
 // over 2^62)
@@ -1194,6 +1208,8 @@ static long long mult_div_avoid_overflow(long long a, long long b, long long d)
   long long res = a / d;
   return res + mad_div_avoid_overflow_inner(a%d, b, 0, d);
 }
+
+#endif
 
 static long long faketime_do_tapered_transform_gen(long long t, long long taper_begin, long long taper_end, long long offset)
 {
