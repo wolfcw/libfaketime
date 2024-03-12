@@ -2790,7 +2790,10 @@ static void ftpl_really_init(void)
 #ifdef FAKE_STATELESS
   if (0) ft_shm_init();
 #else
-  ft_shm_init();
+  tmp_env = getenv("FAKETIME_DISABLE_SHM");
+  if (!tmp_env || tmp_env[0] == '0') {
+    ft_shm_init();
+  }
 #endif
 #ifdef FAKE_STAT
   if (getenv("NO_FAKE_STAT")!=NULL)
