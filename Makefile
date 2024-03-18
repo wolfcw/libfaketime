@@ -33,4 +33,23 @@ distclean:
 	$(MAKE) $(SELECTOR) -C src distclean
 	$(MAKE) $(SELECTOR) -C test distclean
 
+macarm64:
+	$(MAKE) $(SELECTOR) -C src clean
+	$(MAKE) $(SELECTOR) -C src distclean
+	$(MAKE) $(SELECTOR) -C src all
+# 	$(MAKE) $(SELECTOR) -C test all
+# 	$(MAKE) $(SELECTOR) -C test distclean
+	$(MAKE) $(SELECTOR) -C src install
+	$(MAKE) $(SELECTOR) -C man install
+	$(INSTALL) -dm0755 "${DESTDIR}${PREFIX}/share/doc/faketime/"
+	$(INSTALL) -m0644 README "${DESTDIR}${PREFIX}/share/doc/faketime/README"
+	$(INSTALL) -m0644 NEWS "${DESTDIR}${PREFIX}/share/doc/faketime/NEWS"
+
+macarm64full:
+	$(MAKE) $(SELECTOR) -C src clean
+	$(MAKE) $(SELECTOR) -C src distclean
+	$(MAKE) $(SELECTOR) -C src all
+	$(MAKE) $(SELECTOR) -C test all
+# 	$(MAKE) $(SELECTOR) -C test distclean
+
 .PHONY: all test install uninstall clean distclean
