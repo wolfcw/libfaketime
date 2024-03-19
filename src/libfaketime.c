@@ -310,6 +310,8 @@ static int initialized = 0;
 static int    fake_gettimeofday(struct timeval *tv);
 static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 int           read_config_file();
+bool          str_array_contains(const char *haystack, const char *needle);
+void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
 
 /** Semaphore protecting shared data */
 static sem_t *shared_sem = NULL;
@@ -2640,6 +2642,11 @@ static void ftpl_really_init(void)
   const char *progname = __progname;
 #endif
 
+  char *ignore_list = getenv("FAKETIME_IGNORE_SYMBOLS");
+  bool should_debug_dlsym = getenv("FAKETIME_DEBUG_DLSYM");
+#define dlsym(handle, symbol) ft_dlvsym(handle, symbol, NULL, symbol, ignore_list, should_debug_dlsym)
+#define dlvsym(handle, symbol, version) ft_dlvsym(handle, symbol, version, symbol "@" version, ignore_list, should_debug_dlsym)
+
   /* Look up all real_* functions. NULL will mark missing ones. */
   real_stat =               dlsym(RTLD_NEXT, "stat");
   real_lstat =              dlsym(RTLD_NEXT, "lstat");
@@ -2785,6 +2792,8 @@ static void ftpl_really_init(void)
   do_macos_dyld_interpose();
 #endif
 
+#undef dlsym
+#undef dlvsym
   initialized = 1;
 
 #ifdef FAKE_STATELESS
@@ -3042,6 +3051,38 @@ inline static void ftpl_init(void) {
   }
 }
 
+void *ft_dlvsym(void *handle, const char *symbol, const char *version,
+    const char *full_name, char *ignore_list, bool should_debug_dlsym)
+{
+  // dlsym or dlvsym with a non-resolving symbol results in a malloc call,
+  // which can trigger infinite recursion or deadlock, as seen in
+  // https://github.com/wolfcw/libfaketime/issues/130
+  // As a work-around, enable users to identify the list of calls,
+  // FAKETIME_DEBUG_DLSYM=1 faketime ...
+  // and then repeat the faketime call again to skip dlsym/dlvsym calls
+  // for these symbols, for example:
+  // FAKETIME_IGNORE_SYMBOLS=__ftime,timer_settime@GLIBC_2.2,timer_gettime@GLIBC_2.2 faketime ...
+  if (ignore_list && str_array_contains(ignore_list, full_name)) {
+    return NULL;
+  }
+  void *addr = NULL;
+#ifdef __GLIBC__
+  if (version) {
+    addr = dlvsym(handle, symbol, version);
+  } else {
+    addr = dlsym(handle, symbol);
+  }
+#else
+  // dlvsym does not exists, version is always NULL at compile time.
+  addr = dlsym(handle, symbol);
+#endif
+  if (!addr && should_debug_dlsym) {
+    fprintf(stderr, "[FAKETIME_DEBUG_DLSYM] Cannot find symbol: %s\n", full_name);
+  }
+  return addr;
+}
+
+
 /*
  *      =======================================================================
  *      Helper functions                                             === HELPER
@@ -3082,6 +3123,23 @@ static void prepare_config_contents(char *contents)
     read_position++;
   }
   *write_position = '\0';
+}
+
+bool str_array_contains(const char *haystack, const char *needle)
+{
+  size_t needle_len = strlen(needle);
+  char *pos = strstr(haystack, needle);
+  while (pos) {
+    if (pos == haystack || *(pos - 1) == ',') {
+      char nextc = *(pos + needle_len);
+      if (nextc == '\0' || nextc == ',') {
+        // Found needle in comma-separated haystack.
+        return true;
+      }
+    }
+    pos = strstr(pos + 1, needle);
+  }
+  return false;
 }
 
 
