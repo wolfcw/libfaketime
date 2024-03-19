@@ -486,6 +486,9 @@ for long-running systems (servers with high uptime) and systems on which
 a lot of processes are started (e.g., servers handling many containers
 or similar virtualization mechanisms).
 
+Use of shared memory can be disabled by setting the FAKETIME_DISABLE_SHM
+environment variable, or equivalently, passing --disable-shm to faketime.
+
 
 Intercepting time-setting calls
 -------------------------------

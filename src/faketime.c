@@ -78,6 +78,9 @@ void usage(const char *name)
 #ifdef FAKE_PID
   "  -p PID              : Pretend that the program's process ID is PID\n"
 #endif
+#ifndef FAKE_STATELESS
+  "  --disable-shm       : Disable use of shared memory by libfaketime.\n"
+#endif
   "  --date-prog PROG    : Use specified GNU-compatible implementation of 'date' program\n"
   "\n"
   "Examples:\n"
@@ -150,6 +153,14 @@ int main (int argc, char **argv)
       curr_opt++;
       continue;
     }
+#ifndef FAKE_STATELESS
+    else if (0 == strcmp(argv[curr_opt], "--disable-shm"))
+    {
+      setenv("FAKETIME_DISABLE_SHM", "1", true);
+      curr_opt++;
+      continue;
+    }
+#endif
     else if (0 == strcmp(argv[curr_opt], "--date-prog"))
     {
       curr_opt++;

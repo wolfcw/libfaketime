@@ -32,6 +32,9 @@ use the advanced timestamp specification format.
 \fB\--exclude-monotonic\fR
 Do not fake time when the program makes a call to clock_gettime with a CLOCK_MONOTONIC clock.
 .TP
+\fB\--disable-shm\fR
+Disable use of shared memory by libfaketime.
+.TP
 \fB\--date-prog <PATH>\fR
 Use a specific GNU-date compatible implementation of the helper used to transform "timestamp format" strings into programmatically usable dates, instead of a compile-time default guess for the generic target platform.
 
