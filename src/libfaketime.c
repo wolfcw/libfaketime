@@ -3075,6 +3075,7 @@ void *ft_dlvsym(void *handle, const char *symbol, const char *version,
 #else
   // dlvsym does not exists, version is always NULL at compile time.
   addr = dlsym(handle, symbol);
+  if (version != NULL) fprintf(stderr, "ft_dlvsym(): version is not NULL\n");
 #endif
   if (!addr && should_debug_dlsym) {
     fprintf(stderr, "[FAKETIME_DEBUG_DLSYM] Cannot find symbol: %s\n", full_name);
