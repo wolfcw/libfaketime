@@ -628,6 +628,7 @@ static void ft_cleanup (void)
   if (shared_sem != NULL)
   {
     sem_close(shared_sem);
+    shared_sem = NULL;
   }
 #ifdef FAKE_PTHREAD
   if (pthread_rwlock_destroy(&monotonic_conds_lock) != 0) {
