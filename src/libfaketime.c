@@ -164,6 +164,13 @@ struct utimbuf {
 #include <sys/random.h>
 #endif
 
+/* __timespec64 is needed for clock_gettime64 on 32-bit architectures */
+struct __timespec64
+{
+  uint64_t tv_sec;         /* Seconds */
+  uint64_t tv_nsec;        /* Nanoseconds */
+};
+
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
@@ -201,6 +208,7 @@ static time_t       (*real_time)            (time_t *);
 static int          (*real_ftime)           (struct timeb *);
 static int          (*real_gettimeofday)    (struct timeval *, void *);
 static int          (*real_clock_gettime)   (clockid_t clk_id, struct timespec *tp);
+static int          (*real_clock_gettime64) (clockid_t clk_id, struct __timespec64 *tp);
 #ifdef TIME_UTC
 static int          (*real_timespec_get)    (struct timespec *ts, int base);
 #endif
@@ -2417,6 +2425,17 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   return result;
 }
 
+/* this is used by 32-bit architectures only */
+int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
+{
+  struct timespec tp;
+  int result;
+
+  result = clock_gettime(clk_id, &tp);
+  tp64->tv_sec = tp.tv_sec;
+  tp64->tv_nsec = tp.tv_nsec;
+  return result;
+}
 
 #ifdef TIME_UTC
 #ifdef MACOS_DYLD_INTERPOSE
@@ -2759,6 +2778,11 @@ static void ftpl_really_init(void)
   if (NULL == real_clock_gettime)
   {
     real_clock_gettime  =   dlsym(RTLD_NEXT, "clock_gettime");
+  }
+  real_clock_gettime64 =    dlsym(RTLD_NEXT, "clock_gettime64");
+  if (NULL == real_clock_gettime64)
+  {
+    real_clock_gettime64 =  dlsym(RTLD_NEXT, "__clock_gettime64");
   }
 #ifdef FAKE_TIMERS
 #if defined(__sun)
