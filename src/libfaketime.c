@@ -2437,6 +2437,27 @@ int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
   return result;
 }
 
+/* this is used by 32-bit architectures only */
+uint64_t __time64(uint64_t *write_out)
+{
+  struct timespec tp;
+  uint64_t output;
+  int error;
+
+  error = clock_gettime(CLOCK_REALTIME, &tp);
+  if (error == -1)
+  {
+    return (uint64_t)error;
+  }
+  output = tp.tv_sec;
+
+  if (write_out)
+  {
+    *write_out = output;
+  }
+  return output;
+}
+
 #ifdef TIME_UTC
 #ifdef MACOS_DYLD_INTERPOSE
 int macos_timespec_get(struct timespec *ts, int base)
