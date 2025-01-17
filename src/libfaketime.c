@@ -168,7 +168,7 @@ struct utimbuf {
 struct __timespec64
 {
   uint64_t tv_sec;         /* Seconds */
-  uint64_t tv_nsec;        /* Nanoseconds */
+  uint32_t tv_nsec;        /* this is 32-bit, apparently! */
 };
 
 /*
