@@ -171,6 +171,13 @@ struct __timespec64
   uint32_t tv_nsec;        /* this is 32-bit, apparently! */
 };
 
+/* __timespec64 is needed for clock_gettime64 on 32-bit architectures */
+struct __timeval64
+{
+  uint64_t tv_sec;         /* Seconds */
+  uint64_t tv_usec;        /* this is 64-bit, apparently! */
+};
+
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
@@ -2434,6 +2441,18 @@ int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
   result = clock_gettime(clk_id, &tp);
   tp64->tv_sec = tp.tv_sec;
   tp64->tv_nsec = tp.tv_nsec;
+  return result;
+}
+
+/* this is used by 32-bit architectures only */
+int __gettimeofday64(struct __timeval64 *tv64, void *tz)
+{
+  struct timeval tv;
+  int result;
+
+  result = gettimeofday(&tv, tz);
+  tv64->tv_sec = tv.tv_sec;
+  tv64->tv_usec = tv.tv_usec;
   return result;
 }
 
