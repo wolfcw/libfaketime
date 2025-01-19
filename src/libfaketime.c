@@ -876,7 +876,7 @@ static bool load_time(struct timespec *tp)
  *      =======================================================================
  */
 #ifdef FAKE_UTIME
-static int fake_utime_disabled = 0;
+static int fake_utime_disabled = 1;
 #endif
 
 
