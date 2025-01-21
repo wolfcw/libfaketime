@@ -304,7 +304,7 @@ static bool check_missing_real(const char *name, bool missing)
 #define CHECK_MISSING_REAL(name) \
   check_missing_real(#name, (NULL == real_##name))
 
-static int initialized = 0;
+static pthread_once_t initialized_once_control = PTHREAD_ONCE_INIT;
 
 /* prototypes */
 static int    fake_gettimeofday(struct timeval *tv);
@@ -2346,44 +2346,12 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 #endif
 {
   int result;
-  static int recursion_depth = 0;
 
-  if (!initialized)
-  {
-    recursion_depth++;
-#ifdef FAIL_PRE_INIT_CALLS
-      fprintf(stderr, "libfaketime: clock_gettime() was called before initialization.\n");
-      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime().\n");
-      if (tp != NULL)
-      {
-        tp->tv_sec = 0;
-        tp->tv_nsec = 0;
-      }
-      return -1;
-#else
-    if (recursion_depth == 2)
-    {
-      fprintf(stderr, "libfaketime: Unexpected recursive calls to clock_gettime() without proper initialization. Trying alternative.\n");
-      DONT_FAKE_TIME(ftpl_init()) ;
-    }
-    else if (recursion_depth == 3)
-    {
-      fprintf(stderr, "libfaketime: Cannot recover from unexpected recursive calls to clock_gettime().\n");
-      fprintf(stderr, "libfaketime:  Please check whether any other libraries are in use that clash with libfaketime.\n");
-      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime() to break recursion now... if that does not work, please check other libraries' error handling.\n");
-      if (tp != NULL)
-      {
-        tp->tv_sec = 0;
-        tp->tv_nsec = 0;
-      }
-      return -1;
-    }
-    else {
-      ftpl_init();
-    }
-#endif
-    recursion_depth--;
-  }
+  ftpl_init();
+  // If ftpl_init ends up recursing, pthread_once will deadlock.
+  // (Previously we attempted to detect this situation, and bomb out,
+  // but the approach taken wasn't thread-safe and broke in practice.)
+
   /* sanity check */
   if (tp == NULL)
   {
@@ -2795,7 +2763,6 @@ static void ftpl_really_init(void)
 
 #undef dlsym
 #undef dlvsym
-  initialized = 1;
 
 #ifdef FAKE_STATELESS
   if (0) ft_shm_init();
@@ -3046,10 +3013,7 @@ static void ftpl_really_init(void)
 }
 
 inline static void ftpl_init(void) {
-  if (!initialized)
-  {
-    ftpl_really_init();
-  }
+  pthread_once(&initialized_once_control, ftpl_really_init);
 }
 
 void *ft_dlvsym(void *handle, const char *symbol, const char *version,
