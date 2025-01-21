@@ -521,16 +521,20 @@ static void ft_shm_destroy(void)
   }
 }
 
+static pthread_once_t ft_shm_initialized_once_control = PTHREAD_ONCE_INIT;
+
+static void ft_shm_really_init (void);
 static void ft_shm_init (void)
+{
+  pthread_once(&ft_shm_initialized_once_control, ft_shm_really_init);
+}
+
+static void ft_shm_really_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
   sem_t *shared_semR = NULL;
   static int nt=1;
-  static int ft_shm_initialized = 0;
-
-  /* do all of this once only */
-  if (ft_shm_initialized > 0) return;
 
   /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
@@ -610,8 +614,6 @@ static void ft_shm_init (void)
   { /* force the deletion of the shm sync env variable */
     unsetenv("FAKETIME_SHARED");
   }
-
-  ft_shm_initialized = 1;
 }
 
 static void ft_cleanup (void)
