@@ -3690,9 +3690,9 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
     struct pthread_cond_monotonic *e = (struct pthread_cond_monotonic*)malloc(sizeof(struct pthread_cond_monotonic));
     e->ptr = cond;
 
-    if (pthread_rwlock_trywrlock(&monotonic_conds_lock) != 0) {
-      sched_yield();
-      return EAGAIN;
+    if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+      exit(-1);
     }
     HASH_ADD_PTR(monotonic_conds, ptr, e);
     pthread_rwlock_unlock(&monotonic_conds_lock);
@@ -3707,9 +3707,9 @@ int pthread_cond_destroy_232(pthread_cond_t *cond)
 
   ftpl_init();
 
-  if (pthread_rwlock_trywrlock(&monotonic_conds_lock) != 0) {
-    sched_yield();
-    return EBUSY;
+  if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+    fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+    exit(-1);
   }
   HASH_FIND_PTR(monotonic_conds, &cond, e);
   if (e) {
@@ -3793,9 +3793,9 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
   if (abstime != NULL)
   {
-    if (pthread_rwlock_tryrdlock(&monotonic_conds_lock) != 0) {
-      sched_yield();
-      return EAGAIN;
+    if (pthread_rwlock_rdlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire read monotonic_conds_lock\n");
+      exit(-1);
     }
     HASH_FIND_PTR(monotonic_conds, &cond, e);
     pthread_rwlock_unlock(&monotonic_conds_lock);
