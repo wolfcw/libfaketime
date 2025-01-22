@@ -3705,6 +3705,8 @@ int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
 
+  ftpl_init();
+
   if (pthread_rwlock_trywrlock(&monotonic_conds_lock) != 0) {
     sched_yield();
     return EBUSY;
@@ -3786,6 +3788,8 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
   int wait_ms;
   clockid_t clk_id;
   int result = 0;
+
+  ftpl_init();
 
   if (abstime != NULL)
   {
