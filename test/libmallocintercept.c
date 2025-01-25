@@ -24,7 +24,9 @@
 #include <unistd.h>
 
 static void print_msg(const char *msg) {
-	write(0, msg, strlen(msg));
+	size_t out;
+	out = write(0, msg, strlen(msg));
+	(void) out; /* unused */
 }
 
 static void* actual_malloc(size_t size) {
