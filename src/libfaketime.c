@@ -42,6 +42,7 @@
 #endif
 #include <time.h>
 #ifdef MACOS_DYLD_INTERPOSE
+#include <pthread.h>
 #include <sys/time.h>
 #include <utime.h>
 #endif
