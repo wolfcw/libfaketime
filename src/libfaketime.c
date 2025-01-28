@@ -319,7 +319,7 @@ static bool check_missing_real(const char *name, bool missing)
 #define CHECK_MISSING_REAL(name) \
   check_missing_real(#name, (NULL == real_##name))
 
-static int initialized = 0;
+static pthread_once_t initialized_once_control = PTHREAD_ONCE_INIT;
 
 /* prototypes */
 static int    fake_gettimeofday(struct timeval *tv);
@@ -536,16 +536,20 @@ static void ft_shm_destroy(void)
   }
 }
 
+static pthread_once_t ft_shm_initialized_once_control = PTHREAD_ONCE_INIT;
+
+static void ft_shm_really_init (void);
 static void ft_shm_init (void)
+{
+  pthread_once(&ft_shm_initialized_once_control, ft_shm_really_init);
+}
+
+static void ft_shm_really_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
   sem_t *shared_semR = NULL;
   static int nt=1;
-  static int ft_shm_initialized = 0;
-
-  /* do all of this once only */
-  if (ft_shm_initialized > 0) return;
 
   /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
@@ -625,8 +629,6 @@ static void ft_shm_init (void)
   { /* force the deletion of the shm sync env variable */
     unsetenv("FAKETIME_SHARED");
   }
-
-  ft_shm_initialized = 1;
 }
 
 static void ft_cleanup (void)
@@ -2361,44 +2363,12 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 #endif
 {
   int result;
-  static int recursion_depth = 0;
 
-  if (!initialized)
-  {
-    recursion_depth++;
-#ifdef FAIL_PRE_INIT_CALLS
-      fprintf(stderr, "libfaketime: clock_gettime() was called before initialization.\n");
-      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime().\n");
-      if (tp != NULL)
-      {
-        tp->tv_sec = 0;
-        tp->tv_nsec = 0;
-      }
-      return -1;
-#else
-    if (recursion_depth == 2)
-    {
-      fprintf(stderr, "libfaketime: Unexpected recursive calls to clock_gettime() without proper initialization. Trying alternative.\n");
-      DONT_FAKE_TIME(ftpl_init()) ;
-    }
-    else if (recursion_depth == 3)
-    {
-      fprintf(stderr, "libfaketime: Cannot recover from unexpected recursive calls to clock_gettime().\n");
-      fprintf(stderr, "libfaketime:  Please check whether any other libraries are in use that clash with libfaketime.\n");
-      fprintf(stderr, "libfaketime:  Returning -1 on clock_gettime() to break recursion now... if that does not work, please check other libraries' error handling.\n");
-      if (tp != NULL)
-      {
-        tp->tv_sec = 0;
-        tp->tv_nsec = 0;
-      }
-      return -1;
-    }
-    else {
-      ftpl_init();
-    }
-#endif
-    recursion_depth--;
-  }
+  ftpl_init();
+  // If ftpl_init ends up recursing, pthread_once will deadlock.
+  // (Previously we attempted to detect this situation, and bomb out,
+  // but the approach taken wasn't thread-safe and broke in practice.)
+
   /* sanity check */
   if (tp == NULL)
   {
@@ -2859,7 +2829,6 @@ static void ftpl_really_init(void)
 
 #undef dlsym
 #undef dlvsym
-  initialized = 1;
 
 #ifdef FAKE_STATELESS
   if (0) ft_shm_init();
@@ -3110,10 +3079,7 @@ static void ftpl_really_init(void)
 }
 
 inline static void ftpl_init(void) {
-  if (!initialized)
-  {
-    ftpl_really_init();
-  }
+  pthread_once(&initialized_once_control, ftpl_really_init);
 }
 
 void *ft_dlvsym(void *handle, const char *symbol, const char *version,
@@ -3788,9 +3754,9 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
     struct pthread_cond_monotonic *e = (struct pthread_cond_monotonic*)malloc(sizeof(struct pthread_cond_monotonic));
     e->ptr = cond;
 
-    if (pthread_rwlock_trywrlock(&monotonic_conds_lock) != 0) {
-      sched_yield();
-      return EAGAIN;
+    if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+      exit(-1);
     }
     HASH_ADD_PTR(monotonic_conds, ptr, e);
     pthread_rwlock_unlock(&monotonic_conds_lock);
@@ -3803,9 +3769,11 @@ int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
 
-  if (pthread_rwlock_trywrlock(&monotonic_conds_lock) != 0) {
-    sched_yield();
-    return EBUSY;
+  ftpl_init();
+
+  if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
+    fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
+    exit(-1);
   }
   HASH_FIND_PTR(monotonic_conds, &cond, e);
   if (e) {
@@ -3885,11 +3853,13 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
   clockid_t clk_id;
   int result = 0;
 
+  ftpl_init();
+
   if (abstime != NULL)
   {
-    if (pthread_rwlock_tryrdlock(&monotonic_conds_lock) != 0) {
-      sched_yield();
-      return EAGAIN;
+    if (pthread_rwlock_rdlock(&monotonic_conds_lock) != 0) {
+      fprintf(stderr,"can't acquire read monotonic_conds_lock\n");
+      exit(-1);
     }
     HASH_FIND_PTR(monotonic_conds, &cond, e);
     pthread_rwlock_unlock(&monotonic_conds_lock);
