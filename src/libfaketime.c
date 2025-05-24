@@ -59,6 +59,9 @@
 #ifdef __linux__
 #include <stdarg.h>
 #include <sys/syscall.h>
+#ifdef INTERCEPT_FUTEX
+#include <linux/futex.h>
+#endif
 #else
 #error INTERCEPT_SYSCALL should only be defined on GNU/Linux systems.
 #endif
