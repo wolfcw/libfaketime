@@ -1,3 +1,14 @@
+Since 0.9.10:
+    - Fixed various cross-platform compile-time issues
+    - Honor nanosecond parameters/fields in relevant system calls
+    - Limited improvements to enhance compatibility with other
+      LD_PRELOAD libraries
+    - Added selected more intercepted system calls
+    - Unset FAKETIME_SHARED automatically for child processes
+      when enabling FAKETIME_FLSHM=1
+    - Disable shared memory for child processes through
+      FAKETIME_DISABLE_SHM=1
+
 Since 0.9.9:
     - automatically try to decide about FORCE_MONOTONIC_FIX
       at run-time when not set as a compile-time flag

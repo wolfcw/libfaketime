@@ -1,5 +1,5 @@
 /*
- *  This file is part of libfaketime, version 0.9.10
+ *  This file is part of libfaketime, version 0.9.11
  *
  *  libfaketime is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License v2 as published by the
@@ -4195,7 +4195,7 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
     // not timeout related, just call the real syscall
     goto futex_fallback;
   }
-  
+
   // if ((futex_op & FUTEX_CMD_MASK) == FUTEX_WAIT_BITSET) {
   if (1) {
     clockid_t clk_id = CLOCK_MONOTONIC;
@@ -4203,13 +4203,13 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
       clk_id = CLOCK_REALTIME;
 
     struct timespec real_tp, fake_tp;
-    
+
     DONT_FAKE_TIME((*real_clock_gettime)(clk_id, &real_tp));
     fake_tp = real_tp;
     if (fake_clock_gettime(clk_id, &fake_tp) == -1) {
       goto futex_fallback;
     }
-    // Create a corrected timeout by adjusting with the difference between 
+    // Create a corrected timeout by adjusting with the difference between
     // real and fake timestamps
     struct timespec adjusted_timeout, time_diff;
     timespecsub(&fake_tp, &real_tp, &time_diff);
@@ -4218,15 +4218,15 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
     long result;
     result = real_syscall(number, uaddr, futex_op, val, &adjusted_timeout, uaddr2, val3);
     if (result != 0) {
-      return result;  
+      return result;
     }
-    
+
     // Check if the futex timeout has already passed according to fake time
     struct timespec now_fake;
     if (fake_clock_gettime(clk_id, &now_fake) != 0) {
       return result;
     }
-    
+
     // If the timeout is already passed in fake time, return 0.
     while (!timespeccmp(&now_fake, timeout, >=)) {
       // Calculate how much real time we need to wait
@@ -4249,15 +4249,15 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
       struct timespec real_timeout;
       timespecadd(&real_now, &wait_time, &real_timeout);
 
-      // fprintf(stdout, "libfaketime: recalculated real timeout: %ld.%09ld\n", 
+      // fprintf(stdout, "libfaketime: recalculated real timeout: %ld.%09ld\n",
       //         real_timeout.tv_sec, real_timeout.tv_nsec);
 
       // Call the real syscall with the recalculated timeout
       result = real_syscall(number, uaddr, futex_op, val, &real_timeout, uaddr2, val3);
       if (result != 0) {
-        return result;  
+        return result;
       }
-      
+
       // Check if the futex timeout has already passed according to fake time
       if (fake_clock_gettime(clk_id, &now_fake) != 0) {
         return result;
@@ -4267,7 +4267,7 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
   } else {
     return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
   }
-  
+
   futex_fallback:
     return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
 }
@@ -4298,7 +4298,7 @@ long syscall(long number, ...) {
     va_end(ap);
     return clock_gettime(clk_id, tp);
   }
-  
+
 #ifdef INTERCEPT_FUTEX
   if (number == __NR_futex) {
     uint32_t *uaddr;
@@ -4314,7 +4314,7 @@ long syscall(long number, ...) {
     timeout = va_arg(ap, struct timespec*);
     uaddr2 = va_arg(ap, uint32_t*);
     val3 = va_arg(ap, uint32_t);
-    va_end(ap); 
+    va_end(ap);
 
     return handle_futex_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
   }
