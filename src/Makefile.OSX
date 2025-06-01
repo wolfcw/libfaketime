@@ -58,6 +58,18 @@ PREFIX ?= /usr/local
 CFLAGS += -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -DPREFIX='"'${PREFIX}'"' $(FAKETIME_COMPILE_CFLAGS) -DMACOS_DYLD_INTERPOSE -DFAKE_SETTIME
 LIB_LDFLAGS += -dynamiclib -current_version 0.9.11 -compatibility_version 0.7
 
+# From macOS 13 onwards, system binaries are compiled against the new arm64e ABI on Apple Silicon.
+# These arm64e binaries enforce Pointer Authentication Code (PAC), and will refuse to run with
+# "unprotected" arm64 libraries. Meanwhile, older platforms might not recognize the new arm64e ABI.
+
+# Therefore, we now compile for two ABIs at the same time, producing a fat library of arm64e and arm64,
+# so in the end the OS gets to pick which architecture it wants at runtime.
+ARCH := $(shell uname -m)
+
+ifeq ($(ARCH),arm64)
+    CFLAGS += -arch arm64e -arch arm64
+endif
+
 SONAME = 1
 LIBS = libfaketime.${SONAME}.dylib
 BINS = faketime
