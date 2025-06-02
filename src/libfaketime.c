@@ -51,6 +51,7 @@
 #include <string.h>
 #include <semaphore.h>
 #include <sys/mman.h>
+#include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -162,6 +163,20 @@ struct utimbuf {
   time_t modtime;      /* modification time */
 };
 #endif
+#endif
+
+/* semaphore backend options */
+#define FT_POSIX 1
+#define FT_SYSV 2
+/* set default backend */
+#ifndef FT_SEMAPHORE_BACKEND
+#define FT_SEMAPHORE_BACKEND FT_POSIX
+#endif
+/* validate selected backend */
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+#else
+#error "Unknown FT_SEMAPHORE_BACKEND; select between FT_POSIX and FT_SYSV"
 #endif
 
 #ifdef FAKE_RANDOM
@@ -334,9 +349,14 @@ int           read_config_file();
 bool          str_array_contains(const char *haystack, const char *needle);
 void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
 
+
 typedef struct {
   char *name;
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   sem_t *sem;
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  int semid;
+#endif
 } ft_sem_t;
 
 /** Semaphore protecting shared data */
@@ -434,44 +454,128 @@ static void ftpl_init (void) __attribute__ ((constructor));
  *      =======================================================================
  */
 
+#if FT_SEMAPHORE_BACKEND == FT_SYSV
+int ft_sem_name2key(char *name)
+{
+  key_t key;
+  char fullname[256];
+  snprintf(fullname, sizeof(fullname), "/tmp%s", name);
+  fullname[sizeof(fullname) - 1] = '\0';
+  int fd = open(fullname, O_CREAT, S_IRUSR | S_IWUSR);
+  if (fd < 0)
+  {
+    perror("libfaketime: open");
+    return -1;
+  }
+  close(fd);
+  if (-1 == (key = ftok(fullname, 'F')))
+  {
+    perror("libfaketime: ftok");
+    return -1;
+  }
+  return key;
+}
+#endif
+
 int ft_sem_create(char *name, ft_sem_t *ft_sem)
 {
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   if (SEM_FAILED == (ft_sem->sem = sem_open(name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
   {
     return -1;
   }
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  key_t key = ft_sem_name2key(name);
+  int nsems = 1;
+
+  ft_sem->semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | S_IWUSR | S_IRUSR);
+  if (ft_sem->semid >= 0) { /* we got here first */
+    struct sembuf sb = {
+      .sem_num = 0,
+      .sem_op = 1, /* number of resources the semaphore has (when decremented down to 0 the semaphore will block) */
+      .sem_flg = 0,
+    };
+    /* the number of semaphore operation structures (struct sembuf) passed to semop */
+    int nsops = 1;
+
+    /* do a semop() to "unlock" the semaphore */
+    if (-1 == semop(ft_sem->semid, &sb, nsops)) {
+      return -1;
+    }
+  } else if (errno == EEXIST) { /* someone else got here before us */
+    return -1;
+  } else {
+    return -1;
+  }
+#endif
   ft_sem->name = name;
   return 0;
 }
 
 int ft_sem_open(char *name, ft_sem_t *ft_sem)
 {
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   if (SEM_FAILED == (ft_sem->sem = sem_open(name, 0)))
   {
     return -1;
   }
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  key_t key = ft_sem_name2key(name);
+  ft_sem->semid = semget(key, 1, S_IWUSR | S_IRUSR);
+  if (ft_sem->semid < 0) {
+    return -1;
+   }
+#endif
   ft_sem->name = name;
   return 0;
 }
 
 int ft_sem_lock(ft_sem_t *ft_sem)
 {
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   return sem_wait(ft_sem->sem);
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  struct sembuf sb = {
+    .sem_num = 0,
+    .sem_op = -1,  /* allocate resource (lock) */
+    .sem_flg = 0,
+  };
+  return semop(ft_sem->semid, &sb, 1);
+#endif
 }
 
 int ft_sem_unlock(ft_sem_t *ft_sem)
 {
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   return sem_post(ft_sem->sem);
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  struct sembuf sb = {
+    .sem_num = 0,
+    .sem_op = 1,  /* free resource (unlock) */
+    .sem_flg = 0,
+  };
+  return semop(ft_sem->semid, &sb, 1);
+#endif
 }
 
 int ft_sem_close(ft_sem_t *ft_sem)
 {
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   return sem_close(ft_sem->sem);
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  /* NOP -- there's no "close" equivalent */
+  (void)ft_sem;
+  return 0;
+#endif
 }
 
 int ft_sem_unlink(ft_sem_t *ft_sem)
 {
+#if FT_SEMAPHORE_BACKEND == FT_POSIX
   return sem_unlink(ft_sem->name);
+#elif FT_SEMAPHORE_BACKEND == FT_SYSV
+  return semctl(ft_sem->semid, 0, IPC_RMID);
+#endif
 }
 
 /*
