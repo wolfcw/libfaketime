@@ -334,8 +334,14 @@ int           read_config_file();
 bool          str_array_contains(const char *haystack, const char *needle);
 void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
 
+typedef struct {
+  char *name;
+  sem_t *sem;
+} ft_sem_t;
+
 /** Semaphore protecting shared data */
-static sem_t *shared_sem = NULL;
+static ft_sem_t shared_sem;
+static bool shared_sem_initialized = false;
 
 /** Data shared among faketime-spawned processes */
 static struct ft_shared_s *ft_shared = NULL;
@@ -422,6 +428,51 @@ static bool parse_config_file = true;
 static void ft_cleanup (void) __attribute__ ((destructor));
 static void ftpl_init (void) __attribute__ ((constructor));
 
+/*
+ *      =======================================================================
+ *      Semaphore related functions                                     === SEM
+ *      =======================================================================
+ */
+
+int ft_sem_create(char *name, ft_sem_t *ft_sem)
+{
+  if (SEM_FAILED == (ft_sem->sem = sem_open(name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
+  {
+    return -1;
+  }
+  ft_sem->name = name;
+  return 0;
+}
+
+int ft_sem_open(char *name, ft_sem_t *ft_sem)
+{
+  if (SEM_FAILED == (ft_sem->sem = sem_open(name, 0)))
+  {
+    return -1;
+  }
+  ft_sem->name = name;
+  return 0;
+}
+
+int ft_sem_lock(ft_sem_t *ft_sem)
+{
+  return sem_wait(ft_sem->sem);
+}
+
+int ft_sem_unlock(ft_sem_t *ft_sem)
+{
+  return sem_post(ft_sem->sem);
+}
+
+int ft_sem_close(ft_sem_t *ft_sem)
+{
+  return sem_close(ft_sem->sem);
+}
+
+int ft_sem_unlink(ft_sem_t *ft_sem)
+{
+  return sem_unlink(ft_sem->name);
+}
 
 /*
  *      =======================================================================
@@ -434,10 +485,10 @@ static bool shmCreator = false;
 static void ft_shm_create(void) {
   char sem_name[256], shm_name[256], sem_nameT[256], shm_nameT[256];
   int shm_fdN;
-  sem_t *semN;
+  ft_sem_t semN;
   struct ft_shared_s *ft_sharedN;
   char shared_objsN[513];
-  sem_t *shared_semT = NULL;
+  ft_sem_t shared_semT;
   pid_t pid;
 
 #ifdef FAKE_PID
@@ -447,8 +498,8 @@ static void ft_shm_create(void) {
 #endif
   snprintf(sem_name, 255, "/faketime_sem_%ld", (long)pid);
   snprintf(shm_name, 255, "/faketime_shm_%ld", (long)pid);
-  if (SEM_FAILED == (semN = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
-  { /* silently fail on platforms that do not support sem_open() */
+  if (-1 == ft_sem_create(sem_name, &semN))
+  { /* silently fail on platforms that do not support semaphores */
     return;
   }
   /* create shm */
@@ -470,9 +521,9 @@ static void ft_shm_create(void) {
     perror("libfaketime: In ft_shm_create(), mmap failed");
     exit(EXIT_FAILURE);
   }
-  if (sem_wait(semN) == -1)
+  if (ft_sem_lock(&semN) == -1)
   {
-    perror("libfaketime: In ft_shm_create(), sem_wait failed");
+    perror("libfaketime: In ft_shm_create(), ft_sem_lock failed");
     exit(EXIT_FAILURE);
   }
   /* init elapsed time ticks to zero */
@@ -490,25 +541,25 @@ static void ft_shm_create(void) {
     perror("libfaketime: In ft_shm_create(), munmap failed");
     exit(EXIT_FAILURE);
   }
-  if (sem_post(semN) == -1)
+  if (ft_sem_unlock(&semN) == -1)
   {
-    perror("libfaketime: In ft_shm_create(), sem_post failed");
+    perror("libfaketime: In ft_shm_create(), ft_sem_unlock failed");
     exit(EXIT_FAILURE);
   }
 
   snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
 
   int semSafetyCheckPassed = 0;
-  sem_close(semN);
+  ft_sem_close(&semN);
 
   sscanf(shared_objsN, "%255s %255s", sem_nameT, shm_nameT);
-  if (SEM_FAILED == (shared_semT = sem_open(sem_nameT, 0)))
+  if (-1 == ft_sem_open(sem_nameT, &shared_semT))
   {
-      fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal sem_open issue with %s\n", sem_nameT);
+      fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal ft_sem_open issue with %s\n", sem_nameT);
   }
   else {
     semSafetyCheckPassed = 1;
-    sem_close(shared_semT);
+    ft_sem_close(&shared_semT);
   }
 
   if (semSafetyCheckPassed == 1) {
@@ -520,6 +571,7 @@ static void ft_shm_create(void) {
 static void ft_shm_destroy(void)
 {
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
+  ft_sem_t ft_sem;
 
   if (ft_shared_env != NULL)
   {
@@ -536,7 +588,10 @@ static void ft_shm_destroy(void)
        Since there is no easy solution for this problem (see issue #56),
        ft_shm_init() below at least tries to handle this carefully.
     */
-    sem_unlink(sem_name);
+    if (0 == ft_sem_open(sem_name, &ft_sem))
+    {
+      ft_sem_unlink(&ft_sem);
+    }
     shm_unlink(shm_name);
     unsetenv("FAKETIME_SHARED");
   }
@@ -554,7 +609,7 @@ static void ft_shm_really_init (void)
 {
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
-  sem_t *shared_semR = NULL;
+  ft_sem_t shared_semR;
   static int nt=1;
 
   /* create semaphore and shared memory locally unless it has been passed along */
@@ -572,14 +627,14 @@ static void ft_shm_really_init (void)
       printf("libfaketime: In ft_shm_init(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
       exit(1);
     }
-    if (SEM_FAILED == (shared_semR = sem_open(sem_name, 0))) /* gone stale? */
+    if (-1 == ft_sem_open(sem_name, &shared_semR)) /* gone stale? */
     {
       ft_shm_create();
       ft_shared_env = getenv("FAKETIME_SHARED");
     }
     else
     {
-      sem_close(shared_semR);
+      ft_sem_close(&shared_semR);
     }
   }
 
@@ -592,7 +647,7 @@ static void ft_shm_really_init (void)
       exit(1);
     }
 
-    if (SEM_FAILED == (shared_sem = sem_open(sem_name, 0)))
+    if (-1 == ft_sem_open(sem_name, &shared_sem))
     {
       if (shmCreator)
       {
@@ -617,6 +672,7 @@ static void ft_shm_really_init (void)
 
       }
     }
+    shared_sem_initialized = true;
 
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR)))
     {
@@ -648,10 +704,10 @@ static void ft_cleanup (void)
   {
     munmap(stss, infile_size);
   }
-  if (shared_sem != NULL)
+  if (shared_sem_initialized)
   {
-    sem_close(shared_sem);
-    shared_sem = NULL;
+    ft_sem_close(&shared_sem);
+    shared_sem_initialized = false;
   }
 #ifdef FAKE_PTHREAD
   if (pthread_rwlock_destroy(&monotonic_conds_lock) != 0) {
@@ -727,11 +783,11 @@ static void system_time_from_system (struct system_time_s * systime)
 
 static void next_time(struct timespec *tp, struct timespec *ticklen)
 {
-  if (shared_sem != NULL)
+  if (shared_sem_initialized)
   {
     struct timespec inc;
     /* lock */
-    if (sem_wait(shared_sem) == -1)
+    if (ft_sem_lock(&shared_sem) == -1)
     {
       if (errno == EINTR)
       {
@@ -740,7 +796,7 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
       }
       else
       {
-        perror("libfaketime: In next_time(), sem_wait failed");
+        perror("libfaketime: In next_time(), ft_sem_lock failed");
         exit(1);
       }
     }
@@ -749,9 +805,9 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
     timespecadd(&user_faked_time_timespec, &inc, tp);
     (ft_shared->ticks)++;
     /* unlock */
-    if (sem_post(shared_sem) == -1)
+    if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In next_time(), sem_post failed");
+      perror("libfaketime: In next_time(), ft_sem_unlock failed");
       exit(1);
     }
   }
@@ -760,17 +816,17 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
 static void reset_time()
 {
   system_time_from_system(&ftpl_starttime);
-  if (shared_sem != NULL)
+  if (shared_sem_initialized)
   {
-    if (sem_wait(shared_sem) == -1)
+    if (ft_sem_lock(&shared_sem) == -1)
     {
-      perror("libfaketime: In reset_time(), sem_wait failed");
+      perror("libfaketime: In reset_time(), ft_sem_lock failed");
       exit(1);
     }
     ft_shared->start_time = ftpl_starttime;
-    if (sem_post(shared_sem) == -1)
+    if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In reset_time(), sem_post failed");
+      perror("libfaketime: In reset_time(), ft_sem_unlock failed");
       exit(1);
     }
   }
@@ -785,7 +841,7 @@ static void reset_time()
 
 static void save_time(struct timespec *tp)
 {
-  if ((shared_sem != NULL) && (outfile != -1))
+  if (shared_sem_initialized && (outfile != -1))
   {
     struct saved_timestamp time_write;
     ssize_t written;
@@ -795,7 +851,7 @@ static void save_time(struct timespec *tp)
     time_write.nsec = htobe64(tp->tv_nsec);
 
     /* lock */
-    if (sem_wait(shared_sem) == -1)
+    if (ft_sem_lock(&shared_sem) == -1)
     {
       if (errno == EINTR)
       {
@@ -804,7 +860,7 @@ static void save_time(struct timespec *tp)
       }
       else
       {
-        perror("libfaketime: In save_time(), sem_wait failed");
+        perror("libfaketime: In save_time(), ft_sem_lock failed");
         exit(1);
       }
     }
@@ -823,9 +879,9 @@ static void save_time(struct timespec *tp)
     }
 
     /* unlock */
-    if (sem_post(shared_sem) == -1)
+    if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In save_time(), sem_post failed");
+      perror("libfaketime: In save_time(), ft_sem_unlcok failed");
       exit(1);
     }
   }
@@ -838,10 +894,10 @@ static void save_time(struct timespec *tp)
 static bool load_time(struct timespec *tp)
 {
   bool ret = false;
-  if ((shared_sem != NULL) && (infile_set))
+  if (shared_sem_initialized && (infile_set))
   {
     /* lock */
-    if (sem_wait(shared_sem) == -1)
+    if (ft_sem_lock(&shared_sem) == -1)
     {
       if (errno == EINTR)
       {
@@ -849,7 +905,7 @@ static bool load_time(struct timespec *tp)
       }
       else
       {
-        perror("libfaketime: In load_time(), sem_wait failed");
+        perror("libfaketime: In load_time(), ft_sem_lock failed");
         exit(1);
       }
     }
@@ -883,9 +939,9 @@ static bool load_time(struct timespec *tp)
     }
 
     /* unlock */
-    if (sem_post(shared_sem) == -1)
+    if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In load_time(), sem_post failed");
+      perror("libfaketime: In load_time(), ft_sem_unlock failed");
       exit(1);
     }
   }
@@ -919,9 +975,9 @@ static bool user_per_tick_inc_set_backup = false;
 
 void lock_for_stat()
 {
-  if (shared_sem != NULL)
+  if (shared_sem_initialized)
   {
-    if (sem_wait(shared_sem) == -1)
+    if (ft_sem_lock(&shared_sem) == -1)
     {
       if (errno == EINTR)
       {
@@ -930,7 +986,7 @@ void lock_for_stat()
       }
       else
       {
-        perror("libfaketime: In lock_for_stat(), sem_wait failed");
+        perror("libfaketime: In lock_for_stat(), ft_sem_lock failed");
         exit(1);
       }
     }
@@ -944,11 +1000,11 @@ void unlock_for_stat()
 {
   user_per_tick_inc_set = user_per_tick_inc_set_backup;
 
-  if (shared_sem != NULL)
+  if (shared_sem_initialized)
   {
-    if (sem_post(shared_sem) == -1)
+    if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In unlock_for_stat(), sem_post failed");
+      perror("libfaketime: In unlock_for_stat(), ft_sem_unlock failed");
       exit(1);
     }
   }
@@ -3032,11 +3088,11 @@ static void ftpl_really_init(void)
     user_faked_time_fmt[BUFSIZ - 1] = 0;
   }
 
-  if (shared_sem != 0)
+  if (shared_sem_initialized)
   {
-    if (sem_wait(shared_sem) == -1)
+    if (ft_sem_lock(&shared_sem) == -1)
     {
-      perror("libfaketime: In ftpl_init(), sem_wait failed");
+      perror("libfaketime: In ftpl_init(), ft_sem_lock failed");
       exit(1);
     }
     if (ft_shared->start_time.real.tv_nsec == -1)
@@ -3050,9 +3106,9 @@ static void ftpl_really_init(void)
       /** get preset start time */
       ftpl_starttime = ft_shared->start_time;
     }
-    if (sem_post(shared_sem) == -1)
+    if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In ftpl_init(), sem_post failed");
+      perror("libfaketime: In ftpl_init(), ft_sem_unlock failed");
       exit(1);
     }
   }
