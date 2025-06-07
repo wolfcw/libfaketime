@@ -236,7 +236,7 @@ static int          (*real_pthread_cond_destroy_232) (pthread_cond_t *);
 static pthread_rwlock_t monotonic_conds_lock;
 #endif
 
-#ifndef __APPLEOSX__
+#ifndef __APPLE__
 #ifdef FAKE_TIMERS
 static int          (*real_timer_settime_22)   (int timerid, int flags, const struct itimerspec *new_value,
                                                 struct itimerspec * old_value);
@@ -282,7 +282,7 @@ static int          (*real_pselect)         (int nfds, fd_set *restrict readfds,
 static int          (*real_sem_timedwait)   (sem_t*, const struct timespec*);
 static int          (*real_sem_clockwait)   (sem_t *sem, clockid_t clockid, const struct timespec *abstime);
 #endif
-#ifdef __APPLEOSX__
+#ifdef __APPLE__
 static int          (*real_clock_get_time)  (clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t);
 static int          apple_clock_gettime     (clockid_t clk_id, struct timespec *tp);
 static clock_serv_t clock_serv_real;
@@ -694,7 +694,7 @@ static void get_fake_monotonic_setting(int* current_value)
 /* Get system time from system for all clocks */
 static void system_time_from_system (struct system_time_s * systime)
 {
-#ifdef __APPLEOSX__
+#ifdef __APPLE__
   /* from https://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
   clock_serv_t cclock;
   mach_timespec_t mts;
@@ -2784,7 +2784,7 @@ static void ftpl_really_init(void)
     exit(-1);
   }
 #endif
-#ifdef __APPLEOSX__
+#ifdef __APPLE__
   real_clock_get_time =     dlsym(RTLD_NEXT, "clock_get_time");
   real_clock_gettime  =     apple_clock_gettime;
 #else
@@ -3545,7 +3545,7 @@ int fake_gettimeofday(struct timeval *tv)
  *      =======================================================================
  */
 
-#ifdef __APPLEOSX__
+#ifdef __APPLE__
 /*
  * clock_gettime implementation for __APPLE__
  * @note It always behave like being called with CLOCK_REALTIME.

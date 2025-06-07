@@ -64,10 +64,16 @@ LIB_LDFLAGS += -dynamiclib -current_version 0.9.11 -compatibility_version 0.7
 
 # Therefore, we now compile for two ABIs at the same time, producing a fat library of arm64e and arm64,
 # so in the end the OS gets to pick which architecture it wants at runtime.
+
+# In addition, we need to enable signing and authentication of indirect calls (-fptrauth-calls);
+# otherwise in ftpl_init, pthread_once will indirectly call ftpl_really_init, which then fail PAC.
+# Ideally this should be a compiler default for the arm64e ABI, but apparently not.
+
 ARCH := $(shell uname -m)
 
 ifeq ($(ARCH),arm64)
     CFLAGS += -arch arm64e -arch arm64
+    CFLAGS += -fptrauth-calls -fptrauth-returns
 endif
 
 SONAME = 1
