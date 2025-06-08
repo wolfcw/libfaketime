@@ -166,3 +166,50 @@ The environment variable FAKETIME can be changed at application run-time
 and always takes precedence over other user-controlled settings. It can
 be re-set to 0 (zero) to work around potential incompatibilities or if
 you do not want libfaketime applied to your software.
+
+5) Working with the new arm64e system binaries in Apple Silicon
+---------------------------------------------------------------
+
+Since Apple Silicon, Apple started shipping system binaries compiled against
+the `arm64e` ABI. This new ABI enforces Pointer Authentication Codes (PACs),
+and enforces assembly instructions to sign and check pointer signatures to
+prevent malicious control flow altering.
+
+    $ file /bin/date
+    /bin/date: Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64e:Mach-O 64-bit executable arm64e]
+    /bin/date (for architecture x86_64):    Mach-O 64-bit executable x86_64
+    /bin/date (for architecture arm64e):    Mach-O 64-bit executable arm64e
+
+Most importantly, the new `arm64e` ABI is incompatible with the normal `arm64`
+ABI we are used to; this is done so that everything `arm64e` is PAC-enforced.
+
+As a result, this will happen when we try to hook naive `arm64` libfaketime on
+system binaries (and vice versa with `arm64e` libfaketime on `arm64` binaries):
+
+    $ DYLD_INSERT_LIBRARIES=libfaketime.1.dylib /bin/date
+    dyld[5788]: terminating because inserted dylib 'libfaketime.1.dylib' could not be loaded:
+    tried: 'libfaketime.1.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+
+Since PR #497, we now compile libfaketime with a fat library/binary setup, so
+that we support both ABIs at the same time:
+
+    $ file libfaketime.1.dylib
+    libfaketime.1.dylib: Mach-O universal binary with 2 architectures: [arm64:Mach-O 64-bit dynamically linked shared library arm64] [arm64e:Mach-O 64-bit dynamically linked shared library arm64e]
+    libfaketime.1.dylib (for architecture arm64):   Mach-O 64-bit dynamically linked shared library arm64
+    libfaketime.1.dylib (for architecture arm64e):  Mach-O 64-bit dynamically linked shared library arm64e
+
+Unfortunately, Apple does not support running third-party `arm64e` code yet,
+since the ABI is still unstable. This means that you cannot use libfaketime
+on system `arm64e` binaries out of the box, at the time of writing.
+
+If you really need to, you may disable SIP in the recovery terminal:
+
+    (in recovery)       # csrutil disable
+
+And enable the experimental ABI after boot:
+
+    (in regular boot)   $ sudo nvram boot-args=-arm64e_preview_abi
+
+Then `arm64e` should work as-is. This use case is rather uncommon since most
+userspace binaries will remain `arm64` for the time being, until Apple really
+doubles down on `arm64e`. Regardless, we should be prepared for that.
