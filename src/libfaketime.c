@@ -208,10 +208,12 @@ static int          (*real_xstat)           (int, const char *, struct stat *);
 static int          (*real_fxstat)          (int, int, struct stat *);
 static int          (*real_fxstatat)        (int, int, const char *, struct stat *, int);
 static int          (*real_lxstat)          (int, const char *, struct stat *);
+#if !defined(__APPLE__) || !__DARWIN_ONLY_64_BIT_INO_T
 static int          (*real_xstat64)         (int, const char *, struct stat64 *);
 static int          (*real_fxstat64)        (int, int , struct stat64 *);
 static int          (*real_fxstatat64)      (int, int , const char *, struct stat64 *, int);
 static int          (*real_lxstat64)        (int, const char *, struct stat64 *);
+#endif
 #ifdef STATX_TYPE
 static int          (*real_statx)           (int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statxbuf);
 #endif
@@ -983,6 +985,7 @@ static inline void fake_statbuf (struct stat *buf) {
 #endif
 }
 
+#ifndef __APPLE__
 static inline void fake_stat64buf (struct stat64 *buf) {
 #ifndef st_atime
   lock_for_stat();
@@ -992,18 +995,13 @@ static inline void fake_stat64buf (struct stat64 *buf) {
   unlock_for_stat();
 #else
   lock_for_stat();
-#ifndef __APPLE__
-  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
-  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
-  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
-#else
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctimespec);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_atimespec);
   fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtimespec);
-#endif
   unlock_for_stat();
 #endif
 }
+#endif
 
 /* macOS dyld interposing uses the function's real name instead of real_name */
 #ifdef MACOS_DYLD_INTERPOSE
@@ -1113,25 +1111,19 @@ int __lxstat (int ver, const char *path, struct stat *buf)
 {
   STAT_HANDLER(lxstat, buf, ver, path, buf);
 }
-#endif
 
-#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat64 (int ver, const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(xstat64, buf, ver, path, buf);
 }
-#endif
 
-#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __fxstat64 (int ver, int fildes, struct stat64 *buf)
 {
   STAT64_HANDLER(fxstat64, buf, ver, fildes, buf);
 }
-#endif
 
-#ifndef __APPLE__
 /* Added in v0.8 as suggested by Daniel Kahn Gillmor */
 #ifndef NO_ATFILE
 int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf, int flag)
@@ -1139,16 +1131,14 @@ int __fxstatat64 (int ver, int fildes, const char *filename, struct stat64 *buf,
   STAT64_HANDLER(fxstatat64, buf, ver, fildes, filename, buf, flag);
 }
 #endif
-#endif
 
-#ifndef __APPLE__
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __lxstat64 (int ver, const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(lxstat64, buf, ver, path, buf);
 }
-#endif
-#endif
+#endif  /* ifndef __APPLE__ */
+#endif  /* ifdef FAKE_STAT */
 
 #ifdef STATX_TYPE
 static inline void fake_statx_timestamp(struct statx_timestamp* p)
@@ -2689,10 +2679,12 @@ static void ftpl_really_init(void)
   real_fxstat =             dlsym(RTLD_NEXT, "__fxstat");
   real_fxstatat =           dlsym(RTLD_NEXT, "__fxstatat");
   real_lxstat =             dlsym(RTLD_NEXT, "__lxstat");
+#if !defined(__APPLE__) || !__DARWIN_ONLY_64_BIT_INO_T
   real_xstat64 =            dlsym(RTLD_NEXT,"__xstat64");
   real_fxstat64 =           dlsym(RTLD_NEXT, "__fxstat64");
   real_fxstatat64 =         dlsym(RTLD_NEXT, "__fxstatat64");
   real_lxstat64 =           dlsym(RTLD_NEXT, "__lxstat64");
+#endif
 #ifdef STATX_TYPE
   real_statx =              dlsym(RTLD_NEXT, "statx");
 #endif
