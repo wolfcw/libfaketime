@@ -56,7 +56,7 @@ INSTALL ?= install
 PREFIX ?= /usr/local
 
 CFLAGS += -DFAKE_SLEEP -DFAKE_INTERNAL_CALLS -DPREFIX='"'${PREFIX}'"' $(FAKETIME_COMPILE_CFLAGS) -DMACOS_DYLD_INTERPOSE -DFAKE_SETTIME
-LIB_LDFLAGS += -dynamiclib -current_version 0.9.11 -compatibility_version 0.7
+LIB_LDFLAGS += -dynamiclib -current_version 0.9.12 -compatibility_version 0.7
 
 # From macOS 13 onwards, system binaries are compiled against the new arm64e ABI on Apple Silicon.
 # These arm64e binaries enforce Pointer Authentication Code (PAC), and will refuse to run with

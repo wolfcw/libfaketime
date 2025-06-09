@@ -1,3 +1,9 @@
+List of changes for v0.9.12
+===========================
+
+Since 0.9.11:
+    - Improved macOS compatibility (@usertam)
+
 Since 0.9.10:
     - Fixed various cross-platform compile-time issues
     - Honor nanosecond parameters/fields in relevant system calls
