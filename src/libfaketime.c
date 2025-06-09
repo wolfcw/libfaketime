@@ -995,9 +995,9 @@ static inline void fake_stat64buf (struct stat64 *buf) {
   unlock_for_stat();
 #else
   lock_for_stat();
-  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctimespec);
-  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atimespec);
-  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtimespec);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_ctim);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_atim);
+  fake_clock_gettime(CLOCK_REALTIME, &buf->st_mtim);
   unlock_for_stat();
 #endif
 }
