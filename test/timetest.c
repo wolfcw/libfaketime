@@ -39,10 +39,22 @@
 #include <pthread.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
+
+#define MONO_FIX_TIMEOUT_SECONDS     1
+#define MONO_FIX_TOLERANCE_SECONDS   0.25 // Increased tolerance slightly for CI environments
+#define MONO_FIX_LOWER_BOUND     (MONO_FIX_TIMEOUT_SECONDS - MONO_FIX_TOLERANCE_SECONDS)
+#define MONO_FIX_UPPER_BOUND     (MONO_FIX_TIMEOUT_SECONDS + MONO_FIX_TOLERANCE_SECONDS)
 
 #define VERBOSE 0
 
 #define SIG SIGUSR1
+
+#ifdef __ARM_ARCH
+static int fake_monotonic_clock = 0;
+#else
+static int fake_monotonic_clock = 1;
+#endif
 
 static void
 handler(int sig, siginfo_t *si, void *uc)
@@ -57,36 +69,53 @@ handler(int sig, siginfo_t *si, void *uc)
   }
 }
 
+static void get_fake_monotonic_setting(int* current_value)
+{
+  char *tmp_env;
+  if ((tmp_env = getenv("FAKETIME_DONT_FAKE_MONOTONIC")) != NULL
+    || (tmp_env = getenv("DONT_FAKE_MONOTONIC")) != NULL)
+  {
+    if (0 == strcmp(tmp_env, "1"))
+    {
+      (*current_value) = 0;
+    }
+    else
+    {
+      (*current_value) = 1;
+    }
+  }
+}
+
 void* pthread_test(void* args)
 {
-  pthread_mutex_t fakeMutex = PTHREAD_MUTEX_INITIALIZER;
-  pthread_cond_t fakeCond = PTHREAD_COND_INITIALIZER;
+  pthread_mutex_t fake_mtx = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t fake_cond = PTHREAD_COND_INITIALIZER;
 
   pthread_cond_t monotonic_cond;
   pthread_condattr_t attr;
 
-  struct timespec timeToWait, now;
+  struct timespec time_to_wait, now;
   int rt;
 
   args = args; // silence compiler warning about unused argument
 
   clock_gettime(CLOCK_REALTIME, &now);
-  timeToWait.tv_sec = now.tv_sec+1;
-  timeToWait.tv_nsec = now.tv_nsec;
+  time_to_wait.tv_sec = now.tv_sec+1;
+  time_to_wait.tv_nsec = now.tv_nsec;
 
   printf("pthread_cond_timedwait: CLOCK_REALTIME test\n");
   printf("(Intentionally sleeping 1 second...)\n");
   fflush(stdout);
 
-  pthread_mutex_lock(&fakeMutex);
-  rt = pthread_cond_timedwait(&fakeCond, &fakeMutex, &timeToWait);
+  pthread_mutex_lock(&fake_mtx);
+  rt = pthread_cond_timedwait(&fake_cond, &fake_mtx, &time_to_wait);
   if (rt != ETIMEDOUT)
   {
     printf("pthread_cond_timedwait failed\n");
-    pthread_mutex_unlock(&fakeMutex);
+    pthread_mutex_unlock(&fake_mtx);
     exit(EXIT_FAILURE);
   }
-  pthread_mutex_unlock(&fakeMutex);
+  pthread_mutex_unlock(&fake_mtx);
 
 
   pthread_condattr_init(&attr);
@@ -94,24 +123,63 @@ void* pthread_test(void* args)
   pthread_cond_init(&monotonic_cond, &attr);
 
   clock_gettime(CLOCK_MONOTONIC, &now);
-  timeToWait.tv_sec = now.tv_sec+1;
-  timeToWait.tv_nsec = now.tv_nsec;
+  time_to_wait.tv_sec = now.tv_sec+1;
+  time_to_wait.tv_nsec = now.tv_nsec;
 
   printf("pthread_cond_timedwait: CLOCK_MONOTONIC test\n");
   printf("(Intentionally sleeping 1 second...)\n");
   printf("(If this test hangs for more than a few seconds, please report\n your glibc version and system details as FORCE_MONOTONIC_FIX\n issue at https://github.com/wolfcw/libfaketime)\n");
   fflush(stdout);
 
-  pthread_mutex_lock(&fakeMutex);
-  rt = pthread_cond_timedwait(&monotonic_cond, &fakeMutex, &timeToWait);
+  pthread_mutex_lock(&fake_mtx);
+  rt = pthread_cond_timedwait(&monotonic_cond, &fake_mtx, &time_to_wait);
   if (rt != ETIMEDOUT)
   {
     printf("pthread_cond_timedwait failed\n");
-    pthread_mutex_unlock(&fakeMutex);
+    pthread_mutex_unlock(&fake_mtx);
     exit(EXIT_FAILURE);
   }
-  pthread_mutex_unlock(&fakeMutex);
+  pthread_mutex_unlock(&fake_mtx);
 
+  get_fake_monotonic_setting(&fake_monotonic_clock);
+  if (!fake_monotonic_clock)
+  {
+    printf("pthread_cond_timedwait: using real CLOCK_MONOTONIC test\n");
+    struct timespec mono_after_wait;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    time_to_wait.tv_sec = now.tv_sec + MONO_FIX_TIMEOUT_SECONDS;
+    time_to_wait.tv_nsec = now.tv_nsec;
+
+    struct timespec current_real_time;
+    clock_gettime(CLOCK_REALTIME, &current_real_time);
+
+    struct timespec new_real_time = current_real_time;
+    new_real_time.tv_sec += 3600; // Advance by one hour
+
+    clock_settime(CLOCK_REALTIME, &new_real_time);
+
+    pthread_mutex_lock(&fake_mtx);
+
+    rt = pthread_cond_timedwait(&monotonic_cond, &fake_mtx, &time_to_wait);
+    clock_gettime(CLOCK_MONOTONIC, &mono_after_wait);
+
+    pthread_mutex_unlock(&fake_mtx);
+
+    double elapsed_wall_time = (mono_after_wait.tv_sec - now.tv_sec) +
+                                (mono_after_wait.tv_nsec - now.tv_nsec) / 1000000000.0;
+
+    if (rt == ETIMEDOUT && (elapsed_wall_time >= MONO_FIX_LOWER_BOUND && elapsed_wall_time <= MONO_FIX_UPPER_BOUND))
+    {
+      printf("pthread_cond_timedwait with real CLOCK_MONOTONIC passed: elapsed time = %.2f seconds\n", elapsed_wall_time);
+    }
+    else
+    {
+      printf("pthread_cond_timedwait with real CLOCK_MONOTONIC FAILED: elapsed time = %.2f seconds, return code = %d\n", elapsed_wall_time, rt);
+      exit(EXIT_FAILURE);
+    }
+  }
   pthread_cond_destroy(&monotonic_cond);
 
   return NULL;

@@ -3889,7 +3889,14 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
     }
     else
     {
-      timespecsub(abstime, &faketime, &tp);
+      if (!fake_monotonic_clock && clk_id == CLOCK_MONOTONIC)
+      {
+        timespecsub(abstime, &realtime, &tp);
+      }
+      else
+      {
+        timespecsub(abstime, &faketime, &tp);
+      }
       if (user_rate_set)
       {
         timespecmul(&tp, 1.0 / user_rate, &tdiff_actual);
