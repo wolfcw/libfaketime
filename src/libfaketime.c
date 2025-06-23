@@ -504,7 +504,7 @@ static void ft_shm_create(void) {
   sscanf(shared_objsN, "%255s %255s", sem_nameT, shm_nameT);
   if (SEM_FAILED == (shared_semT = sem_open(sem_nameT, 0)))
   {
-      fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal sem_open issue with %s", sem_nameT);
+      fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal sem_open issue with %s\n", sem_nameT);
   }
   else {
     semSafetyCheckPassed = 1;
