@@ -224,6 +224,7 @@ static int          (*real_fxstat)          (int, int, struct stat *);
 static int          (*real_fxstatat)        (int, int, const char *, struct stat *, int);
 static int          (*real_lxstat)          (int, const char *, struct stat *);
 #if !defined(__APPLE__) || !__DARWIN_ONLY_64_BIT_INO_T
+static int          (*real_stat64)          (const char *, struct stat64 *);
 static int          (*real_xstat64)         (int, const char *, struct stat64 *);
 static int          (*real_fxstat64)        (int, int , struct stat64 *);
 static int          (*real_fxstatat64)      (int, int , const char *, struct stat64 *, int);
@@ -1270,6 +1271,11 @@ int __fxstatat(int ver, int fildes, const char *filename, struct stat *buf, int 
 int __lxstat (int ver, const char *path, struct stat *buf)
 {
   STAT_HANDLER(lxstat, buf, ver, path, buf);
+}
+
+int stat64 (const char *path, struct stat64 *buf)
+{
+  STAT64_HANDLER(stat64, buf, path, buf);
 }
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
@@ -2840,6 +2846,7 @@ static void ftpl_really_init(void)
   real_fxstatat =           dlsym(RTLD_NEXT, "__fxstatat");
   real_lxstat =             dlsym(RTLD_NEXT, "__lxstat");
 #if !defined(__APPLE__) || !__DARWIN_ONLY_64_BIT_INO_T
+  real_stat64 =             dlsym(RTLD_NEXT, "stat64");
   real_xstat64 =            dlsym(RTLD_NEXT,"__xstat64");
   real_fxstat64 =           dlsym(RTLD_NEXT, "__fxstat64");
   real_fxstatat64 =         dlsym(RTLD_NEXT, "__fxstatat64");
