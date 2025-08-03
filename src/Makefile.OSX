@@ -71,25 +71,32 @@ LIB_LDFLAGS += -dynamiclib -current_version 0.9.12 -compatibility_version 0.7
 
 ARCH := $(shell uname -m)
 
-ifeq ($(ARCH),arm64)
-    CFLAGS += -arch arm64e -arch arm64
-    CFLAGS += -fptrauth-calls -fptrauth-returns
-endif
-
 SONAME = 1
 LIBS = libfaketime.${SONAME}.dylib
 BINS = faketime
 
 all: ${LIBS} ${BINS}
 
+ifeq ($(ARCH),arm64)
+libfaketime.${SONAME}.dylib: libfaketime.c
+	${CC} -o libfaketime.arm64e.dylib ${CFLAGS} -arch arm64e -fptrauth-calls -fptrauth-returns ${LDFLAGS} ${LIB_LDFLAGS} -install_name ${PREFIX}/lib/faketime/$@ $<
+	${CC} -o libfaketime.arm64.dylib ${CFLAGS} -arch arm64 ${LDFLAGS} ${LIB_LDFLAGS} -install_name ${PREFIX}/lib/faketime/$@ $<
+	lipo -create -output $@ libfaketime.arm64e.dylib libfaketime.arm64.dylib
+	rm libfaketime.arm64e.dylib libfaketime.arm64.dylib
+
+faketime: faketime.c
+	${CC} -o $@ ${CFLAGS} -arch arm64e -arch arm64 ${LDFLAGS} $<
+
+else
 libfaketime.${SONAME}.dylib: libfaketime.c
 	${CC} -o $@ ${CFLAGS} ${LDFLAGS} ${LIB_LDFLAGS} -install_name ${PREFIX}/lib/faketime/$@ $<
 
 faketime: faketime.c
 	${CC} -o $@ ${CFLAGS} ${LDFLAGS} $<
+endif
 
 clean:
-	@rm -f ${OBJ} ${LIBS} ${BINS}
+	@rm -f ${OBJ} ${LIBS} ${BINS} libfaketime.arm64e.dylib libfaketime.arm64.dylib
 
 distclean: clean
 	@echo
