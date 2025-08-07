@@ -1273,10 +1273,12 @@ int __lxstat (int ver, const char *path, struct stat *buf)
   STAT_HANDLER(lxstat, buf, ver, path, buf);
 }
 
+#ifdef __GLIBC__
 int stat64 (const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(stat64, buf, path, buf);
 }
+#endif
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
 int __xstat64 (int ver, const char *path, struct stat64 *buf)
