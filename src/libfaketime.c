@@ -4010,7 +4010,7 @@ bool needs_forced_monotonic_fix(char *function_name)
 
 int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime, ft_lib_compat_pthread compat)
 {
-  struct timespec tp, tdiff_actual, realtime, faketime;
+  struct timespec tp, tdiff_actual, realtime, faketime, current_monotonic;
   struct timespec *tf = NULL;
   struct pthread_cond_monotonic* e;
   char *tmp_env;
@@ -4060,7 +4060,12 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
     {
       if (!fake_monotonic_clock && clk_id == CLOCK_MONOTONIC)
       {
-        timespecsub(abstime, &realtime, &tp);
+        DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_MONOTONIC, &current_monotonic));
+        if (result == -1)
+        {
+          return -1;
+        }
+        timespecsub(abstime, &current_monotonic, &tp);
       }
       else
       {
@@ -4084,7 +4089,16 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 #ifndef __ARM_ARCH
 #ifndef FORCE_MONOTONIC_FIX
     if (clk_id == CLOCK_MONOTONIC) {
-      if (needs_forced_monotonic_fix("pthread_cond_timedwait") == true) {
+      if (!fake_monotonic_clock) {
+        /* When not faking monotonic clock, use real monotonic time as base */
+        DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_MONOTONIC, &current_monotonic));
+        if (result == -1)
+        {
+          return -1;
+        }
+        timespecadd(&current_monotonic, &tdiff_actual, &tp);
+      }
+      else if (needs_forced_monotonic_fix("pthread_cond_timedwait") == true) {
         timespecadd(&realtime, &tdiff_actual, &tp);
       }
       else {
