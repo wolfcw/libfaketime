@@ -256,10 +256,10 @@ the difference:
 
 LD_PRELOAD=src/libfaketime.so.1 FAKETIME="@2000-01-01 11:12:13" \
   FAKETIME_DONT_RESET=1 \
-  /bin/bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
+  bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
 
 LD_PRELOAD=src/libfaketime.so.1 FAKETIME="@2000-01-01 11:12:13" \
-  /bin/bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
+  bash -c 'while [ $SECONDS -lt 5 ]; do date; sleep 1; done'
 
 In the second example, the "date" command will always print the same time,
 while in the first example, with FAKETIME_DONT_RESET set, time will increment
@@ -354,7 +354,7 @@ like "+0 x2", i.e., use an explicit zero offset as a prefix in your FAKETIME.
 For testing, your should run a command like
 
 LD_PRELOAD=./libfaketime.so.1 FAKETIME="+1,5y x10,0" \
-/bin/bash -c 'while true; do echo $SECONDS ; sleep 1 ; done'
+bash -c 'while true; do echo $SECONDS ; sleep 1 ; done'
 
 For each second that the endless loop sleeps, the executed bash shell will
 think that 10 seconds have passed ($SECONDS is a bash-internal variable
