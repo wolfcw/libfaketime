@@ -697,10 +697,21 @@ static void ft_shm_destroy(void)
     */
     if (0 == ft_sem_open(sem_name, &ft_sem))
     {
-      ft_sem_unlink(&ft_sem);
+      // Only delete the semaphore (and shared memory) if we're the owner.
+      pid_t sem_owner_pid;
+      int num_matched = sscanf(sem_name, "/faketime_sem_%d", &sem_owner_pid);
+      if (num_matched != 1)
+      {
+        fprintf(stderr, "libfaketime: failed to parse semaphore owner pid from sem_name %s\n", sem_name);
+        exit(1);
+      }
+      if (getpid() == sem_owner_pid)
+      {
+        ft_sem_unlink(&ft_sem);
+        shm_unlink(shm_name);
+        unsetenv("FAKETIME_SHARED");
+      }
     }
-    shm_unlink(shm_name);
-    unsetenv("FAKETIME_SHARED");
   }
 }
 
