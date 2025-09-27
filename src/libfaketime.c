@@ -352,7 +352,7 @@ void *ft_dlvsym(void *handle, const char *symbol, const char *version, const cha
 
 
 typedef struct {
-  char *name;
+  char name[256];
 #if FT_SEMAPHORE_BACKEND == FT_POSIX
   sem_t *sem;
 #elif FT_SEMAPHORE_BACKEND == FT_SYSV
@@ -509,7 +509,8 @@ int ft_sem_create(char *name, ft_sem_t *ft_sem)
     return -1;
   }
 #endif
-  ft_sem->name = name;
+  strncpy(ft_sem->name, name, sizeof ft_sem->name - 1);
+  ft_sem->name[sizeof ft_sem->name - 1] = '\0';
   return 0;
 }
 
@@ -527,7 +528,8 @@ int ft_sem_open(char *name, ft_sem_t *ft_sem)
     return -1;
    }
 #endif
-  ft_sem->name = name;
+  strncpy(ft_sem->name, name, sizeof ft_sem->name - 1);
+  ft_sem->name[sizeof ft_sem->name - 1] = '\0';
   return 0;
 }
 
