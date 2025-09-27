@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 #	testframe.sh DIR
 # bare-bones testing framework.
 # run the test suites in the given DIR;
