@@ -4485,6 +4485,8 @@ long syscall(long number, ...) {
   }
 #endif
 // static int (*real_clock_gettime) (clockid_t clk_id, struct timespec *tp);
+  /* Intercept clock_gettime syscall if available */
+#ifdef __NR_clock_gettime
   if (number == __NR_clock_gettime && (getenv("FAKETIME") || getenv("FAKETIME_TIMESTAMP_FILE"))) {
     clockid_t clk_id;
     struct timespec *tp;
@@ -4493,6 +4495,87 @@ long syscall(long number, ...) {
     va_end(ap);
     return clock_gettime(clk_id, tp);
   }
+#endif
+
+#ifdef FAKE_SLEEP
+#ifdef __NR_clock_nanosleep
+  /* Intercept raw clock_nanosleep syscall */
+  if (number == __NR_clock_nanosleep && (getenv("FAKETIME") || getenv("FAKETIME_TIMESTAMP_FILE")))
+  {
+    clockid_t clk_id;
+    int flags;
+    const struct timespec *req;
+    struct timespec *rem;
+
+    clk_id = va_arg(ap, clockid_t);
+    flags = va_arg(ap, int);
+    req = va_arg(ap, const struct timespec*);
+    rem = va_arg(ap, struct timespec*);
+    va_end(ap);
+
+    if (req == NULL)
+    {
+      /* Pass through invalid input to maintain behavior */
+      return real_syscall(number, clk_id, flags, req, rem);
+    }
+
+    struct timespec real_req;
+
+    if (flags & TIMER_ABSTIME)
+    {
+      /* Sleep until absolute fake time 'req': convert to corresponding real abstime */
+      struct timespec tdiff, timeadj;
+      /* time difference between target fake abstime and fake base */
+      timespecsub(req, &user_faked_time_timespec, &timeadj);
+      if (user_rate_set) {
+        timespecmul(&timeadj, 1.0 / user_rate, &tdiff);
+      } else {
+        tdiff = timeadj;
+      }
+
+      if (clk_id == CLOCK_REALTIME)
+      {
+        timespecadd(&ftpl_starttime.real, &tdiff, &real_req);
+      } else if (clk_id == CLOCK_MONOTONIC)
+      {
+        get_fake_monotonic_setting(&fake_monotonic_clock);
+        if (fake_monotonic_clock) {
+          timespecadd(&ftpl_starttime.mon, &tdiff, &real_req);
+        } else {
+          /* leave untouched if monotonic faking disabled */
+          real_req = *req;
+        }
+      } else {
+        /* other clocks: leave untouched */
+        real_req = *req;
+      }
+    } else
+    {
+      /* Relative sleep: scale by 1/rate for realtime/monotonic when faking */
+      if (user_rate_set && !dont_fake && ((clk_id == CLOCK_REALTIME) || (clk_id == CLOCK_MONOTONIC)))
+      {
+        timespecmul(req, 1.0 / user_rate, &real_req);
+      } else {
+        real_req = *req;
+      }
+    }
+
+    long rc = real_syscall(number, clk_id, flags, &real_req, rem);
+    if (rc != 0)
+    {
+      return rc;
+    }
+    if (rem != NULL && (rem->tv_sec != 0 || rem->tv_nsec != 0))
+    {
+      if (user_rate_set && !dont_fake)
+      {
+        timespecmul(rem, user_rate, rem);
+      }
+    }
+    return rc;
+  }
+#endif /* __NR_clock_nanosleep */
+#endif /* FAKE_SLEEP */
 
 #ifdef INTERCEPT_FUTEX
   if (number == __NR_futex) {
