@@ -2666,7 +2666,7 @@ int timespec_get(struct timespec *ts, int base)
 static void parse_ft_string(const char *user_faked_time)
 {
   struct tm user_faked_time_tm;
-  char * tmp_time_fmt;
+  const char * tmp_time_fmt;
   char * nstime_str;
 
   if (!strncmp(user_faked_time, user_faked_time_saved, BUFFERLEN))
@@ -3338,7 +3338,7 @@ static void prepare_config_contents(char *contents)
 bool str_array_contains(const char *haystack, const char *needle)
 {
   size_t needle_len = strlen(needle);
-  char *pos = strstr(haystack, needle);
+  const char *pos = strstr(haystack, needle);
   while (pos) {
     if (pos == haystack || *(pos - 1) == ',') {
       char nextc = *(pos + needle_len);
