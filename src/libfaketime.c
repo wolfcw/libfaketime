@@ -341,7 +341,12 @@ static bool check_missing_real(const char *name, bool missing)
 #define CHECK_MISSING_REAL(name) \
   check_missing_real(#name, (NULL == real_##name))
 
+#if defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+static pthread_mutex_t initialized_once_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#else
+static pthread_mutex_t initialized_once_mutex;
 static pthread_once_t initialized_once_control = PTHREAD_ONCE_INIT;
+#endif
 
 /* prototypes */
 static int    fake_gettimeofday(struct timeval *tv);
@@ -715,12 +720,40 @@ static void ft_shm_destroy(void)
   }
 }
 
+#if defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+static pthread_mutex_t ft_shm_initialized_once_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#else
+static pthread_mutex_t ft_shm_initialized_once_mutex;
 static pthread_once_t ft_shm_initialized_once_control = PTHREAD_ONCE_INIT;
+
+static void ft_shm_init_mutex (void)
+{
+  pthread_mutexattr_t attr;
+  if (pthread_mutexattr_init(&attr) != 0) {
+    return;
+  }
+  if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK) != 0) {
+    return;
+  }
+  pthread_mutex_init(&ft_shm_initialized_once_mutex, &attr);
+}
+#endif
 
 static void ft_shm_really_init (void);
 static void ft_shm_init (void)
 {
-  pthread_once(&ft_shm_initialized_once_control, ft_shm_really_init);
+  static bool init_done = false;
+#if !defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+  pthread_once(&ft_shm_initialized_once_control, ft_shm_init_mutex);
+#endif
+  int ret = pthread_mutex_lock(&ft_shm_initialized_once_mutex);
+  if (ret == 0) {
+    if (!init_done) {
+      init_done = true;
+      ft_shm_really_init();
+    }
+    pthread_mutex_unlock(&ft_shm_initialized_once_mutex);
+  }
 }
 
 static void ft_shm_really_init (void)
@@ -3256,8 +3289,33 @@ static void ftpl_really_init(void)
   dont_fake = dont_fake_final;
 }
 
+#if !defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+static void init_initialized_once_mutex (void)
+{
+  pthread_mutexattr_t attr;
+  if (pthread_mutexattr_init(&attr) != 0) {
+    return;
+  }
+  if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK) != 0) {
+    return;
+  }
+  pthread_mutex_init(&initialized_once_mutex, &attr);
+}
+#endif
+
 inline static void ftpl_init(void) {
-  pthread_once(&initialized_once_control, ftpl_really_init);
+  static bool init_done = false;
+#if !defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+  pthread_once(&initialized_once_control, init_initialized_once_mutex);
+#endif
+  int ret = pthread_mutex_lock(&initialized_once_mutex);
+  if (ret == 0) {
+    if (!init_done) {
+      init_done = true;
+      ftpl_really_init();
+    }
+    pthread_mutex_unlock(&initialized_once_mutex);
+  }
 }
 
 void *ft_dlvsym(void *handle, const char *symbol, const char *version,
