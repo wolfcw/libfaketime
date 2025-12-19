@@ -341,6 +341,7 @@ static bool check_missing_real(const char *name, bool missing)
 #define CHECK_MISSING_REAL(name) \
   check_missing_real(#name, (NULL == real_##name))
 
+static pthread_mutex_t initialized_once_mutex;
 static pthread_once_t initialized_once_control = PTHREAD_ONCE_INIT;
 
 /* prototypes */
@@ -715,12 +716,59 @@ static void ft_shm_destroy(void)
   }
 }
 
+static void ft_initialize_errorcheck_mutex (pthread_mutex_t* mutex)
+{
+  pthread_mutexattr_t attr;
+  int ret = pthread_mutexattr_init(&attr);
+  if (ret != 0) {
+    fprintf(stderr, "libfaketime: failed to initialize mutex attribute: %d\n", ret);
+    exit(-1);
+  }
+  ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+  if (ret != 0) {
+    fprintf(stderr, "libfaketime: failed to set errorcheck mutex attribute: %d\n", ret);
+    exit(-1);
+  }
+  ret = pthread_mutex_init(mutex, &attr);
+  if (ret != 0) {
+    fprintf(stderr, "libfaketime: failed to initialize errorcheck mutex: %d\n", ret);
+    exit(-1);
+  }
+}
+
+static void ft_init_once_generic (bool* init_done, pthread_once_t* once_control, pthread_mutex_t* mutex, void (*init_mutex_cb)(void), void (*initializer_cb)(void))
+{
+  pthread_once(once_control, init_mutex_cb);
+  int ret = pthread_mutex_lock(mutex);
+  if (ret == 0) {
+    if (!*init_done) {
+      // Set this to `true` before we call the initialisation; the effect is that
+      // recursive calls to `ftpl_init` or `ft_shm_really_init` will be suppressed.
+      // If anything that they use calls back to a time function
+      // it will get some not- or partially-set-up faketime state.
+      //  We are betting that that's good enough.
+      // (Empirically, on some platforms the shm functions call `statx`;
+      // we think the timestamps in that call probably don't matter.)
+      *init_done = true;
+      initializer_cb();
+    }
+    pthread_mutex_unlock(mutex);
+  }
+}
+
+static pthread_mutex_t ft_shm_initialized_once_mutex;
 static pthread_once_t ft_shm_initialized_once_control = PTHREAD_ONCE_INIT;
+
+static void ft_shm_init_mutex (void)
+{
+  ft_initialize_errorcheck_mutex(&ft_shm_initialized_once_mutex);
+}
 
 static void ft_shm_really_init (void);
 static void ft_shm_init (void)
 {
-  pthread_once(&ft_shm_initialized_once_control, ft_shm_really_init);
+  static bool init_done = false;
+  ft_init_once_generic(&init_done, &ft_shm_initialized_once_control, &ft_shm_initialized_once_mutex, &ft_shm_init_mutex, &ft_shm_really_init);
 }
 
 static void ft_shm_really_init (void)
@@ -3256,8 +3304,14 @@ static void ftpl_really_init(void)
   dont_fake = dont_fake_final;
 }
 
+static void init_initialized_once_mutex (void)
+{
+  ft_initialize_errorcheck_mutex(&initialized_once_mutex);
+}
+
 inline static void ftpl_init(void) {
-  pthread_once(&initialized_once_control, ftpl_really_init);
+  static bool init_done = false;
+  ft_init_once_generic(&init_done, &initialized_once_control, &initialized_once_mutex, &init_initialized_once_mutex, &ftpl_really_init);
 }
 
 void *ft_dlvsym(void *handle, const char *symbol, const char *version,
