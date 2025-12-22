@@ -4445,12 +4445,13 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
     goto futex_fallback;
   }
 
-  // if ((futex_op & FUTEX_CMD_MASK) == FUTEX_WAIT_BITSET) {
-  if (1) {
-    clockid_t clk_id = CLOCK_MONOTONIC;
-    if (futex_op & FUTEX_CLOCK_REALTIME)
-      clk_id = CLOCK_REALTIME;
+  int futex_cmd = futex_op & FUTEX_CMD_MASK;
+  clockid_t clk_id = CLOCK_MONOTONIC;
+  if (futex_op & FUTEX_CLOCK_REALTIME)
+    clk_id = CLOCK_REALTIME;
 
+  if (futex_cmd == FUTEX_WAIT_BITSET) {
+    // FUTEX_WAIT_BITSET uses absolute timeout
     struct timespec real_tp, fake_tp;
 
     DONT_FAKE_TIME((*real_clock_gettime)(clk_id, &real_tp));
@@ -4513,8 +4514,20 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
       }
     }
     return 0;
+  } else if (futex_cmd == FUTEX_WAIT) {
+    // FUTEX_WAIT uses relative timeout - scale by time rate
+    struct timespec adjusted_timeout;
+    
+    if (user_rate_set && !dont_fake && ((clk_id == CLOCK_REALTIME) || (clk_id == CLOCK_MONOTONIC))) {
+      timespecmul(timeout, 1.0 / user_rate, &adjusted_timeout);
+    } else {
+      adjusted_timeout = *timeout;
+    }
+    
+    return real_syscall(number, uaddr, futex_op, val, &adjusted_timeout, uaddr2, val3);
   } else {
-    return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
+    // Other futex operations - pass through unchanged
+    goto futex_fallback;
   }
 
   futex_fallback:
