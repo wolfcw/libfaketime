@@ -4445,11 +4445,11 @@ static inline long make_futex_syscall(long number, uint32_t* uaddr, int futex_op
     return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
   }
   if (timeout->tv_sec < 0) {
-    fprintf(stderr, "libfaketime: invalid timeout.tv_sec < 0\n");
+    // fprintf(stderr, "libfaketime: invalid timeout.tv_sec < 0\n");
     timeout->tv_sec = 0;
   }
   if (timeout->tv_nsec < 0) {
-    fprintf(stderr, "libfaketime: invalid timeout.tv_nsec < 0\n");
+    // fprintf(stderr, "libfaketime: invalid timeout.tv_nsec < 0\n");
     timeout->tv_nsec = 0;
   }
   return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
