@@ -49,12 +49,23 @@
 #
 #     INTERCEPT_SYSCALL
 #         - (On GNU/Linux only) intercept glibc's syscall() for known relevant syscalls.
-#           If enabled, this currently only works to divert the getrandom syscall.
+#           If enabled, this currently only works a few types of syscalls, 
+# 	        including FUTEX (see below), clock_gettime, etc.
 #
 #         - note that on unusual architectures, if INTERCEPT_SYSCALL is set, you may
 #           need to explicitly define variadic_promotion_t (e.g. by putting
 #           -Dvariadic_promotion_t=int into CFLAGS).  See src/faketime_common.h for
 #           more info.
+#
+#     INTERCEPT_FUTEX
+#         - (On GNU/Linux only) intercept glibc's syscall() for relevant FUTEX syscalls.
+#           If enabled, FUTEX syscalls will be intercepted and translated correspondingly.
+#           - when FUTEX_WAIT_BITSET (with absolute deadline) is set, the deadline will 
+#           be adjusted based on the faketime.
+#		    - when FUTEX_WAKE (with relative deadline) is set, the deadline will be 
+#           adjusted based on the time rate alone.
+# 			- for other FUTEX operations, no adjustment is made for now.
+#
 #
 #     FAKE_STATELESS
 #         - Remove support for any functionality that requires sharing state across
