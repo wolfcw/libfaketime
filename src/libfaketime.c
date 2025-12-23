@@ -4439,9 +4439,24 @@ pid_t getpid() {
 
 #ifdef INTERCEPT_SYSCALL
 #ifdef INTERCEPT_FUTEX
-long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t val, struct timespec* timeout, uint32_t* uaddr2, uint32_t val3) {
+static inline long make_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t val, struct timespec* timeout, uint32_t* uaddr2, uint32_t val3) { 
   if (timeout == NULL) {
     // not timeout related, just call the real syscall
+    return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
+  }
+  if (timeout->tv_sec < 0) {
+    fprintf(stderr, "libfaketime: invalid timeout.tv_sec < 0\n");
+    timeout->tv_sec = 0;
+  }
+  if (timeout->tv_nsec < 0) {
+    fprintf(stderr, "libfaketime: invalid timeout.tv_nsec < 0\n");
+    timeout->tv_nsec = 0;
+  }
+  return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
+}
+
+static inline long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t val, struct timespec* timeout, uint32_t* uaddr2, uint32_t val3) {
+  if (timeout == NULL) {
     goto futex_fallback;
   }
 
@@ -4464,9 +4479,7 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
     struct timespec adjusted_timeout, time_diff;
     timespecsub(&fake_tp, &real_tp, &time_diff);
     timespecsub(timeout, &time_diff, &adjusted_timeout);
-    // fprintf(stdout, "libfaketime: adjusted timeout: %ld.%09ld\n", adjusted_timeout.tv_sec, adjusted_timeout.tv_nsec);
-    long result;
-    result = real_syscall(number, uaddr, futex_op, val, &adjusted_timeout, uaddr2, val3);
+    long result = make_futex_syscall(number, uaddr, futex_op, val, &adjusted_timeout, uaddr2, val3);
     if (result != 0) {
       return result;
     }
@@ -4499,11 +4512,8 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
       struct timespec real_timeout;
       timespecadd(&real_now, &wait_time, &real_timeout);
 
-      // fprintf(stdout, "libfaketime: recalculated real timeout: %ld.%09ld\n",
-      //         real_timeout.tv_sec, real_timeout.tv_nsec);
-
       // Call the real syscall with the recalculated timeout
-      result = real_syscall(number, uaddr, futex_op, val, &real_timeout, uaddr2, val3);
+      result = make_futex_syscall(number, uaddr, futex_op, val, &real_timeout, uaddr2, val3);
       if (result != 0) {
         return result;
       }
@@ -4524,14 +4534,14 @@ long handle_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t v
       adjusted_timeout = *timeout;
     }
     
-    return real_syscall(number, uaddr, futex_op, val, &adjusted_timeout, uaddr2, val3);
+    return make_futex_syscall(number, uaddr, futex_op, val, &adjusted_timeout, uaddr2, val3);
   } else {
     // Other futex operations - pass through unchanged
     goto futex_fallback;
   }
 
   futex_fallback:
-    return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
+    return make_futex_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
 }
 #endif
 
