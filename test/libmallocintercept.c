@@ -76,7 +76,7 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
-  long int ptr2 = (long int) ptr; ptr2 -= (long int) ptr;
+	(void) ptr; /* unused */
 	print_msg("Called free() on from libmallocintercept...");
 	poke_faketime();
 	print_msg("successfully\n");
