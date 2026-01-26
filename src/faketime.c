@@ -290,7 +290,7 @@ int main (int argc, char **argv)
     }
 
     /* set shm size */
-    if (-1 == ftruncate(shm_fd, sizeof(uint64_t)))
+    if (-1 == ftruncate(shm_fd, sizeof(struct ft_shared_s)))
     {
       perror("faketime: ftruncate");
       cleanup_shobjs();
@@ -316,12 +316,16 @@ int main (int argc, char **argv)
     /* init elapsed time ticks to zero */
     ft_shared->ticks = 0;
     ft_shared->file_idx = 0;
-    ft_shared->start_time.real.tv_sec = 0;
-    ft_shared->start_time.real.tv_nsec = -1;
-    ft_shared->start_time.mon.tv_sec = 0;
-    ft_shared->start_time.mon.tv_nsec = -1;
-    ft_shared->start_time.mon_raw.tv_sec = 0;
-    ft_shared->start_time.mon_raw.tv_nsec = -1;
+    ft_shared->start_time_real.sec = 0;
+    ft_shared->start_time_real.nsec = -1;
+    ft_shared->start_time_mon.sec = 0;
+    ft_shared->start_time_mon.nsec = -1;
+    ft_shared->start_time_mon_raw.sec = 0;
+    ft_shared->start_time_mon_raw.nsec = -1;
+#ifdef CLOCK_BOOTTIME
+    ft_shared->start_time_boot.sec = 0;
+    ft_shared->start_time_boot.nsec = -1;
+#endif
 
     if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s))))
     {

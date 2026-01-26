@@ -38,6 +38,13 @@ struct system_time_s
 #endif
 };
 
+/* Fixed-width time representation for shared memory (arch-independent) */
+struct ft_shared_time_s
+{
+  int64_t sec;
+  int64_t nsec;
+};
+
 /* Data shared among faketime-spawned processes */
 struct ft_shared_s
 {
@@ -47,8 +54,13 @@ struct ft_shared_s
   uint64_t ticks;
   /* Index of timestamp to be loaded from file */
   uint64_t file_idx;
-  /* System time Faketime started at */
-  struct system_time_s start_time;
+  /* System time Faketime started at (fixed-width for cross-arch safety) */
+  struct ft_shared_time_s start_time_real;
+  struct ft_shared_time_s start_time_mon;
+  struct ft_shared_time_s start_time_mon_raw;
+#ifdef CLOCK_BOOTTIME
+  struct ft_shared_time_s start_time_boot;
+#endif
 };
 
 /* These are all needed in order to properly build on OSX */

@@ -588,6 +588,36 @@ int ft_sem_unlink(ft_sem_t *ft_sem)
  *      =======================================================================
  */
 
+static void system_time_to_shared(const struct system_time_s *src,
+                                  struct ft_shared_s *dst)
+{
+  dst->start_time_real.sec  = (int64_t)src->real.tv_sec;
+  dst->start_time_real.nsec = (int64_t)src->real.tv_nsec;
+  dst->start_time_mon.sec   = (int64_t)src->mon.tv_sec;
+  dst->start_time_mon.nsec  = (int64_t)src->mon.tv_nsec;
+  dst->start_time_mon_raw.sec  = (int64_t)src->mon_raw.tv_sec;
+  dst->start_time_mon_raw.nsec = (int64_t)src->mon_raw.tv_nsec;
+#ifdef CLOCK_BOOTTIME
+  dst->start_time_boot.sec  = (int64_t)src->boot.tv_sec;
+  dst->start_time_boot.nsec = (int64_t)src->boot.tv_nsec;
+#endif
+}
+
+static void shared_to_system_time(const struct ft_shared_s *src,
+                                  struct system_time_s *dst)
+{
+  dst->real.tv_sec     = (time_t)src->start_time_real.sec;
+  dst->real.tv_nsec    = (long)src->start_time_real.nsec;
+  dst->mon.tv_sec      = (time_t)src->start_time_mon.sec;
+  dst->mon.tv_nsec     = (long)src->start_time_mon.nsec;
+  dst->mon_raw.tv_sec  = (time_t)src->start_time_mon_raw.sec;
+  dst->mon_raw.tv_nsec = (long)src->start_time_mon_raw.nsec;
+#ifdef CLOCK_BOOTTIME
+  dst->boot.tv_sec     = (time_t)src->start_time_boot.sec;
+  dst->boot.tv_nsec    = (long)src->start_time_boot.nsec;
+#endif
+}
+
 static bool shmCreator = false;
 
 static void ft_shm_create(void) {
@@ -617,7 +647,7 @@ static void ft_shm_create(void) {
     exit(EXIT_FAILURE);
   }
   /* set shm size */
-  if (-1 == ftruncate(shm_fdN, sizeof(uint64_t)))
+  if (-1 == ftruncate(shm_fdN, sizeof(struct ft_shared_s)))
   {
     perror("libfaketime: In ft_shm_create(), ftruncate failed");
     exit(EXIT_FAILURE);
@@ -637,12 +667,16 @@ static void ft_shm_create(void) {
   /* init elapsed time ticks to zero */
   ft_sharedN->ticks = 0;
   ft_sharedN->file_idx = 0;
-  ft_sharedN->start_time.real.tv_sec = 0;
-  ft_sharedN->start_time.real.tv_nsec = -1;
-  ft_sharedN->start_time.mon.tv_sec = 0;
-  ft_sharedN->start_time.mon.tv_nsec = -1;
-  ft_sharedN->start_time.mon_raw.tv_sec = 0;
-  ft_sharedN->start_time.mon_raw.tv_nsec = -1;
+  ft_sharedN->start_time_real.sec = 0;
+  ft_sharedN->start_time_real.nsec = -1;
+  ft_sharedN->start_time_mon.sec = 0;
+  ft_sharedN->start_time_mon.nsec = -1;
+  ft_sharedN->start_time_mon_raw.sec = 0;
+  ft_sharedN->start_time_mon_raw.nsec = -1;
+#ifdef CLOCK_BOOTTIME
+  ft_sharedN->start_time_boot.sec = 0;
+  ft_sharedN->start_time_boot.nsec = -1;
+#endif
 
   if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
   {
@@ -864,7 +898,7 @@ static void ft_cleanup (void)
   /* detach from shared memory */
   if (ft_shared != NULL)
   {
-    munmap(ft_shared, sizeof(uint64_t));
+    munmap(ft_shared, sizeof(struct ft_shared_s));
   }
   if (stss != NULL)
   {
@@ -989,7 +1023,7 @@ static void reset_time()
       perror("libfaketime: In reset_time(), ft_sem_lock failed");
       exit(1);
     }
-    ft_shared->start_time = ftpl_starttime;
+    system_time_to_shared(&ftpl_starttime, ft_shared);
     if (ft_sem_unlock(&shared_sem) == -1)
     {
       perror("libfaketime: In reset_time(), ft_sem_unlock failed");
@@ -1087,11 +1121,11 @@ static bool load_time(struct timespec *tp)
         /* we set shared memory to stop using infile */
         ft_shared->ticks = 1;
         system_time_from_system(&ftpl_starttime);
-        ft_shared->start_time = ftpl_starttime;
+        system_time_to_shared(&ftpl_starttime, ft_shared);
       }
       else
       {
-        ftpl_starttime = ft_shared->start_time;
+        shared_to_system_time(ft_shared, &ftpl_starttime);
       }
 
       munmap(stss, infile_size);
@@ -3269,16 +3303,16 @@ static void ftpl_really_init(void)
       perror("libfaketime: In ftpl_init(), ft_sem_lock failed");
       exit(1);
     }
-    if (ft_shared->start_time.real.tv_nsec == -1)
+    if (ft_shared->start_time_real.nsec == -1)
     {
       /* set up global start time */
       system_time_from_system(&ftpl_starttime);
-      ft_shared->start_time = ftpl_starttime;
+      system_time_to_shared(&ftpl_starttime, ft_shared);
     }
     else
     {
       /** get preset start time */
-      ftpl_starttime = ft_shared->start_time;
+      shared_to_system_time(ft_shared, &ftpl_starttime);
     }
     if (ft_sem_unlock(&shared_sem) == -1)
     {

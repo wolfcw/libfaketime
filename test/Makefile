@@ -9,7 +9,7 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
-ALL_TESTS = timetest test
+ALL_TESTS = timetest test shm_layout_test
 
 ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
 ALL_TESTS += confirm_variadic_promotion
@@ -25,6 +25,9 @@ all: $(ALL_TESTS)
 
 timetest: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
+
+shm_layout_test: shm_layout_test.c ../src/faketime_common.h
+	${CC} -o $@ ${CFLAGS} $<
 
 test: timetest functest libmallocintercept.so
 	@echo
@@ -76,7 +79,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo
