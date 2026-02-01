@@ -51,7 +51,6 @@
 #include <string.h>
 #include <semaphore.h>
 #include <sys/mman.h>
-#include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -75,6 +74,7 @@
 
 #include "time_ops.h"
 #include "faketime_common.h"
+#include "ft_sem.h"
 
 #if defined PTHREAD_SINGLETHREADED_TIME && defined FAKE_STATELESS
 #undef PTHREAD_SINGLETHREADED_TIME
@@ -163,20 +163,6 @@ struct utimbuf {
   time_t modtime;      /* modification time */
 };
 #endif
-#endif
-
-/* semaphore backend options */
-#define FT_POSIX 1
-#define FT_SYSV 2
-/* set default backend */
-#ifndef FT_SEMAPHORE_BACKEND
-#define FT_SEMAPHORE_BACKEND FT_POSIX
-#endif
-/* validate selected backend */
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-#else
-#error "Unknown FT_SEMAPHORE_BACKEND; select between FT_POSIX and FT_SYSV"
 #endif
 
 #ifdef FAKE_RANDOM
@@ -352,15 +338,6 @@ bool          str_array_contains(const char *haystack, const char *needle);
 void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
 
 
-typedef struct {
-  char name[256];
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  sem_t *sem;
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  int semid;
-#endif
-} ft_sem_t;
-
 /** Semaphore protecting shared data */
 static ft_sem_t shared_sem;
 static bool shared_sem_initialized = false;
@@ -452,141 +429,39 @@ static void ftpl_init (void) __attribute__ ((constructor));
 
 /*
  *      =======================================================================
- *      Semaphore related functions                                     === SEM
- *      =======================================================================
- */
-
-#if FT_SEMAPHORE_BACKEND == FT_SYSV
-int ft_sem_name2key(char *name)
-{
-  key_t key;
-  char fullname[256];
-  snprintf(fullname, sizeof(fullname), "/tmp%s", name);
-  fullname[sizeof(fullname) - 1] = '\0';
-  int fd = open(fullname, O_CREAT, S_IRUSR | S_IWUSR);
-  if (fd < 0)
-  {
-    perror("libfaketime: open");
-    return -1;
-  }
-  close(fd);
-  if (-1 == (key = ftok(fullname, 'F')))
-  {
-    perror("libfaketime: ftok");
-    return -1;
-  }
-  return key;
-}
-#endif
-
-int ft_sem_create(char *name, ft_sem_t *ft_sem)
-{
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  if (SEM_FAILED == (ft_sem->sem = sem_open(name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
-  {
-    return -1;
-  }
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  key_t key = ft_sem_name2key(name);
-  int nsems = 1;
-
-  ft_sem->semid = semget(key, nsems, IPC_CREAT | IPC_EXCL | S_IWUSR | S_IRUSR);
-  if (ft_sem->semid >= 0) { /* we got here first */
-    struct sembuf sb = {
-      .sem_num = 0,
-      .sem_op = 1, /* number of resources the semaphore has (when decremented down to 0 the semaphore will block) */
-      .sem_flg = 0,
-    };
-    /* the number of semaphore operation structures (struct sembuf) passed to semop */
-    int nsops = 1;
-
-    /* do a semop() to "unlock" the semaphore */
-    if (-1 == semop(ft_sem->semid, &sb, nsops)) {
-      return -1;
-    }
-  } else if (errno == EEXIST) { /* someone else got here before us */
-    return -1;
-  } else {
-    return -1;
-  }
-#endif
-  strncpy(ft_sem->name, name, sizeof ft_sem->name - 1);
-  ft_sem->name[sizeof ft_sem->name - 1] = '\0';
-  return 0;
-}
-
-int ft_sem_open(char *name, ft_sem_t *ft_sem)
-{
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  if (SEM_FAILED == (ft_sem->sem = sem_open(name, 0)))
-  {
-    return -1;
-  }
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  key_t key = ft_sem_name2key(name);
-  ft_sem->semid = semget(key, 1, S_IWUSR | S_IRUSR);
-  if (ft_sem->semid < 0) {
-    return -1;
-   }
-#endif
-  strncpy(ft_sem->name, name, sizeof ft_sem->name - 1);
-  ft_sem->name[sizeof ft_sem->name - 1] = '\0';
-  return 0;
-}
-
-int ft_sem_lock(ft_sem_t *ft_sem)
-{
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  return sem_wait(ft_sem->sem);
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  struct sembuf sb = {
-    .sem_num = 0,
-    .sem_op = -1,  /* allocate resource (lock) */
-    .sem_flg = 0,
-  };
-  return semop(ft_sem->semid, &sb, 1);
-#endif
-}
-
-int ft_sem_unlock(ft_sem_t *ft_sem)
-{
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  return sem_post(ft_sem->sem);
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  struct sembuf sb = {
-    .sem_num = 0,
-    .sem_op = 1,  /* free resource (unlock) */
-    .sem_flg = 0,
-  };
-  return semop(ft_sem->semid, &sb, 1);
-#endif
-}
-
-int ft_sem_close(ft_sem_t *ft_sem)
-{
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  return sem_close(ft_sem->sem);
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  /* NOP -- there's no "close" equivalent */
-  (void)ft_sem;
-  return 0;
-#endif
-}
-
-int ft_sem_unlink(ft_sem_t *ft_sem)
-{
-#if FT_SEMAPHORE_BACKEND == FT_POSIX
-  return sem_unlink(ft_sem->name);
-#elif FT_SEMAPHORE_BACKEND == FT_SYSV
-  return semctl(ft_sem->semid, 0, IPC_RMID);
-#endif
-}
-
-/*
- *      =======================================================================
  *      Shared memory related functions                                 === SHM
  *      =======================================================================
  */
+
+static void system_time_to_shared(const struct system_time_s *src,
+                                  struct ft_shared_s *dst)
+{
+  dst->start_time_real.sec  = (int64_t)src->real.tv_sec;
+  dst->start_time_real.nsec = (int64_t)src->real.tv_nsec;
+  dst->start_time_mon.sec   = (int64_t)src->mon.tv_sec;
+  dst->start_time_mon.nsec  = (int64_t)src->mon.tv_nsec;
+  dst->start_time_mon_raw.sec  = (int64_t)src->mon_raw.tv_sec;
+  dst->start_time_mon_raw.nsec = (int64_t)src->mon_raw.tv_nsec;
+#ifdef CLOCK_BOOTTIME
+  dst->start_time_boot.sec  = (int64_t)src->boot.tv_sec;
+  dst->start_time_boot.nsec = (int64_t)src->boot.tv_nsec;
+#endif
+}
+
+static void shared_to_system_time(const struct ft_shared_s *src,
+                                  struct system_time_s *dst)
+{
+  dst->real.tv_sec     = (time_t)src->start_time_real.sec;
+  dst->real.tv_nsec    = (long)src->start_time_real.nsec;
+  dst->mon.tv_sec      = (time_t)src->start_time_mon.sec;
+  dst->mon.tv_nsec     = (long)src->start_time_mon.nsec;
+  dst->mon_raw.tv_sec  = (time_t)src->start_time_mon_raw.sec;
+  dst->mon_raw.tv_nsec = (long)src->start_time_mon_raw.nsec;
+#ifdef CLOCK_BOOTTIME
+  dst->boot.tv_sec     = (time_t)src->start_time_boot.sec;
+  dst->boot.tv_nsec    = (long)src->start_time_boot.nsec;
+#endif
+}
 
 static bool shmCreator = false;
 
@@ -617,7 +492,7 @@ static void ft_shm_create(void) {
     exit(EXIT_FAILURE);
   }
   /* set shm size */
-  if (-1 == ftruncate(shm_fdN, sizeof(uint64_t)))
+  if (-1 == ftruncate(shm_fdN, sizeof(struct ft_shared_s)))
   {
     perror("libfaketime: In ft_shm_create(), ftruncate failed");
     exit(EXIT_FAILURE);
@@ -637,12 +512,16 @@ static void ft_shm_create(void) {
   /* init elapsed time ticks to zero */
   ft_sharedN->ticks = 0;
   ft_sharedN->file_idx = 0;
-  ft_sharedN->start_time.real.tv_sec = 0;
-  ft_sharedN->start_time.real.tv_nsec = -1;
-  ft_sharedN->start_time.mon.tv_sec = 0;
-  ft_sharedN->start_time.mon.tv_nsec = -1;
-  ft_sharedN->start_time.mon_raw.tv_sec = 0;
-  ft_sharedN->start_time.mon_raw.tv_nsec = -1;
+  ft_sharedN->start_time_real.sec = 0;
+  ft_sharedN->start_time_real.nsec = -1;
+  ft_sharedN->start_time_mon.sec = 0;
+  ft_sharedN->start_time_mon.nsec = -1;
+  ft_sharedN->start_time_mon_raw.sec = 0;
+  ft_sharedN->start_time_mon_raw.nsec = -1;
+#ifdef CLOCK_BOOTTIME
+  ft_sharedN->start_time_boot.sec = 0;
+  ft_sharedN->start_time_boot.nsec = -1;
+#endif
 
   if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
   {
@@ -864,7 +743,7 @@ static void ft_cleanup (void)
   /* detach from shared memory */
   if (ft_shared != NULL)
   {
-    munmap(ft_shared, sizeof(uint64_t));
+    munmap(ft_shared, sizeof(struct ft_shared_s));
   }
   if (stss != NULL)
   {
@@ -989,7 +868,7 @@ static void reset_time()
       perror("libfaketime: In reset_time(), ft_sem_lock failed");
       exit(1);
     }
-    ft_shared->start_time = ftpl_starttime;
+    system_time_to_shared(&ftpl_starttime, ft_shared);
     if (ft_sem_unlock(&shared_sem) == -1)
     {
       perror("libfaketime: In reset_time(), ft_sem_unlock failed");
@@ -1087,11 +966,11 @@ static bool load_time(struct timespec *tp)
         /* we set shared memory to stop using infile */
         ft_shared->ticks = 1;
         system_time_from_system(&ftpl_starttime);
-        ft_shared->start_time = ftpl_starttime;
+        system_time_to_shared(&ftpl_starttime, ft_shared);
       }
       else
       {
-        ftpl_starttime = ft_shared->start_time;
+        shared_to_system_time(ft_shared, &ftpl_starttime);
       }
 
       munmap(stss, infile_size);
@@ -3269,16 +3148,16 @@ static void ftpl_really_init(void)
       perror("libfaketime: In ftpl_init(), ft_sem_lock failed");
       exit(1);
     }
-    if (ft_shared->start_time.real.tv_nsec == -1)
+    if (ft_shared->start_time_real.nsec == -1)
     {
       /* set up global start time */
       system_time_from_system(&ftpl_starttime);
-      ft_shared->start_time = ftpl_starttime;
+      system_time_to_shared(&ftpl_starttime, ft_shared);
     }
     else
     {
       /** get preset start time */
-      ftpl_starttime = ft_shared->start_time;
+      shared_to_system_time(ft_shared, &ftpl_starttime);
     }
     if (ft_sem_unlock(&shared_sem) == -1)
     {

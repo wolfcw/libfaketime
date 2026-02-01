@@ -168,17 +168,20 @@ all: ${LIBS} ${BINS}
 
 libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD_SINGLETHREADED_TIME
 
-${LIBS_OBJ}: libfaketime.c
+ft_sem.o: ft_sem.c ft_sem.h
+	${CC} -o $@ -c ${CFLAGS} ${CPPFLAGS} $<
+
+${LIBS_OBJ}: libfaketime.c ft_sem.h
 	${CC} -o $@ -c ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $<
 
-%.so.${SONAME}: %.o libfaketime.map
-	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ${LDADD}
+%.so.${SONAME}: %.o ft_sem.o libfaketime.map
+	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ft_sem.o ${LDADD}
 
-${BINS}: faketime.c
-	${CC} -o $@ ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $< ${LDFLAGS} ${BIN_LDFLAGS}
+${BINS}: faketime.c ft_sem.o ft_sem.h
+	${CC} -o $@ ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $< ft_sem.o ${LDFLAGS} ${BIN_LDFLAGS}
 
 clean:
-	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS}
+	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS} ft_sem.o
 
 distclean: clean
 	@echo

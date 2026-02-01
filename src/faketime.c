@@ -44,7 +44,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
-#include <semaphore.h>
+#include "ft_sem.h"
 
 #include "faketime_common.h"
 
@@ -60,6 +60,7 @@ static const char *date_cmd = "date";
 
 /* semaphore and shared memory names */
 char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
+static ft_sem_t wrapper_sem;
 
 void usage(const char *name)
 {
@@ -98,9 +99,9 @@ void usage(const char *name)
 /** Clean up shared objects */
 static void cleanup_shobjs()
 {
-  if (-1 == sem_unlink(sem_name))
+  if (-1 == ft_sem_unlink(&wrapper_sem))
   {
-    perror("faketime: sem_unlink");
+    perror("faketime: ft_sem_unlink");
   }
   if (-1 == shm_unlink(shm_name))
   {
@@ -255,9 +256,8 @@ int main (int argc, char **argv)
   curr_opt++;
 
   {
-    /* create semaphores and shared memory */
+    /* create lock and shared memory */
     int shm_fd;
-    sem_t *sem;
     struct ft_shared_s *ft_shared;
     char shared_objs[PATH_BUFSIZE * 2 + 1];
 
@@ -271,10 +271,10 @@ int main (int argc, char **argv)
     snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%ld", (long)getpid());
     snprintf(shm_name, PATH_BUFSIZE -1 ,"/faketime_shm_%ld", (long)getpid());
 
-    if (SEM_FAILED == (sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IWUSR|S_IRUSR, 1)))
+    if (-1 == ft_sem_create(sem_name, &wrapper_sem))
     {
-      perror("faketime: sem_open");
-      fprintf(stderr, "The faketime wrapper only works on platforms that support the sem_open()\nsystem call. However, you may LD_PRELOAD libfaketime without using this wrapper.\n");
+      perror("faketime: ft_sem_create");
+      fprintf(stderr, "The faketime wrapper failed to create its lock.\nHowever, you may LD_PRELOAD libfaketime without using this wrapper.\n");
       exit(EXIT_FAILURE);
     }
 
@@ -282,15 +282,12 @@ int main (int argc, char **argv)
     if (-1 == (shm_fd = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
     {
       perror("faketime: shm_open");
-      if (-1 == sem_unlink(argv[2]))
-      {
-        perror("faketime: sem_unlink");
-      }
+      ft_sem_unlink(&wrapper_sem);
       exit(EXIT_FAILURE);
     }
 
     /* set shm size */
-    if (-1 == ftruncate(shm_fd, sizeof(uint64_t)))
+    if (-1 == ftruncate(shm_fd, sizeof(struct ft_shared_s)))
     {
       perror("faketime: ftruncate");
       cleanup_shobjs();
@@ -306,9 +303,9 @@ int main (int argc, char **argv)
       exit(EXIT_FAILURE);
     }
 
-    if (sem_wait(sem) == -1)
+    if (ft_sem_lock(&wrapper_sem) == -1)
     {
-      perror("faketime: sem_wait");
+      perror("faketime: ft_sem_lock");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
@@ -316,12 +313,16 @@ int main (int argc, char **argv)
     /* init elapsed time ticks to zero */
     ft_shared->ticks = 0;
     ft_shared->file_idx = 0;
-    ft_shared->start_time.real.tv_sec = 0;
-    ft_shared->start_time.real.tv_nsec = -1;
-    ft_shared->start_time.mon.tv_sec = 0;
-    ft_shared->start_time.mon.tv_nsec = -1;
-    ft_shared->start_time.mon_raw.tv_sec = 0;
-    ft_shared->start_time.mon_raw.tv_nsec = -1;
+    ft_shared->start_time_real.sec = 0;
+    ft_shared->start_time_real.nsec = -1;
+    ft_shared->start_time_mon.sec = 0;
+    ft_shared->start_time_mon.nsec = -1;
+    ft_shared->start_time_mon_raw.sec = 0;
+    ft_shared->start_time_mon_raw.nsec = -1;
+#ifdef CLOCK_BOOTTIME
+    ft_shared->start_time_boot.sec = 0;
+    ft_shared->start_time_boot.nsec = -1;
+#endif
 
     if (-1 == munmap(ft_shared, (sizeof(struct ft_shared_s))))
     {
@@ -330,16 +331,16 @@ int main (int argc, char **argv)
       exit(EXIT_FAILURE);
     }
 
-    if (sem_post(sem) == -1)
+    if (ft_sem_unlock(&wrapper_sem) == -1)
     {
-      perror("faketime: semop");
+      perror("faketime: ft_sem_unlock");
       cleanup_shobjs();
       exit(EXIT_FAILURE);
     }
 
     snprintf(shared_objs, sizeof(shared_objs), "%s %s", sem_name, shm_name);
     setenv("FAKETIME_SHARED", shared_objs, true);
-    sem_close(sem);
+    ft_sem_close(&wrapper_sem);
   }
 
   {
