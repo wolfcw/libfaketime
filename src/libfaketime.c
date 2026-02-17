@@ -2701,12 +2701,33 @@ static void parse_ft_string(const char *user_faked_time)
         else
         {
           user_faked_time_timespec.tv_sec = master_file_stats.st_mtime;
-          user_faked_time_timespec.tv_nsec = 0;
+          if (NULL == getenv("FAKETIME_FOLLOW_ABSOLUTE"))
+          {
+            /* Normal FAKETIME_FOLLOW_FILE behavior; fake time coasts between mtime updates */
+            user_faked_time_timespec.tv_nsec = 0;
+          }
+          else
+          {
+            /* Set fake time to nanosecond-precision mtime */
+            user_faked_time_timespec.tv_nsec = master_file_stats.st_mtim.tv_nsec;
+
+            /* Freeze fake time (mtime is absolute truth in this mode) */
+            if (ft_mode != FT_NOOP)
+            {
+              ft_mode = FT_FREEZE;
+            }
+
+            /* Bypass parse_modifiers since we have absolute time */
+            user_faked_time_set = true;
+          }
         }
       }
       if (NULL == getenv("FAKETIME_DONT_RESET"))
         reset_time();
-      goto parse_modifiers;
+      if (!user_faked_time_set)
+      {
+        goto parse_modifiers;
+      }
       break;
 
     case 'i':

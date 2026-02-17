@@ -420,6 +420,15 @@ LD_PRELOAD=/path/to/libfaketime.so.1 \
 # (in a different terminal window or whatever)
 touch -t 2002290123.45 /tmp/my-demo-file.tmp
 
+Setting the environment variable FAKETIME_FOLLOW_ABSOLUTE=1 enables a submode
+of FAKETIME_FOLLOW_FILE behavior where fake time ONLY advances when the follow
+file's timestamp advances. In this mode an application that is not subject to
+libfaketime LD_PRELOAD intercept can absolutely control time for applications
+that are hooked by libfaketime. For example, a host application can control the
+timestamp of a follow file mapped into a container to implement (relatively)
+clean pause/resume behavior for fake time applications running within the
+container.
+
 
 Changing the 'x' modifier during run-time
 -----------------------------------------
