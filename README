@@ -56,9 +56,9 @@ documentation whether it can be achieved by using libfaketime directly.
 
 - libfaketime uses the library preload mechanism of your operating system's
   linker (which is involved in starting programs) and thus cannot work with
-  statically linked binaries or binaries that have the setuid-flag set (e.g.,
-  suidroot programs like "ping" or "passwd"). Please see you system linker's
-  manpage for further details.
+  binaries that have libc statically linked or binaries that have the 
+  setuid-flag set (e.g., suidroot programs like "ping" or "passwd"). 
+  Please see your system linker's manpage for further details.
 
 - libfaketime supports the pthreads environment. A separate library is built
   (libfaketimeMT.so.1), which contains the pthread synchronization calls. This
