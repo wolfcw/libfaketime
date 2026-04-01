@@ -1,4 +1,4 @@
-name: Run make test
+name: Run make tes1
 
 on:
   push:
