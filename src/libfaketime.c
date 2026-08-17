@@ -1291,7 +1291,6 @@ int __lxstat64 (int ver, const char *path, struct stat64 *buf)
 }
 #endif /* __ANDROID__ */
 #endif  /* ifndef __APPLE__ */
-#endif  /* ifdef FAKE_STAT */
 
 #ifdef STATX_TYPE
 static inline void fake_statx_timestamp(struct statx_timestamp* p)
@@ -1324,6 +1323,7 @@ int statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct 
   STAT_HANDLER_COMMON(statx, statxbuf, fake_statxbuf, dirfd, pathname, flags, mask, statxbuf)
 }
 #endif
+#endif  /* ifdef FAKE_STAT */
 
 #ifdef FAKE_FILE_TIMESTAMPS
 #ifdef MACOS_DYLD_INTERPOSE
