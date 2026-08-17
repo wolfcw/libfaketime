@@ -3513,7 +3513,7 @@ static void pthread_cleanup_mutex_lock(void *data)
 
 int read_config_file()
 {
-  static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+  char user_faked_time[BUFFERLEN];
   static char custom_filename[BUFSIZ];
   static char filename[BUFSIZ];
   int faketimerc;
@@ -3681,7 +3681,7 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
   if (cache_expired == 1)
   {
-    static char user_faked_time[BUFFERLEN]; /* changed to static for caching in v0.6 */
+    char user_faked_time[BUFFERLEN];
     /* initialize with default or env. variable */
     char *tmp_env;
 
