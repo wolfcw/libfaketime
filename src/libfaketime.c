@@ -364,8 +364,10 @@ static pthread_once_t initialized_once_control = PTHREAD_ONCE_INIT;
 /* prototypes */
 static int    fake_gettimeofday(struct timeval *tv);
 static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
+#ifdef FAKE_FILE_TIMESTAMPS
 static int    fake_current_realtime(struct timespec *tp);
 static int    fake_current_timeval(struct timeval *tv);
+#endif
 int           read_config_file();
 bool          str_array_contains(const char *haystack, const char *needle);
 void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
