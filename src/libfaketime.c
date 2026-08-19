@@ -4628,7 +4628,7 @@ static inline long handle_futex_syscall(long number, uint32_t* uaddr, int futex_
   }
 
   futex_fallback:
-    return make_futex_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
+    return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
 }
 #endif
 
