@@ -9,7 +9,7 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
-ALL_TESTS = timetest test shm_layout_test set_mtime time_ops_test clock_error_test
+ALL_TESTS = timetest test shm_layout_test set_mtime time_ops_test clock_error_test wait_contract_test
 
 ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
 ALL_TESTS += confirm_variadic_promotion
@@ -42,10 +42,13 @@ time_ops_test: time_ops_test.c ../src/time_ops.h
 clock_error_test: clock_error_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
+wait_contract_test: wait_contract_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
 fake_pid_test: fake_pid_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest time_ops_test set_mtime clock_error_test functest
+test: timetest time_ops_test set_mtime clock_error_test wait_contract_test functest
 	@echo
 	@./time_ops_test
 	@./test.sh

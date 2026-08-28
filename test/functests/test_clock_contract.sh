@@ -21,6 +21,7 @@ run()
 	run_testcase sleep_returns
 	run_testcase invalid_clock_id_fails
 	run_testcase null_clock_output_fails
+	run_testcase past_wait_deadlines_timeout
 }
 
 realtime_absolute_value()
@@ -70,4 +71,17 @@ null_clock_output_fails()
 	result=$(fakecmd "+0" ./clock_error_test)
 	asserteq "$result" "clock_gettime(NULL) returned EFAULT" \
 		"null clock output should fail with EFAULT"
+}
+
+past_wait_deadlines_timeout()
+{
+	typeset result
+	result=$(fakecmd "+0" ./wait_contract_test)
+	if [ "$PLATFORM" = "mac" ]; then
+		asserteq "$result" "realtime past deadline returned ETIMEDOUT" \
+			"past realtime deadline should time out"
+	else
+		asserteq "$result" "realtime and monotonic past deadlines returned ETIMEDOUT" \
+			"past realtime and monotonic deadlines should time out"
+	fi
 }
