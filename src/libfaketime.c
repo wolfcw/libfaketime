@@ -2820,6 +2820,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   /* sanity check */
   if (tp == NULL)
   {
+    errno = EFAULT;
     return -1;
   }
 
@@ -2855,6 +2856,12 @@ int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
 {
   struct timespec tp;
   int result;
+
+  if (tp64 == NULL)
+  {
+    errno = EFAULT;
+    return -1;
+  }
 
   result = clock_gettime(clk_id, &tp);
   tp64->tv_sec = tp.tv_sec;
@@ -4189,6 +4196,7 @@ int __clock_gettime(clockid_t clk_id, struct timespec *tp)
   /* sanity check */
   if (tp == NULL)
   {
+    errno = EFAULT;
     return -1;
   }
 

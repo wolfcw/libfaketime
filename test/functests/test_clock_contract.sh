@@ -20,6 +20,7 @@ run()
 	run_testcase monotonic_is_non_decreasing
 	run_testcase sleep_returns
 	run_testcase invalid_clock_id_fails
+	run_testcase null_clock_output_fails
 }
 
 realtime_absolute_value()
@@ -61,4 +62,12 @@ invalid_clock_id_fails()
 	result=$(fakecmd "+0" perl -MPOSIX -e \
 		'my $ok = !eval { clock_gettime(-1); 1 }; print($ok ? "ok" : "bad")')
 	asserteq "$result" "ok" "invalid clock id should fail"
+}
+
+null_clock_output_fails()
+{
+	typeset result
+	result=$(fakecmd "+0" ./clock_error_test)
+	asserteq "$result" "clock_gettime(NULL) returned EFAULT" \
+		"null clock output should fail with EFAULT"
 }
