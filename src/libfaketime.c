@@ -51,8 +51,10 @@
 #include <string.h>
 #include <semaphore.h>
 #include <sys/mman.h>
+#include <spawn.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <limits.h>
 #ifdef INTERCEPT_SYSCALL
@@ -443,10 +445,60 @@ static long ft_start_after_ncalls = -1;
 static long ft_stop_after_ncalls = -1;
 
 static bool spawnsupport = false;
+static bool spawn_exec_support = false;
 static int spawned = 0;
 static char ft_spawn_target[1024];
+#define FT_SPAWN_MAX_ARGS 8
+static char ft_spawn_exec[1024];
+static char ft_spawn_args[FT_SPAWN_MAX_ARGS][1024];
+static char *ft_spawn_argv[FT_SPAWN_MAX_ARGS + 2];
+#define FT_SPAWN_MAX_ENV 4096
+static char *ft_spawn_env[FT_SPAWN_MAX_ENV];
 static long ft_spawn_secs = -1;
 static long ft_spawn_ncalls = -1;
+
+extern char **environ;
+
+static bool is_spawn_environment_entry(const char *entry)
+{
+  return strncmp(entry, "FAKETIME_SPAWN_", strlen("FAKETIME_SPAWN_")) == 0;
+}
+
+static void run_spawn_exec(void)
+{
+  pid_t child_pid;
+  int child_status;
+  int spawn_result;
+  unsigned int env_index;
+  unsigned int env_count = 0;
+  pid_t waited;
+
+  for (env_index = 0; environ[env_index] != NULL; env_index++)
+  {
+    if (!is_spawn_environment_entry(environ[env_index]))
+    {
+      if (env_count + 1 >= FT_SPAWN_MAX_ENV)
+      {
+        return;
+      }
+      ft_spawn_env[env_count++] = environ[env_index];
+    }
+  }
+  ft_spawn_env[env_count] = NULL;
+
+  spawn_result = posix_spawn(&child_pid, ft_spawn_exec, NULL, NULL,
+                             ft_spawn_argv, ft_spawn_env);
+  if (spawn_result != 0)
+  {
+    return;
+  }
+
+  do
+  {
+    waited = waitpid(child_pid, &child_status, 0);
+  }
+  while (waited == -1 && errno == EINTR);
+}
 
 #ifdef __ARM_ARCH
 static int fake_monotonic_clock = 0;
@@ -3495,9 +3547,61 @@ static void ftpl_really_init(void)
   /* check whether we should spawn an external command */
   if ((tmp_env = getenv("FAKETIME_SPAWN_TARGET")) != NULL)
   {
+    if (getenv("FAKETIME_SPAWN_EXEC") != NULL)
+    {
+      fprintf(stderr, "libfaketime: FAKETIME_SPAWN_TARGET and FAKETIME_SPAWN_EXEC are mutually exclusive\n");
+      exit(EXIT_FAILURE);
+    }
     spawnsupport = true;
-    (void) strncpy(ft_spawn_target, getenv("FAKETIME_SPAWN_TARGET"), sizeof(ft_spawn_target) - 1);
+    (void) strncpy(ft_spawn_target, tmp_env, sizeof(ft_spawn_target) - 1);
     ft_spawn_target[sizeof(ft_spawn_target) - 1] = 0;
+    if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL)
+    {
+      ft_spawn_secs = parse_long_setting("FAKETIME_SPAWN_SECONDS", tmp_env);
+    }
+    if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL)
+    {
+      ft_spawn_ncalls = parse_long_setting("FAKETIME_SPAWN_NUMCALLS", tmp_env);
+    }
+  }
+  if ((tmp_env = getenv("FAKETIME_SPAWN_EXEC")) != NULL)
+  {
+    char arg_name[32];
+    bool missing_argument = false;
+    unsigned int arg_index;
+
+    if (getenv("FAKETIME_SPAWN_TARGET") != NULL || tmp_env[0] == '\0' ||
+        strlen(tmp_env) >= sizeof(ft_spawn_exec))
+    {
+      fprintf(stderr, "libfaketime: invalid FAKETIME_SPAWN_EXEC configuration\n");
+      exit(EXIT_FAILURE);
+    }
+    (void) strncpy(ft_spawn_exec, tmp_env, sizeof(ft_spawn_exec) - 1);
+    ft_spawn_exec[sizeof(ft_spawn_exec) - 1] = '\0';
+    ft_spawn_argv[0] = ft_spawn_exec;
+    for (arg_index = 1; arg_index <= FT_SPAWN_MAX_ARGS; arg_index++)
+    {
+      const char *argument;
+      (void) snprintf(arg_name, sizeof(arg_name), "FAKETIME_SPAWN_ARG_%u", arg_index);
+      argument = getenv(arg_name);
+      if (argument == NULL)
+      {
+        missing_argument = true;
+        continue;
+      }
+      if (missing_argument || strlen(argument) >= sizeof(ft_spawn_args[0]))
+      {
+        fprintf(stderr, "libfaketime: invalid FAKETIME_SPAWN_ARG configuration\n");
+        exit(EXIT_FAILURE);
+      }
+      (void) strncpy(ft_spawn_args[arg_index - 1], argument,
+                     sizeof(ft_spawn_args[0]) - 1);
+      ft_spawn_args[arg_index - 1][sizeof(ft_spawn_args[0]) - 1] = '\0';
+      ft_spawn_argv[arg_index] = ft_spawn_args[arg_index - 1];
+    }
+    ft_spawn_argv[arg_index] = NULL;
+    spawn_exec_support = true;
+    spawnsupport = true;
     if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL)
     {
       ft_spawn_secs = parse_long_setting("FAKETIME_SPAWN_SECONDS", tmp_env);
@@ -3908,7 +4012,14 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         if ((((ft_spawn_secs > -1) && (tmp_ts.tv_sec >= ft_spawn_secs)) || (callcounter == ft_spawn_ncalls)) && (spawned == 0))
         {
           spawned = 1;
-          (void) (system(ft_spawn_target) + 1);
+          if (spawn_exec_support)
+          {
+            run_spawn_exec();
+          }
+          else
+          {
+            (void) (system(ft_spawn_target) + 1);
+          }
         }
       }
     }

@@ -13,10 +13,11 @@ int macos_clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 int main(void)
 {
+  int (*clock_gettime_fn)(clockid_t, struct timespec *) = test_clock_gettime;
   struct timespec *output = (struct timespec *)(uintptr_t)0;
 
   errno = 0;
-  if (test_clock_gettime(CLOCK_REALTIME, output) != -1 || errno != EFAULT)
+  if (clock_gettime_fn(CLOCK_REALTIME, output) != -1 || errno != EFAULT)
   {
     fprintf(stderr, "clock_gettime(NULL) returned errno %d\n", errno);
     return EXIT_FAILURE;
