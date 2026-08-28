@@ -712,6 +712,13 @@ one needs to be aware of:
 Spawning the external process is controlled using three environment variables:
 FAKETIME_SPAWN_TARGET, FAKETIME_SPAWN_SECONDS, FAKETIME_SPAWN_NUMCALLS.
 
+Security warning: FAKETIME_SPAWN_TARGET is passed to a shell. This is an
+intentional command-execution feature, not a safe argument-passing interface.
+Do not enable it when environment variables can be influenced by an untrusted
+user, and do not use it for setuid/setgid programs, privileged daemons, or
+other security-sensitive processes. A shell-free argv-based interface would
+be required for those use cases; none is currently provided.
+
 Example (using bash on Linux):
 
 (... usual libfaketime setup here, setting LD_PRELOAD and FAKETIME ...)
