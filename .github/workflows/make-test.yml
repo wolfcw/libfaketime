@@ -16,23 +16,44 @@ jobs:
         - os: ubuntu-latest
           compiler: gcc
           compile_flags: ""
+          sanitizer: false
         - os: ubuntu-latest
           compiler: clang
           compile_flags: "-DFORCE_MONOTONIC_FIX"
+          sanitizer: false
         - os: macos-14
           compiler: clang
           compile_flags: ""
+          sanitizer: false
         - os: macos-13
           compiler: clang
           compile_flags: ""
+          sanitizer: false
+        - os: ubuntu-latest
+          compiler: gcc
+          compile_flags: ""
+          sanitizer: true
     runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
     - name: make
+      if: ${{ !matrix.sanitizer }}
       env:
         CC: ${{ matrix.compiler }}
         FAKETIME_COMPILE_CFLAGS: ${{ matrix.compile_flags }}
       run: make
     - name: make test
+      if: ${{ !matrix.sanitizer }}
       run: make test
+    - name: make test with sanitizers
+      if: ${{ matrix.sanitizer }}
+      env:
+        ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+        CC: ${{ matrix.compiler }}
+        FAKETIME_COMPILE_CFLAGS: ${{ matrix.compile_flags }}
+        CFLAGS: -fsanitize=address,undefined -fno-omit-frame-pointer
+        LDFLAGS: -fsanitize=address,undefined
+      run: |
+        ASAN_LIB=$(gcc -print-file-name=libasan.so)
+        FAKETIME_TESTLIB="$ASAN_LIB:../src/libfaketime.so.1" make test
