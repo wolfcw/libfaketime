@@ -372,6 +372,7 @@ static bool check_missing_real(const char *name, bool missing)
 {
   if (missing)
   { /* dlsym() failed */
+    errno = ENOSYS;
 #ifdef DEBUG
     (void) fprintf(stderr, "faketime problem: original %s not found.\n", name);
 #else
