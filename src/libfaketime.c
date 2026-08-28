@@ -761,17 +761,28 @@ enum ft_init_state
 {
   FT_INIT_UNINITIALIZED,
   FT_INIT_INITIALIZING,
-  FT_INIT_READY
+  FT_INIT_READY,
+  FT_INIT_FAILED
 };
 
-static void ft_init_once_generic (enum ft_init_state* state,
+static bool ft_init_once_generic (enum ft_init_state* state,
                                   pthread_once_t* once_control,
                                   pthread_mutex_t* mutex,
                                   void (*init_mutex_cb)(void),
                                   void (*initializer_cb)(void))
 {
-  pthread_once(once_control, init_mutex_cb);
-  int ret = pthread_mutex_lock(mutex);
+  int ret = pthread_once(once_control, init_mutex_cb);
+  if (ret != 0)
+  {
+    *state = FT_INIT_FAILED;
+    errno = ret;
+    return false;
+  }
+
+  if (*state == FT_INIT_FAILED)
+    return false;
+
+  ret = pthread_mutex_lock(mutex);
   if (ret == 0) {
     if (*state == FT_INIT_UNINITIALIZED) {
       /* Mark initialization before calling out so recursive calls are safe. */
@@ -785,7 +796,11 @@ static void ft_init_once_generic (enum ft_init_state* state,
       *state = FT_INIT_READY;
     }
     pthread_mutex_unlock(mutex);
+    return *state == FT_INIT_READY;
   }
+  *state = FT_INIT_FAILED;
+  errno = ret;
+  return false;
 }
 
 static pthread_mutex_t ft_shm_initialized_once_mutex;
