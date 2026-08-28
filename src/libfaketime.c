@@ -923,10 +923,14 @@ static void ft_cleanup (void)
   if (ft_shared != NULL)
   {
     munmap(ft_shared, sizeof(struct ft_shared_s));
+    ft_shared = NULL;
   }
   if (stss != NULL)
   {
     munmap(stss, infile_size);
+    stss = NULL;
+    infile_size = 0;
+    infile_set = false;
   }
   if (shared_sem_initialized)
   {
@@ -939,7 +943,11 @@ static void ft_cleanup (void)
     exit(-1);
   }
 #endif
-  if (shmCreator == true) ft_shm_destroy();
+  if (shmCreator == true)
+  {
+    ft_shm_destroy();
+    shmCreator = false;
+  }
 }
 
 
