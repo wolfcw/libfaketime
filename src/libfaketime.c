@@ -105,6 +105,8 @@ struct timeb {
 
 #define BUFFERLEN   256
 
+static long stat_mtime_nsec(const struct stat *st);
+
 #ifndef __APPLE__
 extern char *__progname;
 #ifdef __sun
@@ -530,6 +532,7 @@ static void ft_shm_create(void) {
   if (-1 == ftruncate(shm_fdN, sizeof(struct ft_shared_s)))
   {
     perror("libfaketime: In ft_shm_create(), ftruncate failed");
+    close(shm_fdN);
     exit(EXIT_FAILURE);
   }
   /* map shm */
@@ -537,6 +540,12 @@ static void ft_shm_create(void) {
                      MAP_SHARED, shm_fdN, 0)))
   {
     perror("libfaketime: In ft_shm_create(), mmap failed");
+    close(shm_fdN);
+    exit(EXIT_FAILURE);
+  }
+  if (close(shm_fdN) == -1)
+  {
+    perror("libfaketime: In ft_shm_create(), close failed");
     exit(EXIT_FAILURE);
   }
   if (ft_sem_lock(&semN) == -1)
@@ -764,6 +773,12 @@ static void ft_shm_really_init (void)
             MAP_SHARED, ticks_shm_fd, 0)))
     {
       perror("libfaketime: In ft_shm_init(), mmap failed");
+      close(ticks_shm_fd);
+      exit(1);
+    }
+    if (close(ticks_shm_fd) == -1)
+    {
+      perror("libfaketime: In ft_shm_init(), close failed");
       exit(1);
     }
   }
@@ -945,15 +960,24 @@ static void save_time(struct timespec *tp)
       }
     }
 
-    lseek(outfile, 0, SEEK_END);
-    do
+    while (n < sizeof(time_write))
     {
       written = write(outfile, &(((char*)&time_write)[n]), sizeof(time_write) - n);
+      if (written == -1)
+      {
+        if (errno == EINTR)
+          continue;
+        break;
+      }
+      if (written == 0)
+      {
+        errno = EIO;
+        break;
+      }
+      n += (size_t)written;
     }
-    while (((written == -1) && (errno == EINTR)) ||
-            (sizeof(time_write) < (n += written)));
 
-    if ((written == -1) || (n < sizeof(time_write)))
+    if (n < sizeof(time_write))
     {
       perror("libfaketime: In save_time(), saving timestamp to file failed");
     }
@@ -2870,7 +2894,7 @@ static void parse_ft_string(const char *user_faked_time)
           else
           {
             /* Set fake time to nanosecond-precision mtime */
-            user_faked_time_timespec.tv_nsec = master_file_stats.st_mtim.tv_nsec;
+            user_faked_time_timespec.tv_nsec = stat_mtime_nsec(&master_file_stats);
 
             /* Freeze fake time (mtime is absolute truth in this mode) */
             if (ft_mode != FT_NOOP)
@@ -3307,16 +3331,23 @@ static void ftpl_really_init(void)
       exit(EXIT_FAILURE);
     }
 
-    fstat(infile, &sb);
-    if (sizeof(stss[0]) > (infile_size = sb.st_size))
+    if (fstat(infile, &sb) == -1)
+    {
+      perror("libfaketime: In ftpl_init(), inspecting timestamp file failed");
+      close(infile);
+      exit(EXIT_FAILURE);
+    }
+    if (sb.st_size < 0 || sizeof(stss[0]) > (infile_size = (size_t)sb.st_size))
     {
       printf("There are no timestamps in the provided file to load timestamps from");
+      close(infile);
       exit(EXIT_FAILURE);
     }
 
     if ((infile_size % sizeof(stss[0])) != 0)
     {
       printf("File size is not multiple of timestamp size. It is probably damaged.");
+      close(infile);
       exit(EXIT_FAILURE);
     }
 
@@ -3324,8 +3355,10 @@ static void ftpl_really_init(void)
     if (stss == MAP_FAILED)
     {
       perror("libfaketime: In ftpl_init(), mapping file for loading timestamps failed");
+      close(infile);
       exit(EXIT_FAILURE);
     }
+    close(infile);
     infile_set = true;
   }
 
@@ -3447,24 +3480,40 @@ static void prepare_config_contents(char *contents)
       /* The line begins with a comment character and should be completely ignored */
       in_comment = true;
     }
-    beginning_of_line = false;
-
     if (*read_position == '\n') {
       /* We reached the end of the line that should be ignored (if any is ignored) */
       in_comment = false;
       /* The next character begins a new line */
       beginning_of_line = true;
+      read_position++;
+      continue;
     }
 
-    /* If we are not in a comment and are not looking at a line break, copy the
-     * character from the read position to the write position. */
-    if (!in_comment && *read_position != '\r' && *write_position != '\n') {
+    /* CR is a line separator too; LF, if present, is handled above. */
+    if (*read_position == '\r') {
+      in_comment = false;
+      beginning_of_line = true;
+      read_position++;
+      continue;
+    }
+
+    beginning_of_line = false;
+    if (!in_comment) {
       *write_position = *read_position;
       write_position++;
     }
     read_position++;
   }
   *write_position = '\0';
+}
+
+static long stat_mtime_nsec(const struct stat *st)
+{
+#ifdef __APPLE__
+  return st->st_mtimespec.tv_nsec;
+#else
+  return st->st_mtim.tv_nsec;
+#endif
 }
 
 bool str_array_contains(const char *haystack, const char *needle)

@@ -21,3 +21,12 @@ jobs:
       run: FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
     - name: make test
       run: make test
+
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: make
+      run: make
+    - name: make test
+      run: make test
