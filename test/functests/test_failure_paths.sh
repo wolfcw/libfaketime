@@ -19,6 +19,7 @@ run()
 	run_testcase rejects_missing_date_program
 	run_testcase rejects_empty_load_file
 	run_testcase rejects_partial_load_file
+	run_testcase rejects_invalid_load_timestamp
 	run_testcase save_file_failure_does_not_hang
 	rm -f "$LOAD_FILE"
 }
@@ -67,6 +68,17 @@ rejects_partial_load_file()
 		return 1
 	fi
 	echo "out=1 partial load file is rejected - ok"
+	return 0
+}
+
+rejects_invalid_load_timestamp()
+{
+	perl -e 'print pack("Q>Q>", 0, 1000000000)' > "$LOAD_FILE"
+	if run_with_load_file; then
+		echo "out=0 invalid load timestamp is rejected - bad"
+		return 1
+	fi
+	echo "out=1 invalid load timestamp is rejected - ok"
 	return 0
 }
 

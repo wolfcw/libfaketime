@@ -421,6 +421,11 @@ static inline void timespec_from_saved (struct timespec *tp,
   tp->tv_nsec = be64toh(saved->nsec);
 }
 
+static inline bool saved_timestamp_valid(const struct saved_timestamp *saved)
+{
+  return be64toh(saved->nsec) < SEC_TO_nSEC;
+}
+
 /** Saved timestamps */
 static struct saved_timestamp *stss = NULL;
 static size_t infile_size;
@@ -3418,6 +3423,18 @@ static void ftpl_really_init(void)
       close(infile);
       exit(EXIT_FAILURE);
     }
+
+    for (size_t i = 0; i < infile_size / sizeof(stss[0]); i++)
+    {
+      if (!saved_timestamp_valid(&stss[i]))
+      {
+        fprintf(stderr, "libfaketime: invalid nanoseconds in timestamp load file\n");
+        munmap(stss, infile_size);
+        close(infile);
+        exit(EXIT_FAILURE);
+      }
+    }
+
     close(infile);
     infile_set = true;
   }
