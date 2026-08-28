@@ -447,10 +447,11 @@ static long ft_stop_after_ncalls = -1;
 static bool spawnsupport = false;
 static bool spawn_exec_support = false;
 static int spawned = 0;
-static char ft_spawn_target[1024];
+#define FT_SPAWN_VALUE_SIZE 1024
 #define FT_SPAWN_MAX_ARGS 8
-static char ft_spawn_exec[1024];
-static char ft_spawn_args[FT_SPAWN_MAX_ARGS][1024];
+static char ft_spawn_target[FT_SPAWN_VALUE_SIZE];
+static char ft_spawn_exec[FT_SPAWN_VALUE_SIZE];
+static char ft_spawn_args[FT_SPAWN_MAX_ARGS][FT_SPAWN_VALUE_SIZE];
 static char *ft_spawn_argv[FT_SPAWN_MAX_ARGS + 2];
 #define FT_SPAWN_MAX_ENV 4096
 static char *ft_spawn_env[FT_SPAWN_MAX_ENV];
