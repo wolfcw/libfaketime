@@ -733,6 +733,7 @@ static void ft_shm_destroy(void)
         shm_unlink(shm_name);
         unsetenv("FAKETIME_SHARED");
       }
+      ft_sem_close(&ft_sem);
     }
   }
 }
@@ -952,6 +953,11 @@ static void ft_cleanup (void)
   {
     ft_sem_close(&shared_sem);
     shared_sem_initialized = false;
+  }
+  if (outfile != -1)
+  {
+    (void)close(outfile);
+    outfile = -1;
   }
 #ifdef FAKE_PTHREAD
   if (pthread_rwlock_destroy(&monotonic_conds_lock) != 0) {

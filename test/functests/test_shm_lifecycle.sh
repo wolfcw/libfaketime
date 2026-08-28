@@ -17,6 +17,7 @@ run()
 	init
 	run_testcase repeated_shared_state
 	run_testcase fork_exec_inherits_shared_state
+	run_testcase save_and_load_resources
 }
 
 repeated_shared_state()
@@ -41,4 +42,31 @@ fork_exec_inherits_shared_state()
 		'my $pid = fork(); die "fork failed\\n" unless defined $pid; if (!$pid) { exec("perl", "-MPOSIX", "-e", q{print strftime("%Y", gmtime(time))}) or die "exec failed\\n"; } waitpid($pid, 0);')
 	asserteq "$actual" "2020" \
 		"forked and execed child should inherit shared state"
+}
+
+save_and_load_resources()
+{
+	if [ "$PLATFORM" != "linuxlike" ]; then
+		echo "out=skip timestamp save/load resources are Linux-only - ok"
+		return 0
+	fi
+
+	typeset save_file load_file actual
+	save_file=".save_resource_test.$$"
+	load_file=".load_resource_test.$$"
+	actual=$(FAKETIME_SAVE_FILE="$save_file" fakecmd "+0" perl -e 'print time')
+	if [ -z "$actual" ] || [ ! -s "$save_file" ]; then
+		echo "out=save failed to create timestamp resource - bad"
+		rm -f "$save_file" "$load_file"
+		return 1
+	fi
+	cp "$save_file" "$load_file"
+	actual=$(FAKETIME_LOAD_FILE="$load_file" fakecmd "+0" perl -e 'print time')
+	rm -f "$save_file" "$load_file"
+	if [ -z "$actual" ]; then
+		echo "out=load failed to consume timestamp resource - bad"
+		return 1
+	fi
+	echo "out=save/load timestamp resources completed - ok"
+	return 0
 }
