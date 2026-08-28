@@ -379,6 +379,9 @@ int main (int argc, char **argv)
     }
 
     /* init elapsed time ticks to zero */
+    ft_shared->magic = FT_SHARED_MAGIC;
+    ft_shared->version = FT_SHARED_VERSION;
+    ft_shared->size = sizeof(struct ft_shared_s);
     ft_shared->ticks = 0;
     ft_shared->file_idx = 0;
     ft_shared->start_time_real.sec = 0;

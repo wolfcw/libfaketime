@@ -556,6 +556,13 @@ static bool parse_shared_objects(const char *value, char *sem_name,
     valid_shared_name(shm_name, "/faketime_shm_");
 }
 
+static bool valid_shared_header(const struct ft_shared_s *shared)
+{
+  return shared->magic == FT_SHARED_MAGIC &&
+    shared->version == FT_SHARED_VERSION &&
+    shared->size == sizeof(struct ft_shared_s);
+}
+
 static void ft_shm_cleanup_created(ft_sem_t *sem, int *shm_fd,
                                    struct ft_shared_s **mapping,
                                    const char *shm_name, bool locked)
@@ -637,6 +644,9 @@ static void ft_shm_create(void) {
     exit(EXIT_FAILURE);
   }
   /* init elapsed time ticks to zero */
+  ft_sharedN->magic = FT_SHARED_MAGIC;
+  ft_sharedN->version = FT_SHARED_VERSION;
+  ft_sharedN->size = sizeof(struct ft_shared_s);
   ft_sharedN->ticks = 0;
   ft_sharedN->file_idx = 0;
   ft_sharedN->start_time_real.sec = 0;
@@ -856,11 +866,32 @@ static void ft_shm_really_init (void)
       exit(1);
     }
 
+    struct stat shm_stat;
+    if (fstat(ticks_shm_fd, &shm_stat) == -1 ||
+        shm_stat.st_size < (off_t)sizeof(struct ft_shared_s))
+    {
+      perror("libfaketime: In ft_shm_init(), inspecting shared memory failed");
+      close(ticks_shm_fd);
+      ft_sem_close(&shared_sem);
+      shared_sem_initialized = false;
+      exit(1);
+    }
+
     if (MAP_FAILED == (ft_shared = mmap(NULL, sizeof(struct ft_shared_s), PROT_READ|PROT_WRITE,
             MAP_SHARED, ticks_shm_fd, 0)))
     {
       perror("libfaketime: In ft_shm_init(), mmap failed");
       close(ticks_shm_fd);
+      exit(1);
+    }
+    if (!valid_shared_header(ft_shared))
+    {
+      fprintf(stderr, "libfaketime: In ft_shm_init(), incompatible shared-memory header\n");
+      munmap(ft_shared, sizeof(struct ft_shared_s));
+      ft_shared = NULL;
+      close(ticks_shm_fd);
+      ft_sem_close(&shared_sem);
+      shared_sem_initialized = false;
       exit(1);
     }
     if (close(ticks_shm_fd) == -1)

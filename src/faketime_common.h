@@ -46,8 +46,15 @@ struct ft_shared_time_s
 };
 
 /* Data shared among faketime-spawned processes */
+#define FT_SHARED_MAGIC 0x46544c42U
+#define FT_SHARED_VERSION 1U
+
 struct ft_shared_s
 {
+  /* Validate the mapping before using the process-shared state. */
+  uint32_t magic;
+  uint16_t version;
+  uint16_t size;
   /*
    * When advancing time linearly with each time(), etc. call, the calls are
    * counted here */
