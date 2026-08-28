@@ -29,6 +29,18 @@ jobs:
           compiler: clang
           compile_flags: ""
           sanitizer: false
+        - os: macos-14
+          compiler: clang
+          compile_flags: "-DFAKE_FILE_TIMESTAMPS"
+          sanitizer: false
+        - os: ubuntu-latest
+          compiler: gcc
+          compile_flags: "-DFAKE_FILE_TIMESTAMPS"
+          sanitizer: false
+        - os: ubuntu-latest
+          compiler: gcc
+          compile_flags: "-DFAKE_PID"
+          sanitizer: false
         - os: ubuntu-latest
           compiler: gcc
           compile_flags: ""

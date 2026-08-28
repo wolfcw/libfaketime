@@ -1271,7 +1271,7 @@ static bool load_time(struct timespec *tp)
  *      Faked system functions: file related                     === FAKE(FILE)
  *      =======================================================================
  */
-#ifdef FAKE_UTIME
+#ifdef FAKE_FILE_TIMESTAMPS
 static int fake_utime_disabled = 1;
 #endif
 
