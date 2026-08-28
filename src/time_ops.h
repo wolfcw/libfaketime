@@ -28,8 +28,8 @@
 
 #define SEC_TO_uSEC 1000000
 #define SEC_TO_nSEC 1000000000
-#define FT_TIME_MAX(value) ((__typeof__(value))(((__typeof__(value))~0) ^ \
-  ((__typeof__(value))1 << (sizeof(value) * CHAR_BIT - 1))))
+#define FT_TIME_MAX(value) ((__typeof__(value))(((__uint128_t)1 << \
+  (sizeof(value) * CHAR_BIT - 1)) - 1))
 #define FT_TIME_MIN(value) (-FT_TIME_MAX(value) - 1)
 
 /* Convenience macros for operations on timevals.
