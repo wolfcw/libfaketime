@@ -556,11 +556,32 @@ static bool parse_shared_objects(const char *value, char *sem_name,
     valid_shared_name(shm_name, "/faketime_shm_");
 }
 
+static void ft_shm_cleanup_created(ft_sem_t *sem, int *shm_fd,
+                                   struct ft_shared_s **mapping,
+                                   const char *shm_name, bool locked)
+{
+  if (locked)
+    (void)ft_sem_unlock(sem);
+  if (*mapping != MAP_FAILED)
+  {
+    (void)munmap(*mapping, sizeof(struct ft_shared_s));
+    *mapping = MAP_FAILED;
+  }
+  if (*shm_fd >= 0)
+  {
+    (void)close(*shm_fd);
+    *shm_fd = -1;
+  }
+  (void)ft_sem_close(sem);
+  (void)ft_sem_unlink(sem);
+  (void)shm_unlink(shm_name);
+}
+
 static void ft_shm_create(void) {
   char sem_name[256], shm_name[256], sem_nameT[256], shm_nameT[256];
-  int shm_fdN;
+  int shm_fdN = -1;
   ft_sem_t semN;
-  struct ft_shared_s *ft_sharedN;
+  struct ft_shared_s *ft_sharedN = MAP_FAILED;
   char shared_objsN[513];
   ft_sem_t shared_semT;
   pid_t pid;
@@ -590,7 +611,7 @@ static void ft_shm_create(void) {
   if (-1 == ftruncate(shm_fdN, sizeof(struct ft_shared_s)))
   {
     perror("libfaketime: In ft_shm_create(), ftruncate failed");
-    close(shm_fdN);
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
     exit(EXIT_FAILURE);
   }
   /* map shm */
@@ -598,17 +619,21 @@ static void ft_shm_create(void) {
                      MAP_SHARED, shm_fdN, 0)))
   {
     perror("libfaketime: In ft_shm_create(), mmap failed");
-    close(shm_fdN);
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
     exit(EXIT_FAILURE);
   }
   if (close(shm_fdN) == -1)
   {
     perror("libfaketime: In ft_shm_create(), close failed");
+    shm_fdN = -1;
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
     exit(EXIT_FAILURE);
   }
+  shm_fdN = -1;
   if (ft_sem_lock(&semN) == -1)
   {
     perror("libfaketime: In ft_shm_create(), ft_sem_lock failed");
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
     exit(EXIT_FAILURE);
   }
   /* init elapsed time ticks to zero */
@@ -625,16 +650,20 @@ static void ft_shm_create(void) {
   ft_sharedN->start_time_boot.nsec = -1;
 #endif
 
-  if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
-  {
-    perror("libfaketime: In ft_shm_create(), munmap failed");
-    exit(EXIT_FAILURE);
-  }
   if (ft_sem_unlock(&semN) == -1)
   {
     perror("libfaketime: In ft_shm_create(), ft_sem_unlock failed");
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, true);
     exit(EXIT_FAILURE);
   }
+  if (-1 == munmap(ft_sharedN, (sizeof(struct ft_shared_s))))
+  {
+    perror("libfaketime: In ft_shm_create(), munmap failed");
+    ft_sharedN = MAP_FAILED;
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
+    exit(EXIT_FAILURE);
+  }
+  ft_sharedN = MAP_FAILED;
 
   snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
 
