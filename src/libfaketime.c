@@ -460,6 +460,22 @@ static long ft_spawn_ncalls = -1;
 
 extern char **environ;
 
+static void parse_spawn_limits(void)
+{
+  const char *value;
+
+  value = getenv("FAKETIME_SPAWN_SECONDS");
+  if (value != NULL)
+  {
+    ft_spawn_secs = parse_long_setting("FAKETIME_SPAWN_SECONDS", value);
+  }
+  value = getenv("FAKETIME_SPAWN_NUMCALLS");
+  if (value != NULL)
+  {
+    ft_spawn_ncalls = parse_long_setting("FAKETIME_SPAWN_NUMCALLS", value);
+  }
+}
+
 static bool is_spawn_environment_entry(const char *entry)
 {
   return strncmp(entry, "FAKETIME_SPAWN_", strlen("FAKETIME_SPAWN_")) == 0;
@@ -3556,14 +3572,6 @@ static void ftpl_really_init(void)
     spawnsupport = true;
     (void) strncpy(ft_spawn_target, tmp_env, sizeof(ft_spawn_target) - 1);
     ft_spawn_target[sizeof(ft_spawn_target) - 1] = 0;
-    if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL)
-    {
-      ft_spawn_secs = parse_long_setting("FAKETIME_SPAWN_SECONDS", tmp_env);
-    }
-    if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL)
-    {
-      ft_spawn_ncalls = parse_long_setting("FAKETIME_SPAWN_NUMCALLS", tmp_env);
-    }
   }
   if ((tmp_env = getenv("FAKETIME_SPAWN_EXEC")) != NULL)
   {
@@ -3603,14 +3611,10 @@ static void ftpl_really_init(void)
     ft_spawn_argv[arg_index] = NULL;
     spawn_exec_support = true;
     spawnsupport = true;
-    if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL)
-    {
-      ft_spawn_secs = parse_long_setting("FAKETIME_SPAWN_SECONDS", tmp_env);
-    }
-    if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL)
-    {
-      ft_spawn_ncalls = parse_long_setting("FAKETIME_SPAWN_NUMCALLS", tmp_env);
-    }
+  }
+  if (spawnsupport)
+  {
+    parse_spawn_limits();
   }
 
   if ((tmp_env = getenv("FAKETIME_SAVE_FILE")) != NULL)
