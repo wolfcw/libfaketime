@@ -19,7 +19,7 @@ set_mtime: set_mtime.c
 time_ops_test: time_ops_test.c ../src/time_ops.h
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest time_ops_test functest
+test: timetest time_ops_test set_mtime functest
 	@echo
 	@./time_ops_test
 	@./test_OSX.sh
