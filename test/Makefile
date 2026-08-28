@@ -18,6 +18,10 @@ TEST_SNIPPETS := $(filter-out syscall%,${TEST_SNIPPETS})
 EXPECTATIONS := $(filter-out syscall%,${EXPECTATIONS})
 endif
 
+ifneq ($(filter -DFAKE_PID,${CFLAGS}),)
+ALL_TESTS += fake_pid_test
+endif
+
 all: $(ALL_TESTS)
 
 .c.o:
@@ -33,6 +37,9 @@ set_mtime: set_mtime.c
 	${CC} -o $@ ${CFLAGS} $<
 
 time_ops_test: time_ops_test.c ../src/time_ops.h
+	${CC} -o $@ ${CFLAGS} $<
+
+fake_pid_test: fake_pid_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
 test: timetest time_ops_test set_mtime functest

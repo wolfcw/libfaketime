@@ -4784,7 +4784,8 @@ pid_t getpid() {
     long int pid;
     errno = 0;
     pid = strtol(pidstring, &end, 0);
-    if (pidstring == end || *end != '\0' || errno == ERANGE || pid < 0)
+    if (pidstring == end || *end != '\0' || errno == ERANGE || pid < 0 ||
+        (pid_t)pid != pid)
     {
       errno = EINVAL;
       return (pid_t)-1;
