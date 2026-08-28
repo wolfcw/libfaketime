@@ -9,7 +9,7 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
-ALL_TESTS = timetest test shm_layout_test set_mtime
+ALL_TESTS = timetest test shm_layout_test set_mtime time_ops_test
 
 ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
 ALL_TESTS += confirm_variadic_promotion
@@ -32,8 +32,12 @@ shm_layout_test: shm_layout_test.c ../src/faketime_common.h
 set_mtime: set_mtime.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest functest
+time_ops_test: time_ops_test.c ../src/time_ops.h
+	${CC} -o $@ ${CFLAGS} $<
+
+test: timetest time_ops_test functest
 	@echo
+	@./time_ops_test
 	@./test.sh
 
 # run functional tests
@@ -79,7 +83,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest shm_layout_test set_mtime getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test set_mtime time_ops_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo

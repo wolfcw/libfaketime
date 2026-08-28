@@ -5,7 +5,7 @@ CFLAGS += -std=gnu99 -Wall -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
-all: timetest set_mtime test
+all: timetest set_mtime time_ops_test test
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
@@ -16,8 +16,12 @@ timetest: ${OBJ}
 set_mtime: set_mtime.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest functest
+time_ops_test: time_ops_test.c ../src/time_ops.h
+	${CC} -o $@ ${CFLAGS} $<
+
+test: timetest time_ops_test functest
 	@echo
+	@./time_ops_test
 	@./test_OSX.sh
 
 # run functional tests
@@ -25,7 +29,7 @@ functest:
 	./testframe.sh functests
 
 clean:
-	@rm -f ${OBJ} timetest set_mtime
+	@rm -f ${OBJ} timetest set_mtime time_ops_test
 
 distclean: clean
 	@echo
