@@ -756,21 +756,32 @@ static void ft_initialize_errorcheck_mutex (pthread_mutex_t* mutex)
   }
 }
 
-static void ft_init_once_generic (bool* init_done, pthread_once_t* once_control, pthread_mutex_t* mutex, void (*init_mutex_cb)(void), void (*initializer_cb)(void))
+enum ft_init_state
+{
+  FT_INIT_UNINITIALIZED,
+  FT_INIT_INITIALIZING,
+  FT_INIT_READY
+};
+
+static void ft_init_once_generic (enum ft_init_state* state,
+                                  pthread_once_t* once_control,
+                                  pthread_mutex_t* mutex,
+                                  void (*init_mutex_cb)(void),
+                                  void (*initializer_cb)(void))
 {
   pthread_once(once_control, init_mutex_cb);
   int ret = pthread_mutex_lock(mutex);
   if (ret == 0) {
-    if (!*init_done) {
-      // Set this to `true` before we call the initialisation; the effect is that
-      // recursive calls to `ftpl_init` or `ft_shm_really_init` will be suppressed.
+    if (*state == FT_INIT_UNINITIALIZED) {
+      /* Mark initialization before calling out so recursive calls are safe. */
+      *state = FT_INIT_INITIALIZING;
       // If anything that they use calls back to a time function
       // it will get some not- or partially-set-up faketime state.
       //  We are betting that that's good enough.
       // (Empirically, on some platforms the shm functions call `statx`;
       // we think the timestamps in that call probably don't matter.)
-      *init_done = true;
       initializer_cb();
+      *state = FT_INIT_READY;
     }
     pthread_mutex_unlock(mutex);
   }
@@ -787,8 +798,8 @@ static void ft_shm_init_mutex (void)
 static void ft_shm_really_init (void);
 static void ft_shm_init (void)
 {
-  static bool init_done = false;
-  ft_init_once_generic(&init_done, &ft_shm_initialized_once_control, &ft_shm_initialized_once_mutex, &ft_shm_init_mutex, &ft_shm_really_init);
+  static enum ft_init_state state = FT_INIT_UNINITIALIZED;
+  ft_init_once_generic(&state, &ft_shm_initialized_once_control, &ft_shm_initialized_once_mutex, &ft_shm_init_mutex, &ft_shm_really_init);
 }
 
 static void ft_shm_really_init (void)
@@ -3583,8 +3594,8 @@ static void init_initialized_once_mutex (void)
 }
 
 inline static void ftpl_init(void) {
-  static bool init_done = false;
-  ft_init_once_generic(&init_done, &initialized_once_control, &initialized_once_mutex, &init_initialized_once_mutex, &ftpl_really_init);
+  static enum ft_init_state state = FT_INIT_UNINITIALIZED;
+  ft_init_once_generic(&state, &initialized_once_control, &initialized_once_mutex, &init_initialized_once_mutex, &ftpl_really_init);
 }
 
 void *ft_dlvsym(void *handle, const char *symbol, const char *version,
