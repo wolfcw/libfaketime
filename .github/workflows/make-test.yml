@@ -12,21 +12,27 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-22.04]
+        include:
+        - os: ubuntu-latest
+          compiler: gcc
+          compile_flags: ""
+        - os: ubuntu-latest
+          compiler: clang
+          compile_flags: "-DFORCE_MONOTONIC_FIX"
+        - os: macos-14
+          compiler: clang
+          compile_flags: ""
+        - os: macos-13
+          compiler: clang
+          compile_flags: ""
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v1
-    - name: make
-      run: FAKETIME_COMPILE_CFLAGS="-DFORCE_MONOTONIC_FIX" make
-    - name: make test
-      run: make test
-
-  macos:
-    runs-on: macos-latest
-    steps:
     - uses: actions/checkout@v4
     - name: make
+      env:
+        CC: ${{ matrix.compiler }}
+        FAKETIME_COMPILE_CFLAGS: ${{ matrix.compile_flags }}
       run: make
     - name: make test
       run: make test
