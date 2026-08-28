@@ -20,6 +20,7 @@ run()
 	run_testcase rejects_empty_load_file
 	run_testcase rejects_partial_load_file
 	run_testcase rejects_invalid_load_timestamp
+	run_testcase rejects_invalid_shared_objects
 	run_testcase save_file_failure_does_not_hang
 	rm -f "$LOAD_FILE"
 }
@@ -79,6 +80,20 @@ rejects_invalid_load_timestamp()
 		return 1
 	fi
 	echo "out=1 invalid load timestamp is rejected - ok"
+	return 0
+}
+
+rejects_invalid_shared_objects()
+{
+	export FAKETIME_SHARED="/tmp/not-a-semaphore /tmp/not-shared-memory"
+	export FAKETIME_NO_CACHE=1
+	if fakecmd "+0" ../timetest >/dev/null 2>&1; then
+		echo "out=0 invalid shared-object names are rejected - bad"
+		unset FAKETIME_SHARED FAKETIME_NO_CACHE
+		return 1
+	fi
+	unset FAKETIME_SHARED FAKETIME_NO_CACHE
+	echo "out=1 invalid shared-object names are rejected - ok"
 	return 0
 }
 

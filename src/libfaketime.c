@@ -531,6 +531,31 @@ static void shared_to_system_time(const struct ft_shared_s *src,
 
 static bool shmCreator = false;
 
+static bool valid_shared_name(const char *name, const char *prefix)
+{
+  size_t prefix_len = strlen(prefix);
+
+  if (strncmp(name, prefix, prefix_len) != 0 || name[prefix_len] == '\0')
+    return false;
+  for (const char *p = name + prefix_len; *p != '\0'; p++)
+  {
+    if (*p < '0' || *p > '9')
+      return false;
+  }
+  return true;
+}
+
+static bool parse_shared_objects(const char *value, char *sem_name,
+                                 char *shm_name)
+{
+  char extra[2];
+
+  if (sscanf(value, "%255s %255s %1s", sem_name, shm_name, extra) != 2)
+    return false;
+  return valid_shared_name(sem_name, "/faketime_sem_") &&
+    valid_shared_name(shm_name, "/faketime_shm_");
+}
+
 static void ft_shm_create(void) {
   char sem_name[256], shm_name[256], sem_nameT[256], shm_nameT[256];
   int shm_fdN;
@@ -639,7 +664,7 @@ static void ft_shm_destroy(void)
 
   if (ft_shared_env != NULL)
   {
-    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
+    if (!parse_shared_objects(ft_shared_env, sem_name, shm_name))
     {
       printf("libfaketime: In ft_shm_destroy(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
       exit(1);
@@ -744,7 +769,7 @@ static void ft_shm_really_init (void)
   /* check for stale semaphore / shared memory information */
   if (ft_shared_env != NULL)
   {
-    if (sscanf(ft_shared_env, "%255s %255s", sem_name, shm_name) < 2)
+    if (!parse_shared_objects(ft_shared_env, sem_name, shm_name))
     {
       printf("libfaketime: In ft_shm_init(), error parsing semaphore name and shared memory id from string: %s", ft_shared_env);
       exit(1);
