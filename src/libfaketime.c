@@ -1028,6 +1028,8 @@ static bool load_time(struct timespec *tp)
   bool ret = false;
   if (shared_sem_initialized && (infile_set))
   {
+    const size_t timestamp_count = infile_size / sizeof(stss[0]);
+
     /* lock */
     if (ft_sem_lock(&shared_sem) == -1)
     {
@@ -1042,7 +1044,7 @@ static bool load_time(struct timespec *tp)
       }
     }
 
-    if ((sizeof(stss[0]) * (ft_shared->file_idx + 1)) > infile_size)
+    if (ft_shared->file_idx >= timestamp_count)
     {
       /* we are out of timestamps to replay, return to faking time by rules
        * using last timestamp from file as the user provided timestamp */
