@@ -107,6 +107,30 @@ struct timeb {
 
 static long stat_mtime_nsec(const struct stat *st);
 
+static long parse_long_setting(const char *name, const char *value)
+{
+  char *end;
+  long result;
+
+  errno = 0;
+  result = strtol(value, &end, 10);
+  if (value == end || *end != '\0' || errno == ERANGE)
+  {
+    fprintf(stderr, "libfaketime: invalid numeric value for %s: %s\n", name, value);
+    exit(EXIT_FAILURE);
+  }
+  return result;
+}
+
+static bool parse_finite_double_prefix(const char *value, double *result)
+{
+  char *end;
+
+  errno = 0;
+  *result = strtod(value, &end);
+  return value != end && errno != ERANGE && isfinite(*result);
+}
+
 #ifndef __APPLE__
 extern char *__progname;
 #ifdef __sun
@@ -2808,7 +2832,12 @@ static void parse_ft_string(const char *user_faked_time)
 
         if (nstime_str[0] == '.')
         {
-          double nstime = atof(--nstime_str);
+          double nstime;
+          if (!parse_finite_double_prefix(--nstime_str, &nstime))
+          {
+            fprintf(stderr, "libfaketime: invalid fractional timestamp: %s\n", user_faked_time);
+            exit(EXIT_FAILURE);
+          }
           user_faked_time_timespec.tv_nsec = (nstime - floor(nstime)) * SEC_TO_nSEC;
         }
         user_faked_time_set = true;
@@ -2826,7 +2855,12 @@ static void parse_ft_string(const char *user_faked_time)
     case '-': /* User-specified offset */
       if (ft_mode != FT_NOOP) ft_mode = FT_START_AT;
       /* fractional time offsets contributed by Karl Chen in v0.8 */
-      double frac_offset = atof(user_faked_time);
+      double frac_offset;
+      if (!parse_finite_double_prefix(user_faked_time, &frac_offset))
+      {
+        fprintf(stderr, "libfaketime: invalid time offset: %s\n", user_faked_time);
+        exit(EXIT_FAILURE);
+      }
 
       /* offset is in seconds by default, but the string may contain
        * multipliers...
@@ -2854,7 +2888,12 @@ static void parse_ft_string(const char *user_faked_time)
 
         if (nstime_str[0] == '.')
         {
-          double nstime = atof(--nstime_str);
+          double nstime;
+          if (!parse_finite_double_prefix(--nstime_str, &nstime))
+          {
+            fprintf(stderr, "libfaketime: invalid fractional timestamp: %s\n", user_faked_time);
+            exit(EXIT_FAILURE);
+          }
           user_faked_time_timespec.tv_nsec = (nstime - floor(nstime)) * SEC_TO_nSEC;
         }
       }
@@ -2925,7 +2964,11 @@ parse_modifiers:
       /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
       if (strchr(user_faked_time, 'x') != NULL)
       {
-        user_rate = atof(strchr(user_faked_time, 'x')+1);
+        if (!parse_finite_double_prefix(strchr(user_faked_time, 'x') + 1, &user_rate) || user_rate <= 0)
+        {
+          fprintf(stderr, "libfaketime: invalid clock rate in FAKETIME: %s\n", user_faked_time);
+          exit(EXIT_FAILURE);
+        }
         user_rate_set = true;
         if (NULL != getenv("FAKETIME_XRESET")) {
           if (ftpl_timecache.real.tv_nsec >= 0) {
@@ -2946,7 +2989,12 @@ parse_modifiers:
       }
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
-        double tick_inc = atof(tmp_time_fmt + 1);
+        double tick_inc;
+        if (!parse_finite_double_prefix(tmp_time_fmt + 1, &tick_inc))
+        {
+          fprintf(stderr, "libfaketime: invalid tick increment in FAKETIME: %s\n", user_faked_time);
+          exit(EXIT_FAILURE);
+        }
         /* increment time with every time() call */
         user_per_tick_inc.tv_sec = floor(tick_inc);
         user_per_tick_inc.tv_nsec = (tick_inc - user_per_tick_inc.tv_sec) * SEC_TO_nSEC ;
@@ -3187,7 +3235,7 @@ static void ftpl_really_init(void)
     }
     else
     { /* Any other non-number disables the utime functions, but we also support FAKE_UTIME=1 to enable */
-      fake_utime_disabled = !atoi(tmp_env);
+      fake_utime_disabled = !parse_long_setting("FAKE_UTIME", tmp_env);
     }
   }
 #else
@@ -3198,7 +3246,13 @@ static void ftpl_really_init(void)
 
   if ((tmp_env = getenv("FAKETIME_CACHE_DURATION")) != NULL)
   {
-    cache_duration = atoi(tmp_env);
+    long value = parse_long_setting("FAKETIME_CACHE_DURATION", tmp_env);
+    if (value < INT_MIN || value > INT_MAX)
+    {
+      fprintf(stderr, "libfaketime: FAKETIME_CACHE_DURATION is out of range: %s\n", tmp_env);
+      exit(EXIT_FAILURE);
+    }
+    cache_duration = (int)value;
   }
   if ((tmp_env = getenv("FAKETIME_NO_CACHE")) != NULL)
   {
@@ -3279,22 +3333,22 @@ static void ftpl_really_init(void)
 
   if ((tmp_env = getenv("FAKETIME_START_AFTER_SECONDS")) != NULL)
   {
-    ft_start_after_secs = atol(tmp_env);
+    ft_start_after_secs = parse_long_setting("FAKETIME_START_AFTER_SECONDS", tmp_env);
     limited_faking = true;
   }
   if ((tmp_env = getenv("FAKETIME_STOP_AFTER_SECONDS")) != NULL)
   {
-    ft_stop_after_secs = atol(tmp_env);
+    ft_stop_after_secs = parse_long_setting("FAKETIME_STOP_AFTER_SECONDS", tmp_env);
     limited_faking = true;
   }
   if ((tmp_env = getenv("FAKETIME_START_AFTER_NUMCALLS")) != NULL)
   {
-    ft_start_after_ncalls = atol(tmp_env);
+    ft_start_after_ncalls = parse_long_setting("FAKETIME_START_AFTER_NUMCALLS", tmp_env);
     limited_faking = true;
   }
   if ((tmp_env = getenv("FAKETIME_STOP_AFTER_NUMCALLS")) != NULL)
   {
-    ft_stop_after_ncalls = atol(tmp_env);
+    ft_stop_after_ncalls = parse_long_setting("FAKETIME_STOP_AFTER_NUMCALLS", tmp_env);
     limited_faking = true;
   }
 
@@ -3306,11 +3360,11 @@ static void ftpl_really_init(void)
     ft_spawn_target[sizeof(ft_spawn_target) - 1] = 0;
     if ((tmp_env = getenv("FAKETIME_SPAWN_SECONDS")) != NULL)
     {
-      ft_spawn_secs = atol(tmp_env);
+      ft_spawn_secs = parse_long_setting("FAKETIME_SPAWN_SECONDS", tmp_env);
     }
     if ((tmp_env = getenv("FAKETIME_SPAWN_NUMCALLS")) != NULL)
     {
-      ft_spawn_ncalls = atol(tmp_env);
+      ft_spawn_ncalls = parse_long_setting("FAKETIME_SPAWN_NUMCALLS", tmp_env);
     }
   }
 
@@ -4243,7 +4297,7 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
     if ((tmp_env = getenv("FAKETIME_WAIT_MS")) != NULL)
     {
-      wait_ms = atol(tmp_env);
+      wait_ms = parse_long_setting("FAKETIME_WAIT_MS", tmp_env);
       DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, &realtime));
       if (result == -1)
       {
@@ -4526,7 +4580,15 @@ static int bypass_randomness(void* buf, size_t buflen) {
   char *b = buf;
 
   if (seedstring != NULL) {
-    long long int seed = strtoll(seedstring, NULL, 0);
+    char *end;
+    long long int seed;
+    errno = 0;
+    seed = strtoll(seedstring, &end, 0);
+    if (seedstring == end || *end != '\0' || errno == ERANGE)
+    {
+      errno = EINVAL;
+      return 0;
+    }
     for (size_t i = 0; i < buflen; i++) {
       b[i] = fakerandom_msws(seed);
     }
@@ -4568,7 +4630,15 @@ pid_t getpid() {
 #endif
   const char *pidstring = getenv("FAKETIME_FAKEPID");
   if (pidstring != NULL) {
-    long int pid = strtol(pidstring, NULL, 0);
+    char *end;
+    long int pid;
+    errno = 0;
+    pid = strtol(pidstring, &end, 0);
+    if (pidstring == end || *end != '\0' || errno == ERANGE || pid < 0)
+    {
+      errno = EINVAL;
+      return (pid_t)-1;
+    }
     return (pid_t)(pid);
   } else {
     ftpl_init();
