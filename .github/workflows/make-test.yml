@@ -43,6 +43,14 @@ jobs:
           sanitizer: false
         - os: ubuntu-latest
           compiler: gcc
+          compile_flags: "-DFAKE_RANDOM"
+          sanitizer: false
+        - os: ubuntu-latest
+          compiler: gcc
+          compile_flags: "-DINTERCEPT_SYSCALL"
+          sanitizer: false
+        - os: ubuntu-latest
+          compiler: gcc
           compile_flags: ""
           sanitizer: true
     runs-on: ${{ matrix.os }}
