@@ -38,8 +38,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -71,6 +73,23 @@ static void set_env_or_exit(const char *name, const char *value)
     perror("faketime: setenv");
     exit(EXIT_FAILURE);
   }
+}
+
+static bool parse_date_seconds(const char *value, long *result)
+{
+  char *end;
+
+  errno = 0;
+  *result = strtol(value, &end, 10);
+  if (value == end || errno == ERANGE)
+  {
+    return false;
+  }
+  while (isspace((unsigned char)*end))
+  {
+    end++;
+  }
+  return *end == '\0';
 }
 
 void usage(const char *name)
@@ -279,7 +298,20 @@ int main (int argc, char **argv)
                "different timestamp.\n");
         exit(EXIT_FAILURE);
       }
-      offset = atol(buf) - time(NULL);
+      long date_seconds;
+      __int128 offset_wide;
+      if (!parse_date_seconds(buf, &date_seconds))
+      {
+        fprintf(stderr, "faketime: date program returned an invalid timestamp\n");
+        exit(EXIT_FAILURE);
+      }
+      offset_wide = (__int128)date_seconds - (__int128)time(NULL);
+      if (offset_wide < LONG_MIN || offset_wide > LONG_MAX)
+      {
+        fprintf(stderr, "faketime: date timestamp is outside the supported range\n");
+        exit(EXIT_FAILURE);
+      }
+      offset = (long)offset_wide;
       ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
       if (ret < 0)
       {

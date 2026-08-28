@@ -19,6 +19,7 @@ run()
 	run_testcase rejects_invalid_start_limit
 	run_testcase rejects_invalid_offset
 	run_testcase rejects_nonfinite_rate
+	run_testcase rejects_overflowed_date_output
 }
 
 assert_faked_command_fails()
@@ -68,4 +69,19 @@ rejects_nonfinite_rate()
 {
 	assert_faked_command_fails "non-finite clock rate is rejected" \
 		fakecmd xnan perl -e 'print time'
+}
+
+rejects_overflowed_date_output()
+{
+	typeset date_helper=".date_overflow_test.$$"
+	printf '#!/bin/sh\nprintf "999999999999999999999\\n"\n' > "$date_helper"
+	chmod 755 "$date_helper"
+	if ../src/faketime --date-prog "$date_helper" ignored true >/dev/null 2>&1; then
+		echo "out=0 overflowed date output is rejected - bad"
+		rm -f "$date_helper"
+		return 1
+	fi
+	rm -f "$date_helper"
+	echo "out=1 overflowed date output is rejected - ok"
+	return 0
 }
