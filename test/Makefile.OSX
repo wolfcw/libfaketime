@@ -5,7 +5,7 @@ CFLAGS += -std=gnu99 -Wall -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
-all: timetest set_mtime time_ops_test test
+all: timetest set_mtime time_ops_test macos_clock_test test
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
@@ -19,7 +19,10 @@ set_mtime: set_mtime.c
 time_ops_test: time_ops_test.c ../src/time_ops.h
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest time_ops_test set_mtime functest
+macos_clock_test: macos_clock_test.c
+	${CC} -o $@ ${CFLAGS} $< ../src/libfaketime.1.dylib
+
+test: timetest time_ops_test set_mtime macos_clock_test functest
 	@echo
 	@./time_ops_test
 	@./test_OSX.sh
@@ -29,7 +32,7 @@ functest:
 	./testframe.sh functests
 
 clean:
-	@rm -f ${OBJ} timetest set_mtime time_ops_test
+	@rm -f ${OBJ} timetest set_mtime time_ops_test macos_clock_test
 
 distclean: clean
 	@echo

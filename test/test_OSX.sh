@@ -1,7 +1,13 @@
 #!/bin/sh
 
+set -e
+
 export DYLD_FORCE_FLAT_NAMESPACE=1
 export DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib
+
+echo "Testing Darwin clock_get_time null-pointer handling"
+./macos_clock_test
+echo
 
 if [ -f /etc/faketimerc ] ; then
 	echo "Running the test program with your system-wide default in /etc/faketimerc"

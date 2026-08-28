@@ -4121,6 +4121,11 @@ int clock_get_time(clock_serv_t clock_serv, mach_timespec_t *cur_timeclockid_t)
   int result;
   struct timespec ts;
 
+  if (cur_timeclockid_t == NULL)
+  {
+    return KERN_INVALID_ARGUMENT;
+  }
+
   /*
    * Initialize our result with the real current time from CALENDAR_CLOCK.
    * This is a bit of cheating, but we don't keep track of obtained clock
