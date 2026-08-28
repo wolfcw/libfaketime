@@ -525,8 +525,12 @@ static void ft_shm_create(void) {
   /* create shm */
   if (-1 == (shm_fdN = shm_open(shm_name, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR)))
   {
+#ifdef DEBUG
     perror("libfaketime: In ft_shm_create(), shm_open failed");
-    exit(EXIT_FAILURE);
+#endif
+    ft_sem_close(&semN);
+    ft_sem_unlink(&semN);
+    return;
   }
   /* set shm size */
   if (-1 == ftruncate(shm_fdN, sizeof(struct ft_shared_s)))

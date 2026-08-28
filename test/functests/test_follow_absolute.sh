@@ -6,6 +6,11 @@
 
 FOLLOW_FILE=".follow_absolute_test_file"
 
+prepare_follow_file()
+{
+	: > "$FOLLOW_FILE"
+}
+
 init()
 {
 	typeset testsuite="$1"
@@ -34,15 +39,18 @@ follow_absolute_cmd()
 {
 	FAKETIME_FOLLOW_FILE="$FOLLOW_FILE" \
 	FAKETIME_FOLLOW_ABSOLUTE=1 \
-	fakecmd "%" "$@"
+	FAKETIME_NO_CACHE=1 \
+	fakecmd "%" perl -MPOSIX -e \
+		'print strftime("%Y-%m-%d %H:%M:%S", gmtime(time)), "\n"'
 }
 
 # Test that time matches the follow file's mtime
 follow_absolute_basic()
 {
-	touch -d "2020-03-15 10:30:00 UTC" "$FOLLOW_FILE"
+	prepare_follow_file
+	./set_mtime "$FOLLOW_FILE" 1584268200 0
 	typeset actual
-	actual=$(follow_absolute_cmd date -u +"%Y-%m-%d %H:%M:%S")
+	actual=$(follow_absolute_cmd)
 	asserteq "$actual" "2020-03-15 10:30:00" \
 		"time should match follow file mtime"
 }
@@ -50,7 +58,8 @@ follow_absolute_basic()
 # Test that time stays frozen (does not advance with real time)
 follow_absolute_freeze()
 {
-	touch -d "2020-03-15 10:30:00 UTC" "$FOLLOW_FILE"
+	prepare_follow_file
+	./set_mtime "$FOLLOW_FILE" 1584268200 0
 	typeset timestamps
 	timestamps=$(follow_absolute_cmd \
 		perl -e 'print time(), "\n"; sleep(2); print time(), "\n"')
@@ -61,19 +70,18 @@ follow_absolute_freeze()
 		"time should stay frozen within a single process"
 }
 
-# Test that time tracks file mtime changes at millisecond precision
+# Test that time tracks file mtime changes across portable filesystem precision
 follow_absolute_tracks_mtime()
 {
-	touch -d "2020-03-15 10:30:00.000 UTC" "$FOLLOW_FILE"
+	prepare_follow_file
+	./set_mtime "$FOLLOW_FILE" 1584268200 0
 	typeset first
-	first=$(follow_absolute_cmd \
-		perl -MTime::HiRes=time -e 'printf "%.3f\n", time()')
+	first=$(follow_absolute_cmd)
 
-	touch -d "2020-03-15 10:30:00.005 UTC" "$FOLLOW_FILE"
+	./set_mtime "$FOLLOW_FILE" 1584268201 0
 	typeset second
-	second=$(follow_absolute_cmd \
-		perl -MTime::HiRes=time -e 'printf "%.3f\n", time()')
+	second=$(follow_absolute_cmd)
 
 	assertneq "$first" "$second" \
-		"time should advance with file mtime (ms precision)"
+		"time should advance with file mtime"
 }

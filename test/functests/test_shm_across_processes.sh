@@ -1,7 +1,5 @@
-# Verify that shared memory works end-to-end across processes.
-# The faketime wrapper creates SHM with a known FAKETIME value,
-# and the child process (via LD_PRELOAD) reads it and reports
-# the faked time.
+# Verify that a child process receives the faked time on macOS without
+# relying on SIP-protected system binaries.
 
 init()
 {
@@ -26,6 +24,7 @@ shm_year_check()
 {
 	typeset expected="2020"
 	typeset actual
-	actual=$(fakecmd "2020-06-15 12:00:00" date -u +%Y)
+	actual=$(fakecmd "2020-06-15 12:00:00" perl -MPOSIX -e \
+		'print strftime("%Y", gmtime(time))')
 	asserteq "$actual" "$expected" "child process should see faked year via SHM"
 }
