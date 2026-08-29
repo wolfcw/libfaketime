@@ -401,7 +401,7 @@ static int    fake_current_timeval(struct timeval *tv);
 #endif
 static int    read_config_file(void);
 static bool   str_array_contains(const char *haystack, const char *needle);
-void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
+static void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
 
 
 /** Semaphore protecting shared data */
@@ -3777,7 +3777,7 @@ inline static void ftpl_init(void) {
   ft_init_once_generic(&state, &initialized_once_control, &initialized_once_mutex, &init_initialized_once_mutex, &ftpl_really_init);
 }
 
-void *ft_dlvsym(void *handle, const char *symbol, const char *version,
+static void *ft_dlvsym(void *handle, const char *symbol, const char *version,
     const char *full_name, char *ignore_list, bool should_debug_dlsym)
 {
   // dlsym or dlvsym with a non-resolving symbol results in a malloc call,
