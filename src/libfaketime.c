@@ -1104,7 +1104,9 @@ retry_shared_objects:
     }
     shared_sem_initialized = true;
 
-    if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR)))
+    /* An inherited pair must already exist; never attach by creating a
+       same-named object after validation has failed. */
+    if (-1 == (ticks_shm_fd = shm_open(shm_name, O_RDWR, S_IWUSR|S_IRUSR)))
     {
       perror("libfaketime: In ft_shm_init(), shm_open failed");
       ft_shm_cleanup_attached(-1);
