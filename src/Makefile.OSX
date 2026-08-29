@@ -17,8 +17,8 @@
 #         - Enable faked values for getpid() calls through FAKETIME_FAKEPID
 #
 #     FAKE_RANDOM
-#         - Intercept getentropy(). Dangerous for production use.
-#           See README about FAKE_RANDOM.
+#         - Not supported on macOS. The Darwin getentropy() interposition
+#           path is unsafe; see README about FAKE_RANDOM.
 #
 #     FAKE_STAT
 #         - Enables time faking also for files' timestamps.

@@ -15,6 +15,10 @@ init()
 run()
 {
 	init
+	if [ "$PLATFORM" = "mac" ]; then
+		echo "out=skip FAKE_RANDOM is unsupported on macOS - ok"
+		return 0
+	fi
 	run_testcase deterministic_random_output
 }
 

@@ -767,8 +767,13 @@ functionality has been added by Balint Reczey in v0.9.5.
 
 libfaketime can be compiled with the CFLAG FAKE_RANDOM set (see src/Makefile).
 
+This optional feature is currently supported on Linux only.  Do not enable
+FAKE_RANDOM in the macOS build: the Darwin getentropy() interposition path
+cannot safely call the original system implementation and may recurse or
+abort during process startup.  Darwin support remains future work.
+
 When compiled this way, libfaketime additionally intercepts calls to the
-function getrandom(), which currently is Linux-specific.
+function getrandom(), which is Linux-specific.
 
 This functionality is intended to feed a sequence of deterministic, repeatable
 numbers to applications, which use getrandom(), instead of the random numbers
