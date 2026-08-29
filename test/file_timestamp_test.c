@@ -46,6 +46,17 @@ int main(int argc, char **argv)
             expected, (long long)st.st_mtime);
     return EXIT_FAILURE;
   }
+  if (lstat(path, &st) == -1)
+  {
+    perror("lstat");
+    return EXIT_FAILURE;
+  }
+  if ((long long)st.st_mtime != expected)
+  {
+    fprintf(stderr, "expected lstat mtime %lld, got %lld\n",
+            expected, (long long)st.st_mtime);
+    return EXIT_FAILURE;
+  }
 
   if (utimensat(AT_FDCWD, path, NULL, 0) == -1)
   {
