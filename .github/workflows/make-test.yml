@@ -82,12 +82,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Pull Alpine baseline image
+      run: docker pull alpine:3.20
     - name: make test on Alpine musl
       run: |
-        docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" alpine:3.20 sh -lc '
-          apk add --no-cache build-base bash perl coreutils util-linux file
-          cp -a /src /tmp/libfaketime
-          cd /tmp/libfaketime
-          find src test -type f \( -name "*.o" -o -name "*.so*" -o -name "timetest" -o -name "faketime" -o -name "set_mtime" -o -name "*_test" \) -delete
-          timeout 180s make test
-        '
+        set -o pipefail
+        test/docker_baseline.sh alpine:3.20 2>&1 | tee alpine-baseline.log
+    - name: Upload Alpine baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpine-baseline-log
+        path: alpine-baseline.log
+
+  debian:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Debian 13 baseline image
+      run: docker pull debian:13
+    - name: make test on Debian 13
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh debian:13 2>&1 | tee debian-baseline.log
+    - name: Upload Debian baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: debian-baseline-log
+        path: debian-baseline.log
+
+  archlinux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Arch Linux baseline image
+      run: docker pull archlinux:base-devel
+    - name: make test on native Arch Linux
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh archlinux:base-devel 2>&1 | tee archlinux-baseline.log
+    - name: Upload Arch Linux baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: archlinux-baseline-log
+        path: archlinux-baseline.log
