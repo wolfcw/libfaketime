@@ -20,6 +20,7 @@ run()
 	run_testcase rejects_negative_wait_override
 	run_testcase rejects_invalid_offset
 	run_testcase rejects_malformed_offset_suffix
+	run_testcase rejects_overflowed_offset
 	run_testcase rejects_nonfinite_rate
 	run_testcase rejects_malformed_rate
 	run_testcase rejects_malformed_tick_increment
@@ -93,6 +94,12 @@ rejects_malformed_offset_suffix()
 {
 	assert_faked_command_fails "malformed time offset suffix is rejected" \
 		fakecmd "+1dgarbage" perl -e 'print time'
+}
+
+rejects_overflowed_offset()
+{
+	assert_faked_command_fails "overflowed time offset is rejected" \
+		fakecmd "+1e308d" perl -e 'print time'
 }
 
 rejects_nonfinite_rate()

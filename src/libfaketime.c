@@ -158,6 +158,17 @@ static bool parse_finite_double(const char *value, double *result)
   return parse_finite_double_prefix(value, result, &end) && *end == '\0';
 }
 
+static bool scale_finite_double(double *value, double factor)
+{
+  double scaled = *value * factor;
+  if (!isfinite(scaled))
+  {
+    return false;
+  }
+  *value = scaled;
+  return true;
+}
+
 #ifndef __APPLE__
 extern char *__progname;
 #ifdef __sun
@@ -3301,10 +3312,14 @@ static void parse_ft_string(const char *user_faked_time)
       /* offset is in seconds by default, but the string may contain
        * multipliers...
        */
-      if (offset_unit == 'm') frac_offset *= 60;
-      else if (offset_unit == 'h') frac_offset *= 60 * 60;
-      else if (offset_unit == 'd') frac_offset *= 60 * 60 * 24;
-      else if (offset_unit == 'y') frac_offset *= 60 * 60 * 24 * 365;
+      if ((offset_unit == 'm' && !scale_finite_double(&frac_offset, 60.0)) ||
+          (offset_unit == 'h' && !scale_finite_double(&frac_offset, 60.0 * 60.0)) ||
+          (offset_unit == 'd' && !scale_finite_double(&frac_offset, 60.0 * 60.0 * 24.0)) ||
+          (offset_unit == 'y' && !scale_finite_double(&frac_offset, 60.0 * 60.0 * 24.0 * 365.0)))
+      {
+        fprintf(stderr, "libfaketime: time offset is out of range: %s\n", user_faked_time);
+        exit(EXIT_FAILURE);
+      }
 
       user_offset.tv_sec = floor(frac_offset);
       user_offset.tv_nsec = (frac_offset - user_offset.tv_sec) * SEC_TO_nSEC;
