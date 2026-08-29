@@ -683,8 +683,6 @@ static void ft_shm_create(void) {
   length = snprintf(shm_name, sizeof(shm_name), "/faketime_shm_%ld", (long)pid);
   if (length < 0 || (size_t)length >= sizeof(shm_name))
   {
-    ft_sem_close(&semN);
-    ft_sem_unlink(&semN);
     return;
   }
   if (-1 == ft_sem_create(sem_name, &semN))
@@ -765,12 +763,18 @@ static void ft_shm_create(void) {
   length = snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
   if (length < 0 || (size_t)length >= sizeof(shared_objsN))
   {
-    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
+    (void)ft_sem_unlink(&semN);
+    (void)shm_unlink(shm_name);
     return;
   }
 
-  int semSafetyCheckPassed = 0;
-  ft_sem_close(&semN);
+  bool sem_safety_check_passed = false;
+  if (ft_sem_close(&semN) == -1)
+  {
+    (void)ft_sem_unlink(&semN);
+    (void)shm_unlink(shm_name);
+    return;
+  }
 
   sscanf(shared_objsN, "%255s %255s", sem_nameT, shm_nameT);
   if (-1 == ft_sem_open(sem_nameT, &shared_semT))
@@ -778,11 +782,11 @@ static void ft_shm_create(void) {
       fprintf(stderr, "libfaketime: In ft_shm_create(), non-fatal ft_sem_open issue with %s\n", sem_nameT);
   }
   else {
-    semSafetyCheckPassed = 1;
+    sem_safety_check_passed = true;
     ft_sem_close(&shared_semT);
   }
 
-  if (semSafetyCheckPassed == 1) {
+  if (sem_safety_check_passed) {
     if (setenv("FAKETIME_SHARED", shared_objsN, true) == -1)
     {
       perror("libfaketime: In ft_shm_create(), setting FAKETIME_SHARED failed");
@@ -791,6 +795,27 @@ static void ft_shm_create(void) {
       return;
     }
     shmCreator = true;
+  }
+  else
+  {
+    (void)ft_sem_unlink(&semN);
+    (void)shm_unlink(shm_name);
+  }
+}
+
+static void ft_shm_cleanup_attached(int shm_fd)
+{
+  if (ft_shared != NULL && ft_shared != MAP_FAILED)
+  {
+    (void)munmap(ft_shared, sizeof(struct ft_shared_s));
+  }
+  ft_shared = NULL;
+  if (shm_fd >= 0)
+    (void)close(shm_fd);
+  if (shared_sem_initialized)
+  {
+    (void)ft_sem_close(&shared_sem);
+    shared_sem_initialized = false;
   }
 }
 
@@ -996,6 +1021,7 @@ static void ft_shm_really_init (void)
     if (-1 == (ticks_shm_fd = shm_open(shm_name, O_CREAT|O_RDWR, S_IWUSR|S_IRUSR)))
     {
       perror("libfaketime: In ft_shm_init(), shm_open failed");
+      ft_shm_cleanup_attached(-1);
       exit(1);
     }
 
@@ -1004,9 +1030,7 @@ static void ft_shm_really_init (void)
         shm_stat.st_size < (off_t)sizeof(struct ft_shared_s))
     {
       perror("libfaketime: In ft_shm_init(), inspecting shared memory failed");
-      close(ticks_shm_fd);
-      ft_sem_close(&shared_sem);
-      shared_sem_initialized = false;
+      ft_shm_cleanup_attached(ticks_shm_fd);
       exit(1);
     }
 
@@ -1014,22 +1038,19 @@ static void ft_shm_really_init (void)
             MAP_SHARED, ticks_shm_fd, 0)))
     {
       perror("libfaketime: In ft_shm_init(), mmap failed");
-      close(ticks_shm_fd);
+      ft_shm_cleanup_attached(ticks_shm_fd);
       exit(1);
     }
     if (!valid_shared_header(ft_shared))
     {
       fprintf(stderr, "libfaketime: In ft_shm_init(), incompatible shared-memory header\n");
-      munmap(ft_shared, sizeof(struct ft_shared_s));
-      ft_shared = NULL;
-      close(ticks_shm_fd);
-      ft_sem_close(&shared_sem);
-      shared_sem_initialized = false;
+      ft_shm_cleanup_attached(ticks_shm_fd);
       exit(1);
     }
     if (close(ticks_shm_fd) == -1)
     {
       perror("libfaketime: In ft_shm_init(), close failed");
+      ft_shm_cleanup_attached(ticks_shm_fd);
       exit(1);
     }
   }
