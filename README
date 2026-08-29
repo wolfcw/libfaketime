@@ -161,6 +161,45 @@ libfaketime.1.dylib, and the variable DYLD_FORCE_FLAT_NAMESPACE should be
 set (to anything). macOS users should read README.OSX for additional
 details.
 
+Testing on macOS and Linux
+--------------------------
+
+The standard test command builds the platform-specific library and runs the
+complete functional test suite:
+
+    make test
+
+On macOS, the top-level Makefile selects the Darwin makefiles automatically.
+Linux builds can be tested in disposable Docker containers without writing
+build artifacts into the checkout. The baseline runner accepts a list of
+locally available images:
+
+    test/docker_baseline.sh gcc:13-bookworm debian:13 alpine:3.20
+
+On an ARM64 macOS host, request the target platform explicitly. The dedicated
+wrapper also checks each image architecture before starting a container:
+
+    DOCKER_PLATFORM=linux/arm64 test/docker_arm64.sh \
+      gcc:13-bookworm debian:13 alpine:3.20
+
+An image tagged for another architecture must be replaced with an ARM64 image;
+Docker emulation cannot make an image manifest that does not contain ARM64
+usable by this runner. Arch Linux can be added once a matching ARM64 image is
+available:
+
+    DOCKER_PLATFORM=linux/arm64 test/docker_arm64.sh archlinux:base-devel
+
+For memory-safety checks on Linux, the sanitizer runner builds with
+AddressSanitizer and UndefinedBehaviorSanitizer and places the sanitizer
+runtime before libfaketime in LD_PRELOAD:
+
+    DOCKER_PLATFORM=linux/arm64 test/docker_sanitizers.sh gcc:13-bookworm
+
+The sanitizer run skips only helper-process checks whose preload arrangements
+are incompatible with sanitizer instrumentation. Linux-only features are
+reported as skips on macOS; this keeps the common clock, configuration,
+process, and lifecycle coverage comparable on both platforms.
+
 
 4. Usage
 --------
