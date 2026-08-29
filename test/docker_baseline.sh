@@ -50,7 +50,11 @@ run_baseline() {
             '
             ;;
         archlinux:*)
-            docker run --rm -v "$REPO_DIR:/src:ro" "$image" bash -eu -c '
+            docker run --rm -e "DOCKER_ARCH_DISABLE_PACMAN_SANDBOX=${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" \
+                -v "$REPO_DIR:/src:ro" "$image" bash -eu -c '
+                if [ "${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" = 1 ]; then
+                    sed -i "s/^#DisableSandboxSyscalls/DisableSandboxSyscalls/" /etc/pacman.conf
+                fi
                 pacman -Syu --noconfirm --needed base-devel bash perl coreutils util-linux file
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime
