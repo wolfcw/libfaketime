@@ -23,6 +23,15 @@ run()
 	run_testcase null_clock_output_fails
 	run_testcase past_wait_deadlines_timeout
 	run_testcase semaphore_deadlines
+	run_testcase positive_poll_timeout
+}
+
+positive_poll_timeout()
+{
+	typeset result
+	result=$(fakecmd "+0 x2" ./wait_timeout_contract_test)
+	asserteq "$result" "positive poll timeout was preserved" \
+		"positive poll timeout should not be truncated to zero"
 }
 
 semaphore_deadlines()

@@ -558,6 +558,20 @@ static double user_rate = 1.0;
 static bool user_rate_set = false;
 static struct timespec user_per_tick_inc = {0, -1};
 static bool user_per_tick_inc_set = false;
+
+static int scale_timeout_milliseconds(int timeout)
+{
+  long double scaled_timeout;
+
+  if (timeout <= 0 || !user_rate_set || dont_fake)
+    return timeout;
+  scaled_timeout = ceill((long double)timeout / (long double)user_rate);
+  if (scaled_timeout >= (long double)INT_MAX)
+    return INT_MAX;
+  if (scaled_timeout < 1.0L)
+    return 1;
+  return (int)scaled_timeout;
+}
 enum ft_mode_t {FT_FREEZE, FT_START_AT, FT_NOOP} ft_mode = FT_FREEZE;
 
 /* Time to fake is not provided through FAKETIME env. var. */
@@ -2200,14 +2214,7 @@ int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
   {
     return -1;
   }
-  if (user_rate_set && !dont_fake && timeout > 0)
-  {
-    real_timeout = (int) timeout * 1.0/user_rate;
-  }
-  else
-  {
-    real_timeout = timeout;
-  }
+  real_timeout = scale_timeout_milliseconds(timeout);
   DONT_FAKE_TIME(ret = (*real_epoll_wait)(epfd, events, maxevents, real_timeout));
   return ret;
 }
@@ -2224,14 +2231,7 @@ int epoll_pwait(int epfd, struct epoll_event *events, int maxevents, int timeout
   {
     return -1;
   }
-  if (user_rate_set && !dont_fake && timeout > 0)
-  {
-    real_timeout = (int) timeout * 1.0/user_rate;
-  }
-  else
-  {
-    real_timeout = timeout;
-  }
+  real_timeout = scale_timeout_milliseconds(timeout);
   DONT_FAKE_TIME(ret = (*real_epoll_pwait)(epfd, events, maxevents, real_timeout, sigmask));
   return ret;
 }
@@ -2246,13 +2246,15 @@ int macos_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 #endif
 {
-  int ret, timeout_real = (user_rate_set && !dont_fake && (timeout > 0))?(timeout / user_rate):timeout;
+  int ret;
+  int timeout_real;
 
   ftpl_init();
   if (real_poll == NULL)
   {
     return -1;
   }
+  timeout_real = scale_timeout_milliseconds(timeout);
 
 #ifdef MACOS_DYLD_INTERPOSE
   DONT_FAKE_TIME(ret = (*poll)(fds, nfds, timeout_real));
