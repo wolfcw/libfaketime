@@ -44,7 +44,11 @@ fakedate()
         echo "<skip>"
       fi
   else
-  	fakecmd "$1" date +$fmt
+	 if file "$(command -v date)" 2>&1 | grep -q "dynamically linked"; then
+	   fakecmd "$1" date +$fmt
+	 else
+	   echo "<skip>"
+	 fi
   fi
 }
 
@@ -79,6 +83,11 @@ test_with_i()
     fi
 
   else
-	  asserteq $(fakedate $t) $t "(secs since Epoch)"
-  fi
+	 actual=$(fakedate $t)
+	 if [ "$actual" = "<skip>" ]; then
+	   asserteq "$actual" "$actual" "(skipping static date utility)"
+	 else
+	   asserteq "$actual" "$t" "(secs since Epoch)"
+	 fi
+	fi
 }

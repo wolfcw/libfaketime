@@ -87,7 +87,9 @@
 #if defined PTHREAD_SINGLETHREADED_TIME || defined FAKE_PTHREAD
 #include <pthread.h>
 #ifdef __aarch64__
+#ifndef _SYS_TIME_H
 #define _SYS_TIME_H 1
+#endif
 #endif
 #include <signal.h>
 #endif

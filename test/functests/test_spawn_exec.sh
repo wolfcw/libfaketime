@@ -24,8 +24,12 @@ run()
 executes_target_without_shell()
 {
 	typeset marker=".spawn_exec_test.$$"
+	typeset spawn_target=/usr/bin/touch
+	if [ "$PLATFORM" != "mac" ] && [ -x /bin/touch ]; then
+		spawn_target=/bin/touch
+	fi
 	rm -f "$marker"
-	export FAKETIME_SPAWN_EXEC=/usr/bin/touch
+	export FAKETIME_SPAWN_EXEC="$spawn_target"
 	export FAKETIME_SPAWN_ARG_1="$marker"
 	export FAKETIME_SPAWN_SECONDS=0
 	export FAKETIME_NO_CACHE=1
