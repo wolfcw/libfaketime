@@ -98,7 +98,7 @@ run_baseline() {
                 timeout 180s make test
             '
             ;;
-        debian:*|gcc:*)
+        debian:*|ubuntu:*|gcc:*)
             docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 apt-get update
@@ -118,9 +118,26 @@ run_baseline() {
                 timeout 180s make test
             '
             ;;
+        fedora:*)
+            docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+                -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
+                dnf -y install gcc make glibc-devel bash perl coreutils util-linux file
+                rm -rf /tmp/libfaketime
+                mkdir /tmp/libfaketime
+                cp -a /src/. /tmp/libfaketime/
+                cd /tmp/libfaketime
+                find src test -type f \( -name "*.o" -o -name "*.so*" -o \
+                    -name "timetest" -o -name "faketime" -o -name "set_mtime" -o \
+                    -name "*_test" \) -delete
+                printf "container=%s\\n" "$(cat /etc/fedora-release)"
+                printf "kernel="
+                uname -a
+                timeout 180s make test
+            '
+            ;;
         *)
             echo "error: unsupported baseline image: $image" >&2
-            echo "       pass gcc:13-bookworm, alpine:3.20, debian:13, or archlinux:base-devel" >&2
+            echo "       pass gcc:13-bookworm, ubuntu:<tag>, fedora:<tag>, alpine:3.20, debian:13, or archlinux:base-devel" >&2
             return 2
             ;;
     esac
