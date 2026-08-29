@@ -22,6 +22,7 @@ run()
 	run_testcase rejects_invalid_load_timestamp
 	run_testcase rejects_invalid_shared_objects
 	run_testcase rejects_overlong_date_output
+	run_testcase rejects_malformed_date_output
 	if [ -n "${FAKETIME_TESTLIB:-}" ]; then
 		echo "out=skip sanitizer-instrumented helper process checks are unavailable - ok"
 		echo "out=skip sanitizer-instrumented constructor reentry check is unavailable - ok"
@@ -117,6 +118,21 @@ rejects_overlong_date_output()
 	fi
 	rm -f "$date_helper"
 	echo "out=1 overlong date output is rejected - ok"
+	return 0
+}
+
+rejects_malformed_date_output()
+{
+	typeset date_helper=".date_malformed_test.$$"
+	printf '#!/bin/sh\nprintf "123x\\n"\n' > "$date_helper"
+	chmod 755 "$date_helper"
+	if ../src/faketime --date-prog "./$date_helper" ignored true >/dev/null 2>&1; then
+		echo "out=0 malformed date output is accepted - bad"
+		rm -f "$date_helper"
+		return 1
+	fi
+	rm -f "$date_helper"
+	echo "out=1 malformed date output is rejected - ok"
 	return 0
 }
 
