@@ -509,7 +509,7 @@ int main (int argc, char **argv)
     if (EXIT_SUCCESS != execvp(argv[curr_opt], &argv[curr_opt]))
     {
       perror("faketime: Running specified command failed");
-      exit(EXIT_FAILURE);
+      _exit(EXIT_FAILURE);
     }
   }
   else if (child_pid > 0)
