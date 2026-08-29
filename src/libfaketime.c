@@ -4932,6 +4932,11 @@ static int bypass_randomness(void* buf, size_t buflen) {
   char *b = buf;
 
   if (seedstring != NULL) {
+    if (buf == NULL && buflen != 0)
+    {
+      errno = EFAULT;
+      return 0;
+    }
     char *end;
     long long int seed;
     errno = 0;

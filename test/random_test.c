@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,6 +11,15 @@
 int main(void)
 {
   unsigned char buffer[16];
+  void *invalid_buffer = NULL;
+
+#ifndef __APPLE__
+  errno = 0;
+  if (getrandom(invalid_buffer, 1, 0) != -1 || errno != EFAULT)
+  {
+    return EXIT_FAILURE;
+  }
+#endif
 
 #ifdef __APPLE__
   if (getentropy(buffer, sizeof(buffer)) != 0)
