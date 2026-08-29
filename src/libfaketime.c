@@ -1063,6 +1063,7 @@ static void ft_shm_really_init (void)
     }
   }
 
+retry_shared_objects:
   /* process the semaphore / shared memory information */
   if (ft_shared_env != NULL)
   {
@@ -1090,9 +1091,13 @@ static void ft_shm_really_init (void)
           fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
           exit(1);
         }
-        else{
-          ft_shm_init();
-          return;
+        else
+        {
+          /* Drop the stale pair before creating a replacement for this PID. */
+          unsetenv("FAKETIME_SHARED");
+          ft_shm_create();
+          ft_shared_env = getenv("FAKETIME_SHARED");
+          goto retry_shared_objects;
         }
 
       }
