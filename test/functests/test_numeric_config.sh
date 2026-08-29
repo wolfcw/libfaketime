@@ -17,6 +17,7 @@ run()
 	init
 	run_testcase rejects_invalid_cache_duration
 	run_testcase rejects_invalid_start_limit
+	run_testcase rejects_negative_wait_override
 	run_testcase rejects_invalid_offset
 	run_testcase rejects_nonfinite_rate
 	run_testcase rejects_overflowed_date_output
@@ -49,6 +50,24 @@ rejects_invalid_cache_duration()
 rejects_invalid_start_limit()
 {
 	assert_faked_command_fails "invalid start limit is rejected" invalid_start_limit
+}
+
+rejects_negative_wait_override()
+{
+	if [ "$PLATFORM" != "linuxlike" ]; then
+		echo "out=skip FAKETIME_WAIT_MS is unavailable in this build - ok"
+		return 0
+	fi
+	FAKETIME_WAIT_MS=-1
+	export FAKETIME_WAIT_MS
+	if fakecmd "+0" ./wait_contract_test >/dev/null 2>&1; then
+		echo "out=0 negative wait override is accepted - bad"
+		unset FAKETIME_WAIT_MS
+		return 1
+	fi
+	unset FAKETIME_WAIT_MS
+	echo "out=1 negative wait override is rejected - ok"
+	return 0
 }
 
 invalid_cache()

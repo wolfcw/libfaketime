@@ -126,6 +126,17 @@ static long parse_long_setting(const char *name, const char *value)
   return result;
 }
 
+static long parse_nonnegative_long_setting(const char *name, const char *value)
+{
+  long result = parse_long_setting(name, value);
+  if (result < 0)
+  {
+    fprintf(stderr, "libfaketime: negative value for %s: %s\n", name, value);
+    exit(EXIT_FAILURE);
+  }
+  return result;
+}
+
 static bool parse_finite_double_prefix(const char *value, double *result)
 {
   char *end;
@@ -4822,7 +4833,7 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
     if ((tmp_env = getenv("FAKETIME_WAIT_MS")) != NULL)
     {
-      wait_ms = parse_long_setting("FAKETIME_WAIT_MS", tmp_env);
+      wait_ms = parse_nonnegative_long_setting("FAKETIME_WAIT_MS", tmp_env);
       DONT_FAKE_TIME(result = (*real_clock_gettime)(clk_id, &realtime));
       if (result == -1)
       {
