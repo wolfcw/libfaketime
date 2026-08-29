@@ -21,6 +21,7 @@ run()
 	run_testcase rejects_partial_load_file
 	run_testcase rejects_invalid_load_timestamp
 	run_testcase rejects_invalid_shared_objects
+	run_testcase rejects_overlong_date_output
 	run_testcase save_file_failure_does_not_hang
 	rm -f "$LOAD_FILE"
 }
@@ -94,6 +95,21 @@ rejects_invalid_shared_objects()
 	fi
 	unset FAKETIME_SHARED FAKETIME_NO_CACHE
 	echo "out=1 invalid shared-object names are rejected - ok"
+	return 0
+}
+
+rejects_overlong_date_output()
+{
+	typeset date_helper=".date_overlong_test.$$"
+	printf '#!/bin/sh\nperl -e '\''print "123"; print " " x 300'\''\n' > "$date_helper"
+	chmod 755 "$date_helper"
+	if ../src/faketime --date-prog "$date_helper" ignored true >/dev/null 2>&1; then
+		echo "out=0 overlong date output is accepted - bad"
+		rm -f "$date_helper"
+		return 1
+	fi
+	rm -f "$date_helper"
+	echo "out=1 overlong date output is rejected - ok"
 	return 0
 }
 

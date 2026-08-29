@@ -274,25 +274,44 @@ int main (int argc, char **argv)
       int child_status;
       pid_t waited;
       close(pfds[1]);   /* we won't write to this */
-      ssize_t bytes_read;
-      do
+      size_t bytes_read = 0;
+      bool output_overflow = false;
+      for (;;)
       {
-        bytes_read = read(pfds[0], buf, sizeof(buf) - 1);
+        char byte;
+        ssize_t result = read(pfds[0], &byte, sizeof(byte));
+        if (result == 0)
+        {
+          break;
+        }
+        if (result == -1)
+        {
+          if (errno == EINTR)
+          {
+            continue;
+          }
+          perror("faketime: read");
+          close(pfds[0]);
+          exit(EXIT_FAILURE);
+        }
+        if (bytes_read < sizeof(buf) - 1)
+        {
+          buf[bytes_read++] = byte;
+        }
+        else
+        {
+          output_overflow = true;
+        }
       }
-      while (bytes_read == -1 && errno == EINTR);
-      if (bytes_read < 0)
-      {
-        perror("faketime: read");
-        close(pfds[0]);
-        exit(EXIT_FAILURE);
-      }
+      buf[bytes_read] = '\0';
       do
       {
         waited = waitpid(child_pid, &child_status, 0);
       }
       while (waited == -1 && errno == EINTR);
       close(pfds[0]);
-      if (waited == -1 || !WIFEXITED(child_status) || WEXITSTATUS(child_status) != EXIT_SUCCESS)
+      if (output_overflow || waited == -1 || !WIFEXITED(child_status) ||
+          WEXITSTATUS(child_status) != EXIT_SUCCESS)
       {
         printf("Error: Timestamp to fake not recognized, please re-try with a "
                "different timestamp.\n");
