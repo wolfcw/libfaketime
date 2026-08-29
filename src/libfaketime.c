@@ -2436,11 +2436,26 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
     return -1;
   }
 
+  if (clockid != CLOCK_REALTIME && clockid != CLOCK_MONOTONIC)
+  {
+    DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, clockid, abstime));
+    return result;
+  }
+
   if (!dont_fake)
   {
-    struct timespec tdiff, timeadj;
+    struct timespec tdiff, timeadj, fake_now;
 
-    timespecsub(abstime, &user_faked_time_timespec, &tdiff);
+    if (clockid == CLOCK_MONOTONIC)
+    {
+      if (fake_clock_gettime(CLOCK_MONOTONIC, &fake_now) == -1)
+        return -1;
+      timespecsub(abstime, &fake_now, &tdiff);
+    }
+    else
+    {
+      timespecsub(abstime, &user_faked_time_timespec, &tdiff);
+    }
 
     if (user_rate_set)
     {

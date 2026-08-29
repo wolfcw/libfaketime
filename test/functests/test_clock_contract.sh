@@ -33,7 +33,7 @@ semaphore_deadlines()
 		return 0
 	fi
 	result=$(fakecmd "+0" ./sem_contract_test)
-	asserteq "$result" "semaphore deadline and null handling passed" \
+	asserteq "$result" "semaphore realtime, monotonic, and null handling passed" \
 		"semaphore timed-wait contract should be preserved"
 }
 

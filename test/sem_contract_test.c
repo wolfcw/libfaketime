@@ -1,3 +1,6 @@
+#ifndef __APPLE__
+#define _GNU_SOURCE
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <semaphore.h>
@@ -18,6 +21,7 @@ int main(void)
   char name[64];
   sem_t *semaphore;
   struct timespec deadline;
+  struct timespec monotonic_deadline;
   int (*sem_timedwait_fn)(sem_t *, const struct timespec *) = sem_timedwait;
 
   (void)snprintf(name, sizeof(name), "/libfaketime-sem-%ld", (long)getpid());
@@ -56,9 +60,27 @@ int main(void)
     return EXIT_FAILURE;
   }
 
+  if (clock_gettime(CLOCK_MONOTONIC, &monotonic_deadline) == -1)
+  {
+    perror("clock_gettime monotonic");
+    sem_close(semaphore);
+    sem_unlink(name);
+    return EXIT_FAILURE;
+  }
+  monotonic_deadline.tv_sec--;
+  errno = 0;
+  if (sem_clockwait(semaphore, CLOCK_MONOTONIC, &monotonic_deadline) != -1 ||
+      errno != ETIMEDOUT)
+  {
+    fprintf(stderr, "past monotonic semaphore deadline returned errno %d\n", errno);
+    sem_close(semaphore);
+    sem_unlink(name);
+    return EXIT_FAILURE;
+  }
+
   sem_close(semaphore);
   sem_unlink(name);
-  puts("semaphore deadline and null handling passed");
+  puts("semaphore realtime, monotonic, and null handling passed");
   return EXIT_SUCCESS;
 }
 #endif
