@@ -3785,43 +3785,31 @@ void *ft_dlvsym(void *handle, const char *symbol, const char *version,
 
 static void prepare_config_contents(char *contents)
 {
-  /* This function
-   * - removes line separators (\r and \n)
-   * - removes lines beginning with a comment character (# or ;)
-   */
   char *read_position = contents;
   char *write_position = contents;
-  bool in_comment = false;
-  bool beginning_of_line = true;
 
   while (*read_position != '\0') {
-    if (beginning_of_line && (*read_position == '#' || *read_position == ';')) {
-      /* The line begins with a comment character and should be completely ignored */
-      in_comment = true;
-    }
-    if (*read_position == '\n') {
-      /* We reached the end of the line that should be ignored (if any is ignored) */
-      in_comment = false;
-      /* The next character begins a new line */
-      beginning_of_line = true;
-      read_position++;
-      continue;
-    }
+    char *line_end = read_position;
+    char *first_content;
 
-    /* CR is a line separator too; LF, if present, is handled above. */
-    if (*read_position == '\r') {
-      in_comment = false;
-      beginning_of_line = true;
+    while (*line_end != '\0' && *line_end != '\r' && *line_end != '\n') {
+      line_end++;
+    }
+    first_content = read_position;
+    while (first_content < line_end &&
+           (*first_content == ' ' || *first_content == '\t')) {
+      first_content++;
+    }
+    if (first_content == line_end ||
+        (*first_content != '#' && *first_content != ';')) {
+      while (read_position < line_end) {
+        *write_position++ = *read_position++;
+      }
+    }
+    read_position = line_end;
+    while (*read_position == '\r' || *read_position == '\n') {
       read_position++;
-      continue;
     }
-
-    beginning_of_line = false;
-    if (!in_comment) {
-      *write_position = *read_position;
-      write_position++;
-    }
-    read_position++;
   }
   *write_position = '\0';
 }

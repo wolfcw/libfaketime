@@ -72,10 +72,10 @@ accepts_crlf_and_full_line_comments()
 {
 	typeset config_file=".config_comment_test.$$"
 	typeset actual
-	printf '# ignored comment\r\n; also ignored\r\n2020-06-15 12:00:00\r\n' > "$config_file"
+	printf '  # ignored comment\r\n\t; also ignored\r\n2020-06-15 12:00:00\r\n' > "$config_file"
 	actual=$(config_file_cmd "$config_file" perl -MPOSIX -e \
 		'print strftime("%Y-%m-%d %H:%M:%S", localtime(time))')
 	rm -f "$config_file"
 	asserteq "$actual" "2020-06-15 12:00:00" \
-		"CRLF config files and full-line comments should be accepted"
+		"CRLF config files and indented full-line comments should be accepted"
 }
