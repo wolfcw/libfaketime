@@ -5,7 +5,11 @@ CFLAGS += -std=gnu99 -Wall -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
 
-all: timetest set_mtime time_ops_test macos_clock_test clock_error_test wait_contract_test test
+ifneq ($(filter -DFAKE_FILE_TIMESTAMPS -DFAKE_UTIME,${CFLAGS}),)
+FILE_TIMESTAMP_TEST_DEP = file_timestamp_test
+endif
+
+all: timetest set_mtime time_ops_test macos_clock_test clock_error_test wait_contract_test ${FILE_TIMESTAMP_TEST_DEP} test
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
@@ -25,10 +29,13 @@ clock_error_test: clock_error_test.c
 wait_contract_test: wait_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
+file_timestamp_test: file_timestamp_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
 macos_clock_test: macos_clock_test.c
 	${CC} -o $@ ${CFLAGS} $< ../src/libfaketime.1.dylib
 
-test: timetest time_ops_test set_mtime macos_clock_test clock_error_test wait_contract_test ${RANDOM_TEST_DEP} functest
+test: timetest time_ops_test set_mtime macos_clock_test clock_error_test wait_contract_test ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} functest
 	@echo
 	@./time_ops_test
 	@./test_OSX.sh
@@ -38,7 +45,7 @@ functest:
 	./testframe.sh functests
 
 clean:
-	@rm -f ${OBJ} timetest set_mtime time_ops_test macos_clock_test clock_error_test wait_contract_test
+	@rm -f ${OBJ} timetest set_mtime time_ops_test macos_clock_test clock_error_test wait_contract_test file_timestamp_test
 
 distclean: clean
 	@echo
