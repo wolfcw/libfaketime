@@ -28,7 +28,7 @@ wait_contract_test: wait_contract_test.c
 macos_clock_test: macos_clock_test.c
 	${CC} -o $@ ${CFLAGS} $< ../src/libfaketime.1.dylib
 
-test: timetest time_ops_test set_mtime macos_clock_test clock_error_test wait_contract_test functest
+test: timetest time_ops_test set_mtime macos_clock_test clock_error_test wait_contract_test ${RANDOM_TEST_DEP} functest
 	@echo
 	@./time_ops_test
 	@./test_OSX.sh

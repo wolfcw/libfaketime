@@ -22,6 +22,11 @@ ifneq ($(filter -DFAKE_PID,${CFLAGS}),)
 ALL_TESTS += fake_pid_test
 endif
 
+ifneq ($(filter -DFAKE_RANDOM,${CFLAGS}),)
+ALL_TESTS += random_test
+RANDOM_TEST_DEP = random_test
+endif
+
 all: $(ALL_TESTS)
 
 .c.o:
@@ -51,7 +56,10 @@ timerfd_contract_test: timerfd_contract_test.c
 fake_pid_test: fake_pid_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest time_ops_test set_mtime clock_error_test wait_contract_test timerfd_contract_test functest
+random_test: random_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
+test: timetest time_ops_test set_mtime clock_error_test wait_contract_test timerfd_contract_test ${RANDOM_TEST_DEP} functest
 	@echo
 	@./time_ops_test
 	@./test.sh
