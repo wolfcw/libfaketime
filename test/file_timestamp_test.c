@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 int main(int argc, char **argv)
 {
@@ -13,6 +14,7 @@ int main(int argc, char **argv)
   struct stat st;
   char *end;
   long long expected;
+  int fd;
 
   if (argc != 3)
   {
@@ -44,5 +46,24 @@ int main(int argc, char **argv)
             expected, (long long)st.st_mtime);
     return EXIT_FAILURE;
   }
+
+  if (utimensat(AT_FDCWD, path, NULL, 0) == -1)
+  {
+    perror("utimensat(NULL)");
+    return EXIT_FAILURE;
+  }
+  fd = open(path, O_RDONLY);
+  if (fd == -1)
+  {
+    perror("open");
+    return EXIT_FAILURE;
+  }
+  if (futimens(fd, NULL) == -1)
+  {
+    perror("futimens(NULL)");
+    close(fd);
+    return EXIT_FAILURE;
+  }
+  close(fd);
   return EXIT_SUCCESS;
 }
