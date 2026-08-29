@@ -20,6 +20,7 @@ run()
 	run_testcase rejects_invalid_offset
 	run_testcase rejects_nonfinite_rate
 	run_testcase rejects_overflowed_date_output
+	run_testcase accepts_partial_date_format
 }
 
 assert_faked_command_fails()
@@ -83,5 +84,17 @@ rejects_overflowed_date_output()
 	fi
 	rm -f "$date_helper"
 	echo "out=1 overflowed date output is rejected - ok"
+	return 0
+}
+
+accepts_partial_date_format()
+{
+	typeset actual
+	actual=$(FAKETIME_FMT=%Y fakecmd 2020 perl -e 'print time')
+	if [ -z "$actual" ]; then
+		echo "out=0 partial date format failed - bad"
+		return 1
+	fi
+	echo "out=1 partial date format is handled safely - ok"
 	return 0
 }

@@ -3016,7 +3016,7 @@ int timespec_get(struct timespec *ts, int base)
 
 static void parse_ft_string(const char *user_faked_time)
 {
-  struct tm user_faked_time_tm;
+  struct tm user_faked_time_tm = { 0 };
   const char * tmp_time_fmt;
   char * nstime_str;
 
