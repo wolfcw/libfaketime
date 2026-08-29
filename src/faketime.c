@@ -332,7 +332,7 @@ int main (int argc, char **argv)
       }
       offset = (long)offset_wide;
       ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
-      if (ret < 0)
+      if (ret < 0 || (size_t)ret >= sizeof(buf))
       {
         fprintf(stderr, "faketime: generated FAKETIME value is too long\n");
         exit(EXIT_FAILURE);
@@ -369,6 +369,7 @@ int main (int argc, char **argv)
   {
     /* create lock and shared memory */
     int shm_fd;
+    int name_length;
     struct ft_shared_s *ft_shared;
     char shared_objs[PATH_BUFSIZE * 2 + 1];
 
@@ -379,8 +380,18 @@ int main (int argc, char **argv)
      * sizeof(long) always >= sizeof(int), this works on all platforms without
      * the need for crazy #ifdefs.
      */
-    snprintf(sem_name, PATH_BUFSIZE -1 ,"/faketime_sem_%ld", (long)getpid());
-    snprintf(shm_name, PATH_BUFSIZE -1 ,"/faketime_shm_%ld", (long)getpid());
+    name_length = snprintf(sem_name, sizeof(sem_name), "/faketime_sem_%ld", (long)getpid());
+    if (name_length < 0 || (size_t)name_length >= sizeof(sem_name))
+    {
+      fprintf(stderr, "faketime: failed to format semaphore name\n");
+      exit(EXIT_FAILURE);
+    }
+    name_length = snprintf(shm_name, sizeof(shm_name), "/faketime_shm_%ld", (long)getpid());
+    if (name_length < 0 || (size_t)name_length >= sizeof(shm_name))
+    {
+      fprintf(stderr, "faketime: failed to format shared-state names\n");
+      exit(EXIT_FAILURE);
+    }
 
     if (-1 == ft_sem_create(sem_name, &wrapper_sem))
     {
@@ -460,7 +471,13 @@ int main (int argc, char **argv)
       exit(EXIT_FAILURE);
     }
 
-    snprintf(shared_objs, sizeof(shared_objs), "%s %s", sem_name, shm_name);
+    if (snprintf(shared_objs, sizeof(shared_objs), "%s %s", sem_name, shm_name) < 0 ||
+        strlen(sem_name) + strlen(shm_name) + 1 >= sizeof(shared_objs))
+    {
+      fprintf(stderr, "faketime: failed to format shared-state configuration\n");
+      cleanup_shobjs();
+      exit(EXIT_FAILURE);
+    }
     set_env_or_exit("FAKETIME_SHARED", shared_objs);
     ft_sem_close(&wrapper_sem);
   }
