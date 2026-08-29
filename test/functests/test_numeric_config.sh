@@ -19,7 +19,10 @@ run()
 	run_testcase rejects_invalid_start_limit
 	run_testcase rejects_negative_wait_override
 	run_testcase rejects_invalid_offset
+	run_testcase rejects_malformed_offset_suffix
 	run_testcase rejects_nonfinite_rate
+	run_testcase rejects_malformed_rate
+	run_testcase rejects_malformed_tick_increment
 	run_testcase rejects_overflowed_date_output
 	run_testcase accepts_partial_date_format
 	run_testcase rejects_overlong_date_format
@@ -86,10 +89,28 @@ rejects_invalid_offset()
 		fakecmd invalid perl -e 'print time'
 }
 
+rejects_malformed_offset_suffix()
+{
+	assert_faked_command_fails "malformed time offset suffix is rejected" \
+		fakecmd "+1dgarbage" perl -e 'print time'
+}
+
 rejects_nonfinite_rate()
 {
 	assert_faked_command_fails "non-finite clock rate is rejected" \
 		fakecmd xnan perl -e 'print time'
+}
+
+rejects_malformed_rate()
+{
+	assert_faked_command_fails "malformed clock rate is rejected" \
+		fakecmd "+0 x2garbage" perl -e 'print time'
+}
+
+rejects_malformed_tick_increment()
+{
+	assert_faked_command_fails "malformed tick increment is rejected" \
+		fakecmd "+0 i2garbage" perl -e 'print time'
 }
 
 rejects_overflowed_date_output()

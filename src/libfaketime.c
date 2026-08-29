@@ -47,6 +47,7 @@
 #include <utime.h>
 #endif
 #include <math.h>
+#include <ctype.h>
 #include <errno.h>
 #include <string.h>
 #include <semaphore.h>
@@ -137,13 +138,24 @@ static long parse_nonnegative_long_setting(const char *name, const char *value)
   return result;
 }
 
-static bool parse_finite_double_prefix(const char *value, double *result)
+static bool parse_finite_double_prefix(const char *value, double *result,
+                                       char **endptr)
 {
   char *end;
 
   errno = 0;
   *result = strtod(value, &end);
+  if (endptr != NULL)
+  {
+    *endptr = end;
+  }
   return value != end && errno != ERANGE && isfinite(*result);
+}
+
+static bool parse_finite_double(const char *value, double *result)
+{
+  char *end;
+  return parse_finite_double_prefix(value, result, &end) && *end == '\0';
 }
 
 #ifndef __APPLE__
@@ -3240,7 +3252,7 @@ static void parse_ft_string(const char *user_faked_time)
         if (nstime_str[0] == '.')
         {
           double nstime;
-          if (!parse_finite_double_prefix(--nstime_str, &nstime))
+          if (!parse_finite_double_prefix(--nstime_str, &nstime, NULL))
           {
             fprintf(stderr, "libfaketime: invalid fractional timestamp: %s\n", user_faked_time);
             exit(EXIT_FAILURE);
@@ -3263,7 +3275,24 @@ static void parse_ft_string(const char *user_faked_time)
       if (ft_mode != FT_NOOP) ft_mode = FT_START_AT;
       /* fractional time offsets contributed by Karl Chen in v0.8 */
       double frac_offset;
-      if (!parse_finite_double_prefix(user_faked_time, &frac_offset))
+      char *offset_end;
+      if (!parse_finite_double_prefix(user_faked_time, &frac_offset, &offset_end))
+      {
+        fprintf(stderr, "libfaketime: invalid time offset: %s\n", user_faked_time);
+        exit(EXIT_FAILURE);
+      }
+
+      char offset_unit = '\0';
+      if (*offset_end == 'm' || *offset_end == 'h' ||
+          *offset_end == 'd' || *offset_end == 'y')
+      {
+        offset_unit = *offset_end++;
+      }
+      while (isspace((unsigned char)*offset_end))
+      {
+        offset_end++;
+      }
+      if (*offset_end != '\0' && *offset_end != 'x' && *offset_end != 'i')
       {
         fprintf(stderr, "libfaketime: invalid time offset: %s\n", user_faked_time);
         exit(EXIT_FAILURE);
@@ -3272,10 +3301,10 @@ static void parse_ft_string(const char *user_faked_time)
       /* offset is in seconds by default, but the string may contain
        * multipliers...
        */
-      if (strchr(user_faked_time, 'm') != NULL) frac_offset *= 60;
-      else if (strchr(user_faked_time, 'h') != NULL) frac_offset *= 60 * 60;
-      else if (strchr(user_faked_time, 'd') != NULL) frac_offset *= 60 * 60 * 24;
-      else if (strchr(user_faked_time, 'y') != NULL) frac_offset *= 60 * 60 * 24 * 365;
+      if (offset_unit == 'm') frac_offset *= 60;
+      else if (offset_unit == 'h') frac_offset *= 60 * 60;
+      else if (offset_unit == 'd') frac_offset *= 60 * 60 * 24;
+      else if (offset_unit == 'y') frac_offset *= 60 * 60 * 24 * 365;
 
       user_offset.tv_sec = floor(frac_offset);
       user_offset.tv_nsec = (frac_offset - user_offset.tv_sec) * SEC_TO_nSEC;
@@ -3296,7 +3325,7 @@ static void parse_ft_string(const char *user_faked_time)
         if (nstime_str[0] == '.')
         {
           double nstime;
-          if (!parse_finite_double_prefix(--nstime_str, &nstime))
+          if (!parse_finite_double_prefix(--nstime_str, &nstime, NULL))
           {
             fprintf(stderr, "libfaketime: invalid fractional timestamp: %s\n", user_faked_time);
             exit(EXIT_FAILURE);
@@ -3371,7 +3400,7 @@ parse_modifiers:
       /* Speed-up / slow-down contributed by Karl Chen in v0.8 */
       if (strchr(user_faked_time, 'x') != NULL)
       {
-        if (!parse_finite_double_prefix(strchr(user_faked_time, 'x') + 1, &user_rate) || user_rate <= 0)
+        if (!parse_finite_double(strchr(user_faked_time, 'x') + 1, &user_rate) || user_rate <= 0)
         {
           fprintf(stderr, "libfaketime: invalid clock rate in FAKETIME: %s\n", user_faked_time);
           exit(EXIT_FAILURE);
@@ -3397,7 +3426,7 @@ parse_modifiers:
       else if (NULL != (tmp_time_fmt = strchr(user_faked_time, 'i')))
       {
         double tick_inc;
-        if (!parse_finite_double_prefix(tmp_time_fmt + 1, &tick_inc))
+        if (!parse_finite_double(tmp_time_fmt + 1, &tick_inc))
         {
           fprintf(stderr, "libfaketime: invalid tick increment in FAKETIME: %s\n", user_faked_time);
           exit(EXIT_FAILURE);
