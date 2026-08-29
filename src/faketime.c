@@ -52,7 +52,7 @@
 #include "android_compat.h"
 #include "faketime_common.h"
 
-const char version[] = "0.9.12";
+static const char version[] = "0.9.12";
 
 #if (defined __APPLE__) || (defined __sun)
 static const char *date_cmd = "gdate";
@@ -92,7 +92,7 @@ static bool parse_date_seconds(const char *value, long *result)
   return *end == '\0';
 }
 
-void usage(const char *name)
+static void usage(const char *name)
 {
   printf("\n"
   "Usage: %s [switches] <timestamp> <program with arguments>\n"
@@ -127,7 +127,7 @@ void usage(const char *name)
 }
 
 /** Clean up shared objects */
-static void cleanup_shobjs()
+static void cleanup_shobjs(void)
 {
   if (-1 == ft_sem_unlink(&wrapper_sem))
   {
