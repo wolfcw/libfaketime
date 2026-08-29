@@ -24,6 +24,7 @@ run()
 	run_testcase past_wait_deadlines_timeout
 	run_testcase semaphore_deadlines
 	run_testcase positive_poll_timeout
+	run_testcase select_timeout_contract
 }
 
 positive_poll_timeout()
@@ -32,6 +33,19 @@ positive_poll_timeout()
 	result=$(fakecmd "+0 x2" ./wait_timeout_contract_test)
 	asserteq "$result" "positive poll timeout was preserved" \
 		"positive poll timeout should not be truncated to zero"
+}
+
+select_timeout_contract()
+{
+	typeset result
+	result=$(fakecmd "+0 x2" ./wait_api_contract_test)
+	if [ "$PLATFORM" = "mac" ]; then
+		asserteq "$result" "select and pselect timeout contracts passed" \
+			"select and pselect timeout contracts should be preserved"
+	else
+		asserteq "$result" "select, pselect, and ppoll timeout contracts passed" \
+			"select, pselect, and ppoll timeout contracts should be preserved"
+	fi
 }
 
 semaphore_deadlines()
