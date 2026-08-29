@@ -667,6 +667,10 @@ static void ft_shm_create(void) {
   int length;
 
 #ifdef FAKE_PID
+  if (!CHECK_MISSING_REAL(getpid))
+  {
+    return;
+  }
   pid = real_getpid();
 #else
   pid = getpid();
@@ -4991,6 +4995,10 @@ pid_t getpid() {
     return (pid_t)(pid);
   } else {
     ftpl_init();
+    if (!CHECK_MISSING_REAL(getpid))
+    {
+      return (pid_t)-1;
+    }
     return real_getpid();
   }
 }
