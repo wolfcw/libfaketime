@@ -1190,50 +1190,60 @@ static void reset_time(void)
  *      =======================================================================
  */
 
+static bool write_all(int fd, const void *buffer, size_t count)
+{
+  const char *bytes = buffer;
+  size_t written_total = 0;
+
+  while (written_total < count)
+  {
+    ssize_t written = write(fd, bytes + written_total, count - written_total);
+    if (written < 0)
+    {
+      if (errno == EINTR)
+        continue;
+      return false;
+    }
+    if (written == 0)
+    {
+      errno = EIO;
+      return false;
+    }
+    if ((size_t)written > count - written_total)
+    {
+      errno = EIO;
+      return false;
+    }
+    written_total += (size_t)written;
+  }
+  return true;
+}
+
 static void save_time(struct timespec *tp)
 {
   if (shared_sem_initialized && (outfile != -1))
   {
     struct saved_timestamp time_write;
-    ssize_t written;
-    size_t n = 0;
+    bool locked = false;
 
     time_write.sec = htobe64(tp->tv_sec);
     time_write.nsec = htobe64(tp->tv_nsec);
 
     /* lock */
-    if (ft_sem_lock(&shared_sem) == -1)
+    while (!locked)
     {
-      if (errno == EINTR)
+      if (ft_sem_lock(&shared_sem) == 0)
       {
-        save_time(tp);
-        return;
+        locked = true;
       }
-      else
+      else if (errno != EINTR)
       {
         perror("libfaketime: In save_time(), ft_sem_lock failed");
         exit(1);
       }
     }
 
-    while (n < sizeof(time_write))
-    {
-      written = write(outfile, &(((char*)&time_write)[n]), sizeof(time_write) - n);
-      if (written == -1)
-      {
-        if (errno == EINTR)
-          continue;
-        break;
-      }
-      if (written == 0)
-      {
-        errno = EIO;
-        break;
-      }
-      n += (size_t)written;
-    }
-
-    if (n < sizeof(time_write))
+    if (!write_all(outfile, &time_write, sizeof(time_write)))
     {
       perror("libfaketime: In save_time(), saving timestamp to file failed");
     }
@@ -1241,7 +1251,7 @@ static void save_time(struct timespec *tp)
     /* unlock */
     if (ft_sem_unlock(&shared_sem) == -1)
     {
-      perror("libfaketime: In save_time(), ft_sem_unlcok failed");
+      perror("libfaketime: In save_time(), ft_sem_unlock failed");
       exit(1);
     }
   }

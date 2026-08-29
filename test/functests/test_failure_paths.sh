@@ -22,6 +22,7 @@ run()
 	run_testcase rejects_invalid_load_timestamp
 	run_testcase rejects_invalid_shared_objects
 	run_testcase rejects_overlong_date_output
+	run_testcase isolates_date_helper_preload
 	run_testcase save_file_failure_does_not_hang
 	rm -f "$LOAD_FILE"
 }
@@ -110,6 +111,39 @@ rejects_overlong_date_output()
 	fi
 	rm -f "$date_helper"
 	echo "out=1 overlong date output is rejected - ok"
+	return 0
+}
+
+isolates_date_helper_preload()
+{
+	typeset date_helper=".date_preload_test.$$"
+	typeset environment_file=".date_preload_environment.$$"
+	printf '#!/bin/sh\nprintf "%%s\\n%%s\\n" "${LD_PRELOAD:-}" "${DYLD_INSERT_LIBRARIES:-}" > "$DATE_HELPER_ENV_FILE"\nprintf "0\\n"\n' > "$date_helper"
+	chmod 755 "$date_helper"
+	if [ "$PLATFORM" = "mac" ]; then
+		env DATE_HELPER_ENV_FILE="$environment_file" \
+			DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
+			DYLD_FORCE_FLAT_NAMESPACE=1 \
+			../src/faketime --date-prog "./$date_helper" ignored \
+				./date-helper-target-does-not-exist >/dev/null 2>&1
+	else
+		env DATE_HELPER_ENV_FILE="$environment_file" \
+			LD_PRELOAD=../src/libfaketime.so.1 \
+			../src/faketime --date-prog "./$date_helper" ignored \
+				./date-helper-target-does-not-exist >/dev/null 2>&1
+	fi
+	typeset status=$?
+	typeset helper_environment=""
+	if [ -f "$environment_file" ]; then
+		helper_environment=$(cat "$environment_file")
+	fi
+	if [ "$status" -eq 0 ] || [ ! -f "$environment_file" ] || [ -n "$helper_environment" ]; then
+		rm -f "$date_helper" "$environment_file"
+		echo "out=$status date helper preload environment was not isolated ($helper_environment) - bad"
+		return 1
+	fi
+	rm -f "$date_helper" "$environment_file"
+	echo "out=0 date helper preload environment was isolated - ok"
 	return 0
 }
 

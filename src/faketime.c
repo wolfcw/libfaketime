@@ -75,6 +75,17 @@ static void set_env_or_exit(const char *name, const char *value)
   }
 }
 
+static void clear_date_helper_preload(void)
+{
+  if (unsetenv("LD_PRELOAD") == -1 ||
+      unsetenv("DYLD_INSERT_LIBRARIES") == -1 ||
+      unsetenv("DYLD_FORCE_FLAT_NAMESPACE") == -1)
+  {
+    perror("faketime: clearing date helper preload environment");
+    _exit(EXIT_FAILURE);
+  }
+}
+
 static bool parse_date_seconds(const char *value, long *result)
 {
   char *end;
@@ -261,6 +272,7 @@ int main (int argc, char **argv)
       }
       close(pfds[1]);
       close(pfds[0]); /* we don't need this */
+      clear_date_helper_preload();
       // fprintf(stderr, "faketime: using --date-prog: %s\n", date_cmd);
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {

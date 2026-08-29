@@ -54,9 +54,14 @@ save_and_load_resources()
 	typeset save_file load_file actual
 	save_file=".save_resource_test.$$"
 	load_file=".load_resource_test.$$"
-	actual=$(FAKETIME_SAVE_FILE="$save_file" fakecmd "+0" perl -e 'print time')
-	if [ -z "$actual" ] || [ ! -s "$save_file" ]; then
+	actual=$(FAKETIME_SAVE_FILE="$save_file" fakecmd "+0" perl -e 'print time for 1..3')
+	if [ "${#actual}" -ne 30 ] || [ ! -s "$save_file" ]; then
 		echo "out=save failed to create timestamp resource - bad"
+		rm -f "$save_file" "$load_file"
+		return 1
+	fi
+	if [ $(( $(wc -c < "$save_file") % 16 )) -ne 0 ]; then
+		echo "out=save produced a partial timestamp record - bad"
 		rm -f "$save_file" "$load_file"
 		return 1
 	fi
