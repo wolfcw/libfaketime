@@ -4953,6 +4953,10 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
       return buflen;
   } else {
     ftpl_init();
+    if (!CHECK_MISSING_REAL(getrandom))
+    {
+      return -1;
+    }
     return real_getrandom(buf, buflen, flags);
   }
 }
@@ -4968,6 +4972,10 @@ int getentropy(void *buffer, size_t length) {
 #ifdef MACOS_DYLD_INTERPOSE
     return getentropy(buffer, length);
 #else
+    if (!CHECK_MISSING_REAL(getentropy))
+    {
+      return -1;
+    }
     return real_getentropy(buffer, length);
 #endif
   }
@@ -5116,6 +5124,11 @@ static inline long handle_futex_syscall(long number, uint32_t* uaddr, int futex_
 long syscall(long number, ...) {
   va_list ap;
   va_start(ap, number);
+  if (!CHECK_MISSING_REAL(syscall))
+  {
+    va_end(ap);
+    return -1;
+  }
 #ifdef FAKE_RANDOM
   if (number == __NR_getrandom && getenv("FAKERANDOM_SEED")) {
     void *buf;
