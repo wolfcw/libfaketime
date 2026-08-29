@@ -77,3 +77,17 @@ jobs:
       run: |
         ASAN_LIB=$(gcc -print-file-name=libasan.so)
         FAKETIME_TESTLIB="$ASAN_LIB:../src/libfaketime.so.1" make test
+
+  musl:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: make test on Alpine musl
+      run: |
+        docker run --rm -v "$GITHUB_WORKSPACE:/src:ro" alpine:3.20 sh -lc '
+          apk add --no-cache build-base bash perl coreutils util-linux file
+          cp -a /src /tmp/libfaketime
+          cd /tmp/libfaketime
+          find src test -type f \( -name "*.o" -o -name "*.so*" -o -name "timetest" -o -name "faketime" -o -name "set_mtime" -o -name "*_test" \) -delete
+          timeout 180s make test
+        '
