@@ -779,7 +779,13 @@ static void ft_shm_create(void) {
   }
 
   if (semSafetyCheckPassed == 1) {
-    setenv("FAKETIME_SHARED", shared_objsN, true);
+    if (setenv("FAKETIME_SHARED", shared_objsN, true) == -1)
+    {
+      perror("libfaketime: In ft_shm_create(), setting FAKETIME_SHARED failed");
+      (void)ft_sem_unlink(&semN);
+      (void)shm_unlink(shm_name);
+      return;
+    }
     shmCreator = true;
   }
 }
