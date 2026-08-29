@@ -670,8 +670,8 @@ static void ft_shm_create(void) {
 #else
   pid = getpid();
 #endif
-  snprintf(sem_name, 255, "/faketime_sem_%ld", (long)pid);
-  snprintf(shm_name, 255, "/faketime_shm_%ld", (long)pid);
+  snprintf(sem_name, sizeof(sem_name), "/faketime_sem_%ld", (long)pid);
+  snprintf(shm_name, sizeof(shm_name), "/faketime_shm_%ld", (long)pid);
   if (-1 == ft_sem_create(sem_name, &semN))
   { /* silently fail on platforms that do not support semaphores */
     return;
@@ -4759,7 +4759,7 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   char newenv_string[256];
   double offset = (double) sec_diff;
   offset += (double) nsec_diff/SEC_TO_nSEC;
-  snprintf(newenv_string, 255, "%+f", offset);
+  snprintf(newenv_string, sizeof(newenv_string), "%+f", offset);
 
   parse_config_file = false; /* #247: make sure environment takes precedence */
   setenv("FAKETIME", newenv_string, 1);
