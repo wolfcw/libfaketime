@@ -798,6 +798,11 @@ may be attributed to random numbers delivered by getrandom(), e.g., in the
 context of cryptographic operations. Use it for deterministic testing
 purposes only. Never use it in production.
 
+The optional FAKE_PID feature is supported on Linux only. Supplying
+FAKETIME_FAKEPID in a macOS build can destabilize process startup and cause
+an abort because Darwin runtime code relies on the real process identity.
+Do not enable it on macOS; Darwin support remains future work.
+
 For a discussion on why this apparently not date-/time-related function
 has been added to libfaketime and how it may evolve, see Github issue #275.
 

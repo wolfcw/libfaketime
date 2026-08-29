@@ -14,7 +14,8 @@
 #         - Intercept clock_settime(), settimeofday(), and adjtime()
 #
 #     FAKE_PID
-#         - Enable faked values for getpid() calls through FAKETIME_FAKEPID
+#         - Not supported on macOS. FAKETIME_FAKEPID can destabilize the
+#           Darwin runtime; see README.
 #
 #     FAKE_RANDOM
 #         - Not supported on macOS. The Darwin getentropy() interposition
