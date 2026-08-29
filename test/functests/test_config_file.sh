@@ -16,6 +16,7 @@ run()
 {
 	init
 	run_testcase accepts_crlf_and_full_line_comments
+	run_testcase tolerates_missing_config_environment
 }
 
 config_file_cmd()
@@ -28,6 +29,25 @@ config_file_cmd()
 		FAKETIME_TIMESTAMP_FILE="$1" FAKETIME_NO_CACHE=1 \
 			LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" "$2" "${@:3}"
 	fi
+}
+
+tolerates_missing_config_environment()
+{
+	if [ "$PLATFORM" = "mac" ]; then
+		env -u HOME -u FAKETIME_TIMESTAMP_FILE -u FAKETIME \
+			DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
+			DYLD_FORCE_FLAT_NAMESPACE=1 perl -e 'print time' >/dev/null 2>&1
+	else
+		env -u HOME -u FAKETIME_TIMESTAMP_FILE -u FAKETIME \
+			LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+			perl -e 'print time' >/dev/null 2>&1
+	fi
+	if [ "$?" -ne 0 ]; then
+		echo "out=0 missing config environment caused failure - bad"
+		return 1
+	fi
+	echo "out=1 missing config environment is tolerated - ok"
+	return 0
 }
 
 accepts_crlf_and_full_line_comments()

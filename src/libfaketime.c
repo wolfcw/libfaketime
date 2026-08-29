@@ -3886,16 +3886,49 @@ int read_config_file()
   char user_faked_time[BUFFERLEN];
   static char custom_filename[BUFSIZ];
   static char filename[BUFSIZ];
+  const char *custom_env;
+  const char *home_env;
+  int path_length;
   int faketimerc;
   /* check whether there's a .faketimerc in the user's home directory, or
    * a system-wide /etc/faketimerc present.
    * The /etc/faketimerc handling has been contributed by David Burley,
    * Jacob Moorman, and Wayne Davison of SourceForge, Inc. in version 0.6 */
-  (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
-  (void) snprintf(filename, BUFSIZ, "%s/.faketimerc", getenv("HOME"));
-  if ((faketimerc = open(custom_filename, O_RDONLY)) != -1 ||
-      (faketimerc = open(filename, O_RDONLY)) != -1 ||
-      (faketimerc = open("/etc/faketimerc", O_RDONLY)) != -1)
+  custom_filename[0] = '\0';
+  filename[0] = '\0';
+  custom_env = getenv("FAKETIME_TIMESTAMP_FILE");
+  if (custom_env != NULL && custom_env[0] != '\0')
+  {
+    path_length = snprintf(custom_filename, BUFSIZ, "%s", custom_env);
+    if (path_length < 0 || (size_t)path_length >= sizeof(custom_filename))
+    {
+      custom_filename[0] = '\0';
+    }
+  }
+  home_env = getenv("HOME");
+  if (home_env != NULL && home_env[0] != '\0')
+  {
+    path_length = snprintf(filename, BUFSIZ, "%s/.faketimerc", home_env);
+    if (path_length < 0 || (size_t)path_length >= sizeof(filename))
+    {
+      filename[0] = '\0';
+    }
+  }
+
+  faketimerc = -1;
+  if (custom_filename[0] != '\0')
+  {
+    faketimerc = open(custom_filename, O_RDONLY);
+  }
+  if (faketimerc == -1 && filename[0] != '\0')
+  {
+    faketimerc = open(filename, O_RDONLY);
+  }
+  if (faketimerc == -1)
+  {
+    faketimerc = open("/etc/faketimerc", O_RDONLY);
+  }
+  if (faketimerc != -1)
   {
     ssize_t bytes;
     ssize_t length = 0;
