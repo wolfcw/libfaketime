@@ -4771,10 +4771,16 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   {
     const char *error = NULL;
     FILE *envfile;
+    int path_length;
     static char custom_filename[BUFSIZ];
-    (void) snprintf(custom_filename, BUFSIZ, "%s", getenv("FAKETIME_TIMESTAMP_FILE"));
+    path_length = snprintf(custom_filename, sizeof(custom_filename), "%s",
+                           getenv("FAKETIME_TIMESTAMP_FILE"));
 
-    if ((envfile = fopen(custom_filename, "wt")) != NULL)
+    if (path_length < 0 || (size_t)path_length >= sizeof(custom_filename))
+    {
+      error = "to resolve file path";
+    }
+    else if ((envfile = fopen(custom_filename, "wt")) != NULL)
     {
       if (fprintf(envfile, "%+f\n", offset) < 0)
       {
