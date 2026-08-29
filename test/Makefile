@@ -34,7 +34,7 @@ ALL_TESTS += file_timestamp_test
 FILE_TIMESTAMP_TEST_DEP = file_timestamp_test
 endif
 
-all: $(ALL_TESTS)
+all: $(ALL_TESTS) init_reentry.so
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
@@ -60,6 +60,9 @@ wait_contract_test: wait_contract_test.c
 timerfd_contract_test: timerfd_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
+init_reentry.so: init_reentry.c
+	${CC} -shared -fPIC -o $@ ${CFLAGS} $<
+
 fake_pid_test: fake_pid_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
@@ -75,7 +78,7 @@ file_timestamp_test: file_timestamp_test.c
 syscall_contract_test: syscall_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest time_ops_test set_mtime clock_error_test wait_contract_test timerfd_contract_test ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} functest
+test: timetest time_ops_test set_mtime clock_error_test wait_contract_test timerfd_contract_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} functest
 	@echo
 	@./time_ops_test
 	@./test.sh
@@ -123,7 +126,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest shm_layout_test set_mtime time_ops_test clock_error_test wait_contract_test timerfd_contract_test fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test set_mtime time_ops_test clock_error_test wait_contract_test timerfd_contract_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo

@@ -23,6 +23,7 @@ run()
 	run_testcase rejects_invalid_shared_objects
 	run_testcase rejects_overlong_date_output
 	run_testcase isolates_date_helper_preload
+	run_testcase tolerates_constructor_reentry
 	run_testcase save_file_failure_does_not_hang
 	rm -f "$LOAD_FILE"
 }
@@ -144,6 +145,41 @@ isolates_date_helper_preload()
 	fi
 	rm -f "$date_helper" "$environment_file"
 	echo "out=0 date helper preload environment was isolated - ok"
+	return 0
+}
+
+tolerates_constructor_reentry()
+{
+	if [ "$PLATFORM" = "mac" ]; then
+		typeset reentry_lib=./init_reentry.dylib
+		typeset faketime_lib=../src/libfaketime.1.dylib
+		typeset preload_variable=DYLD_INSERT_LIBRARIES
+	else
+		typeset reentry_lib=./init_reentry.so
+		typeset faketime_lib=../src/libfaketime.so.1
+		typeset preload_variable=LD_PRELOAD
+	fi
+	if [ ! -f "$reentry_lib" ]; then
+		echo "out=skip constructor reentry test helper is unavailable - ok"
+		return 0
+	fi
+	typeset status
+	if [ "$PLATFORM" = "mac" ]; then
+		env "$preload_variable=$reentry_lib:$faketime_lib" \
+			DYLD_FORCE_FLAT_NAMESPACE=1 \
+			FAKETIME_NO_CACHE=1 perl -e 'alarm 3; exec @ARGV or exit 127' -- \
+			/usr/bin/true >/dev/null 2>&1
+	else
+		env "$preload_variable=$reentry_lib:$faketime_lib" \
+			FAKETIME_NO_CACHE=1 perl -e 'alarm 3; exec @ARGV or exit 127' -- \
+			/bin/true >/dev/null 2>&1
+	fi
+	status=$?
+	if [ "$status" -ne 0 ]; then
+		echo "out=$status constructor reentry did not complete - bad"
+		return 1
+	fi
+	echo "out=0 constructor reentry completed - ok"
 	return 0
 }
 

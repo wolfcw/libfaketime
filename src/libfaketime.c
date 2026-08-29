@@ -881,6 +881,14 @@ static bool ft_init_once_generic (enum ft_init_state* state,
     return false;
 
   ret = pthread_mutex_lock(mutex);
+  if (ret == EDEADLK && *state == FT_INIT_INITIALIZING)
+  {
+    /* The initializer called back into an intercepted function.  The
+       required real symbols have already been resolved, so let the
+       recursive call use the partially initialized state rather than
+       deadlocking on this thread's error-checking mutex. */
+    return true;
+  }
   if (ret == 0) {
     if (*state == FT_INIT_UNINITIALIZED) {
       /* Mark initialization before calling out so recursive calls are safe. */
