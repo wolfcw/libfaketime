@@ -4564,18 +4564,34 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   if (result != 0 || attr == NULL)
     return result;
 
-  pthread_condattr_getclock(attr, &clock_id);
+  result = pthread_condattr_getclock(attr, &clock_id);
+  if (result != 0)
+    return result;
 
   if (clock_id == CLOCK_MONOTONIC) {
     struct pthread_cond_monotonic *e = (struct pthread_cond_monotonic*)malloc(sizeof(struct pthread_cond_monotonic));
+    if (e == NULL)
+    {
+      (void)real_pthread_cond_destroy_232(cond);
+      return ENOMEM;
+    }
     e->ptr = cond;
 
-    if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
-      fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
-      exit(-1);
+    result = pthread_rwlock_wrlock(&monotonic_conds_lock);
+    if (result != 0) {
+      free(e);
+      (void)real_pthread_cond_destroy_232(cond);
+      return result;
     }
     HASH_ADD_PTR(monotonic_conds, ptr, e);
-    pthread_rwlock_unlock(&monotonic_conds_lock);
+    result = pthread_rwlock_unlock(&monotonic_conds_lock);
+    if (result != 0)
+    {
+      HASH_DEL(monotonic_conds, e);
+      free(e);
+      (void)real_pthread_cond_destroy_232(cond);
+      return result;
+    }
   }
 
   return result;
@@ -4584,21 +4600,25 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
 int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
+  int result;
 
   ftpl_init();
 
-  if (pthread_rwlock_wrlock(&monotonic_conds_lock) != 0) {
-    fprintf(stderr,"can't acquire write monotonic_conds_lock\n");
-    exit(-1);
-  }
+  result = real_pthread_cond_destroy_232(cond);
+  if (result != 0)
+    return result;
+
+  result = pthread_rwlock_wrlock(&monotonic_conds_lock);
+  if (result != 0)
+    return result;
   HASH_FIND_PTR(monotonic_conds, &cond, e);
   if (e) {
     HASH_DEL(monotonic_conds, e);
     free(e);
   }
-  pthread_rwlock_unlock(&monotonic_conds_lock);
+  result = pthread_rwlock_unlock(&monotonic_conds_lock);
 
-  return real_pthread_cond_destroy_232(cond);
+  return result;
 }
 
 /*
@@ -4673,12 +4693,13 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
 
   if (abstime != NULL)
   {
-    if (pthread_rwlock_rdlock(&monotonic_conds_lock) != 0) {
-      fprintf(stderr,"can't acquire read monotonic_conds_lock\n");
-      exit(-1);
-    }
+    result = pthread_rwlock_rdlock(&monotonic_conds_lock);
+    if (result != 0)
+      return result;
     HASH_FIND_PTR(monotonic_conds, &cond, e);
-    pthread_rwlock_unlock(&monotonic_conds_lock);
+    result = pthread_rwlock_unlock(&monotonic_conds_lock);
+    if (result != 0)
+      return result;
     if (e != NULL)
       clk_id = CLOCK_MONOTONIC;
     else
