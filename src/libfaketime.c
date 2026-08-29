@@ -2374,9 +2374,12 @@ int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
   int result;
   struct timespec real_abs_timeout, *real_abs_timeout_pt;
 
+  ftpl_init();
+
   /* sanity check */
   if (abs_timeout == NULL)
   {
+    errno = EINVAL;
     return -1;
   }
 
@@ -2416,6 +2419,10 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
   int result;
   struct timespec real_abstime, *real_abstime_pt;
 
+  ftpl_init();
+
+  if (!CHECK_MISSING_REAL(sem_clockwait)) return -1;
+
   if ((!fake_monotonic_clock) && (clockid == CLOCK_MONOTONIC))
   {
     DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, clockid, abstime));
@@ -2425,10 +2432,9 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
   /* sanity check */
   if (abstime == NULL)
   {
+    errno = EINVAL;
     return -1;
   }
-
-  if (!CHECK_MISSING_REAL(sem_clockwait)) return -1;
 
   if (!dont_fake)
   {

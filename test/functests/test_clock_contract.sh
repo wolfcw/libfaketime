@@ -22,6 +22,19 @@ run()
 	run_testcase invalid_clock_id_fails
 	run_testcase null_clock_output_fails
 	run_testcase past_wait_deadlines_timeout
+	run_testcase semaphore_deadlines
+}
+
+semaphore_deadlines()
+{
+	typeset result
+	if [ "$PLATFORM" = "mac" ]; then
+		echo "out=skip sem_timedwait is unavailable on macOS - ok"
+		return 0
+	fi
+	result=$(fakecmd "+0" ./sem_contract_test)
+	asserteq "$result" "semaphore deadline and null handling passed" \
+		"semaphore timed-wait contract should be preserved"
 }
 
 realtime_absolute_value()
