@@ -1031,10 +1031,11 @@ static void ft_shm_init (void)
 
 static void ft_shm_really_init (void)
 {
+  enum { FT_SHM_RETRY_LIMIT = 3 };
   int ticks_shm_fd;
   char sem_name[256], shm_name[256], *ft_shared_env = getenv("FAKETIME_SHARED");
   ft_sem_t shared_semR;
-  static int nt=1;
+  int retry_count = 1;
 
   /* create semaphore and shared memory locally unless it has been passed along */
   if (ft_shared_env == NULL)
@@ -1082,8 +1083,8 @@ static void ft_shm_really_init (void)
       }
       else
       {
-        nt++;
-        if (nt > 3)
+        retry_count++;
+        if (retry_count > FT_SHM_RETRY_LIMIT)
         {
           perror("libfaketime: In ft_shm_init(), sem_open failed and recreation attempts failed");
           fprintf(stderr, "libfaketime: sem_name was %s, created locally: %s\n", sem_name, shmCreator ? "true":"false");
