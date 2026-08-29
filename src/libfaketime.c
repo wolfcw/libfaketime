@@ -712,9 +712,7 @@ static bool parse_shared_objects(const char *value, char *sem_name,
 
 static bool valid_shared_header(const struct ft_shared_s *shared)
 {
-  return shared->magic == FT_SHARED_MAGIC &&
-    shared->version == FT_SHARED_VERSION &&
-    shared->size == sizeof(struct ft_shared_s);
+  return ft_shared_header_valid(shared);
 }
 
 static void ft_shm_cleanup_created(ft_sem_t *sem, int *shm_fd,
@@ -1109,7 +1107,8 @@ static void ft_shm_really_init (void)
 
     struct stat shm_stat;
     if (fstat(ticks_shm_fd, &shm_stat) == -1 ||
-        shm_stat.st_size < (off_t)sizeof(struct ft_shared_s))
+        shm_stat.st_size < 0 ||
+        (uintmax_t)shm_stat.st_size != sizeof(struct ft_shared_s))
     {
       perror("libfaketime: In ft_shm_init(), inspecting shared memory failed");
       ft_shm_cleanup_attached(ticks_shm_fd);
