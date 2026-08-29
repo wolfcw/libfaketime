@@ -664,14 +664,25 @@ static void ft_shm_create(void) {
   char shared_objsN[513];
   ft_sem_t shared_semT;
   pid_t pid;
+  int length;
 
 #ifdef FAKE_PID
   pid = real_getpid();
 #else
   pid = getpid();
 #endif
-  snprintf(sem_name, sizeof(sem_name), "/faketime_sem_%ld", (long)pid);
-  snprintf(shm_name, sizeof(shm_name), "/faketime_shm_%ld", (long)pid);
+  length = snprintf(sem_name, sizeof(sem_name), "/faketime_sem_%ld", (long)pid);
+  if (length < 0 || (size_t)length >= sizeof(sem_name))
+  {
+    return;
+  }
+  length = snprintf(shm_name, sizeof(shm_name), "/faketime_shm_%ld", (long)pid);
+  if (length < 0 || (size_t)length >= sizeof(shm_name))
+  {
+    ft_sem_close(&semN);
+    ft_sem_unlink(&semN);
+    return;
+  }
   if (-1 == ft_sem_create(sem_name, &semN))
   { /* silently fail on platforms that do not support semaphores */
     return;
@@ -747,7 +758,12 @@ static void ft_shm_create(void) {
   }
   ft_sharedN = MAP_FAILED;
 
-  snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
+  length = snprintf(shared_objsN, sizeof(shared_objsN), "%s %s", sem_name, shm_name);
+  if (length < 0 || (size_t)length >= sizeof(shared_objsN))
+  {
+    ft_shm_cleanup_created(&semN, &shm_fdN, &ft_sharedN, shm_name, false);
+    return;
+  }
 
   int semSafetyCheckPassed = 0;
   ft_sem_close(&semN);
@@ -4759,10 +4775,18 @@ int clock_settime(clockid_t clk_id, const struct timespec *tp) {
   char newenv_string[256];
   double offset = (double) sec_diff;
   offset += (double) nsec_diff/SEC_TO_nSEC;
-  snprintf(newenv_string, sizeof(newenv_string), "%+f", offset);
+  int newenv_length = snprintf(newenv_string, sizeof(newenv_string), "%+f", offset);
+  if (newenv_length < 0 || (size_t)newenv_length >= sizeof(newenv_string))
+  {
+    errno = EOVERFLOW;
+    return -1;
+  }
 
   parse_config_file = false; /* #247: make sure environment takes precedence */
-  setenv("FAKETIME", newenv_string, 1);
+  if (setenv("FAKETIME", newenv_string, 1) == -1)
+  {
+    return -1;
+  }
   force_cache_expiration = 1; /* make sure it becomes effective immediately */
 
   /* If FAKETIME_TIMESTAMP_FILE was given in environment,
