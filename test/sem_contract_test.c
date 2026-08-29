@@ -9,6 +9,11 @@
 #include <time.h>
 #include <unistd.h>
 
+#if defined(__GLIBC__) && \
+    (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30))
+#define HAVE_SEM_CLOCKWAIT 1
+#endif
+
 #ifdef __APPLE__
 int main(void)
 {
@@ -21,7 +26,6 @@ int main(void)
   char name[64];
   sem_t *semaphore;
   struct timespec deadline;
-  struct timespec monotonic_deadline;
   int (*sem_timedwait_fn)(sem_t *, const struct timespec *) = sem_timedwait;
 
   (void)snprintf(name, sizeof(name), "/libfaketime-sem-%ld", (long)getpid());
@@ -60,6 +64,8 @@ int main(void)
     return EXIT_FAILURE;
   }
 
+#ifdef HAVE_SEM_CLOCKWAIT
+  struct timespec monotonic_deadline;
   if (clock_gettime(CLOCK_MONOTONIC, &monotonic_deadline) == -1)
   {
     perror("clock_gettime monotonic");
@@ -77,6 +83,7 @@ int main(void)
     sem_unlink(name);
     return EXIT_FAILURE;
   }
+#endif
 
   sem_close(semaphore);
   sem_unlink(name);

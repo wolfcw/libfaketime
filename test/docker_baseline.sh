@@ -23,6 +23,20 @@ if [ "$#" -eq 0 ]; then
     set -- gcc:13-bookworm alpine:3.20 debian:13 archlinux:base-devel
 fi
 
+DOCKER_PLATFORM=${DOCKER_PLATFORM:-}
+if [ -n "$DOCKER_PLATFORM" ]; then
+    case "$DOCKER_PLATFORM" in
+        linux/amd64|linux/arm64|linux/arm/v7|linux/ppc64le|linux/s390x) ;;
+        *)
+            echo "error: unsupported Docker platform: $DOCKER_PLATFORM" >&2
+            exit 2
+            ;;
+    esac
+    docker_platform_arg="--platform=$DOCKER_PLATFORM"
+else
+    docker_platform_arg=
+fi
+
 run_baseline() {
     image=$1
 
@@ -32,9 +46,21 @@ run_baseline() {
         return 2
     fi
 
+    if [ -n "$DOCKER_PLATFORM" ]; then
+        image_arch=$(docker image inspect --format '{{.Architecture}}' "$image")
+        case "$DOCKER_PLATFORM:$image_arch" in
+            linux/amd64:amd64|linux/arm64:arm64|linux/arm/v7:arm|linux/ppc64le:ppc64le|linux/s390x:s390x) ;;
+            *)
+                echo "error: $image is $image_arch, incompatible with $DOCKER_PLATFORM" >&2
+                echo "       pull an image matching the requested platform and retry" >&2
+                return 2
+                ;;
+        esac
+    fi
+
     case "$image" in
         alpine:*)
-            docker run --rm -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+            docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 apk add --no-cache build-base bash perl coreutils util-linux file
                 rm -rf /tmp/libfaketime
@@ -51,7 +77,7 @@ run_baseline() {
             '
             ;;
         archlinux:*)
-            docker run --rm -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+            docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -e "DOCKER_ARCH_DISABLE_PACMAN_SANDBOX=${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" bash -eu -c '
                 if [ "${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" = 1 ]; then
@@ -73,7 +99,7 @@ run_baseline() {
             '
             ;;
         debian:*|gcc:*)
-            docker run --rm -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+            docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 apt-get update
                 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
