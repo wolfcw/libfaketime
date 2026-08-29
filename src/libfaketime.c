@@ -397,8 +397,8 @@ static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
 static int    fake_current_realtime(struct timespec *tp);
 static int    fake_current_timeval(struct timeval *tv);
 #endif
-int           read_config_file();
-bool          str_array_contains(const char *haystack, const char *needle);
+static int    read_config_file(void);
+static bool   str_array_contains(const char *haystack, const char *needle);
 void *ft_dlvsym(void *handle, const char *symbol, const char *version, const char *full_name, char *ignore_list, bool should_debug_dlsym);
 
 
@@ -3835,7 +3835,7 @@ static long stat_mtime_nsec(const struct stat *st)
 #endif
 }
 
-bool str_array_contains(const char *haystack, const char *needle)
+static bool str_array_contains(const char *haystack, const char *needle)
 {
   size_t needle_len = strlen(needle);
   const char *pos = strstr(haystack, needle);
@@ -3881,7 +3881,7 @@ static void pthread_cleanup_mutex_lock(void *data)
 }
 #endif
 
-int read_config_file()
+static int read_config_file(void)
 {
   char user_faked_time[BUFFERLEN];
   static char custom_filename[BUFSIZ];
