@@ -6,6 +6,8 @@ int main(void)
 {
   clock_serv_t clock_service;
   kern_return_t result;
+  mach_timespec_t current_time;
+  int i;
 
   result = host_get_clock_service(mach_host_self(), CALENDAR_CLOCK,
                                   &clock_service);
@@ -23,6 +25,16 @@ int main(void)
     return 1;
   }
 
-  puts("clock_get_time(NULL) returned KERN_INVALID_ARGUMENT");
+  for (i = 0; i < 256; i++)
+  {
+    result = clock_get_time(clock_service, &current_time);
+    if (result != KERN_SUCCESS)
+    {
+      fprintf(stderr, "clock_get_time failed on iteration %d: %d\n", i, result);
+      return 1;
+    }
+  }
+
+  puts("clock_get_time null handling and repeated calls passed");
   return 0;
 }

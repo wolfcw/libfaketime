@@ -1091,6 +1091,13 @@ static void ft_cleanup (void)
     exit(-1);
   }
 #endif
+#ifdef __APPLE__
+  if (clock_serv_real != MACH_PORT_NULL)
+  {
+    mach_port_deallocate(mach_task_self(), clock_serv_real);
+    clock_serv_real = MACH_PORT_NULL;
+  }
+#endif
   if (shmCreator == true)
   {
     ft_shm_destroy();
@@ -1136,13 +1143,21 @@ static void system_time_from_system (struct system_time_s * systime)
   /* from https://stackoverflow.com/questions/5167269/clock-gettime-alternative-in-mac-os-x */
   clock_serv_t cclock;
   mach_timespec_t mts;
-  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &clock_serv_real);
+  if (clock_serv_real == MACH_PORT_NULL)
+  {
+    if (host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &clock_serv_real) != KERN_SUCCESS)
+    {
+      return;
+    }
+  }
   (*real_clock_get_time)(clock_serv_real, &mts);
   systime->real.tv_sec = mts.tv_sec;
   systime->real.tv_nsec = mts.tv_nsec;
-  host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
-  (*real_clock_get_time)(cclock, &mts);
-  mach_port_deallocate(mach_task_self(), cclock);
+  if (host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock) == KERN_SUCCESS)
+  {
+    (*real_clock_get_time)(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+  }
   systime->mon.tv_sec = mts.tv_sec;
   systime->mon.tv_nsec = mts.tv_nsec;
   systime->mon_raw.tv_sec = mts.tv_sec;
