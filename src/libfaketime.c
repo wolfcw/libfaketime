@@ -3300,7 +3300,7 @@ static void ftpl_really_init(void)
   real_alarm =              dlsym(RTLD_NEXT, "alarm");
   real_poll =               dlsym(RTLD_NEXT, "poll");
   real_ppoll =              dlsym(RTLD_NEXT, "ppoll");
-#ifdef linux
+#ifdef __linux__
   real_epoll_wait =         dlsym(RTLD_NEXT, "epoll_wait");
   real_epoll_pwait =        dlsym(RTLD_NEXT, "epoll_pwait");
 #endif
