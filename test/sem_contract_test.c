@@ -85,8 +85,17 @@ int main(void)
   }
 #endif
 
-  sem_close(semaphore);
-  sem_unlink(name);
+  if (sem_close(semaphore) == -1)
+  {
+    perror("sem_close");
+    sem_unlink(name);
+    return EXIT_FAILURE;
+  }
+  if (sem_unlink(name) == -1)
+  {
+    perror("sem_unlink");
+    return EXIT_FAILURE;
+  }
   puts("semaphore realtime, monotonic, and null handling passed");
   return EXIT_SUCCESS;
 }
