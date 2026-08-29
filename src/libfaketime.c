@@ -1128,10 +1128,12 @@ static void ft_shm_really_init (void)
       ft_shm_cleanup_attached(ticks_shm_fd);
       exit(1);
     }
-    if (close(ticks_shm_fd) == -1)
+    int close_result = close(ticks_shm_fd);
+    ticks_shm_fd = -1;
+    if (close_result == -1)
     {
       perror("libfaketime: In ft_shm_init(), close failed");
-      ft_shm_cleanup_attached(ticks_shm_fd);
+      ft_shm_cleanup_attached(-1);
       exit(1);
     }
   }
