@@ -3931,7 +3931,11 @@ static int read_config_file(void)
       char extra;
       bytes = read(faketimerc, &extra, sizeof(extra));
     }
-    close(faketimerc);
+    if (close(faketimerc) == -1)
+    {
+      perror("libfaketime: closing timestamp configuration file failed");
+      return -1;
+    }
     if (bytes > 0) {
       fprintf(stderr, "libfaketime: timestamp configuration file is too long\n");
       return -1;
