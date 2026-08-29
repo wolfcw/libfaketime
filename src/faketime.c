@@ -86,6 +86,18 @@ static void clear_date_helper_preload(void)
   }
 }
 
+static pid_t wait_for_child(pid_t pid, int *status)
+{
+  pid_t waited;
+
+  do
+  {
+    waited = waitpid(pid, status, 0);
+  }
+  while (waited == -1 && errno == EINTR);
+  return waited;
+}
+
 static bool parse_date_seconds(const char *value, long *result)
 {
   char *end;
@@ -316,11 +328,7 @@ int main (int argc, char **argv)
         }
       }
       buf[bytes_read] = '\0';
-      do
-      {
-        waited = waitpid(child_pid, &child_status, 0);
-      }
-      while (waited == -1 && errno == EINTR);
+      waited = wait_for_child(child_pid, &child_status);
       close(pfds[0]);
       if (output_overflow || waited == -1 || !WIFEXITED(child_status) ||
           WEXITSTATUS(child_status) != EXIT_SUCCESS)
@@ -566,11 +574,7 @@ int main (int argc, char **argv)
     pid_t waited;
     char buf;
     close(keepalive_fds[1]); /* only children need keep this open */
-    do
-    {
-      waited = waitpid(child_pid, &status, 0);
-    }
-    while (waited == -1 && errno == EINTR);
+    waited = wait_for_child(child_pid, &status);
     if (waited == -1)
     {
       perror("faketime: waitpid");
