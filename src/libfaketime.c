@@ -3832,7 +3832,8 @@ static void ftpl_really_init(void)
       close(infile);
       exit(EXIT_FAILURE);
     }
-    if (sb.st_size < 0 || sizeof(stss[0]) > (infile_size = (size_t)sb.st_size))
+    if (sb.st_size < 0 || (uintmax_t)sb.st_size > SIZE_MAX ||
+        sizeof(stss[0]) > (infile_size = (size_t)sb.st_size))
     {
       printf("There are no timestamps in the provided file to load timestamps from");
       close(infile);
