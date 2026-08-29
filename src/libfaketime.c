@@ -365,7 +365,7 @@ static ssize_t     (*real_getrandom)        (void *buf, size_t buflen, unsigned 
 static int         (*real_getentropy)       (void *buffer, size_t length);
 #endif
 #ifdef FAKE_PID
-static pid_t       (*real_getpid)        ();
+static pid_t       (*real_getpid)        (void);
 #endif
 
 #ifdef INTERCEPT_SYSCALL
@@ -4994,9 +4994,9 @@ int getentropy(void *buffer, size_t length) {
 
 #ifdef FAKE_PID
 #ifdef MACOS_DYLD_INTERPOSE
-pid_t macos_getpid() {
+pid_t macos_getpid(void) {
 #else
-pid_t getpid() {
+pid_t getpid(void) {
 #endif
   const char *pidstring = getenv("FAKETIME_FAKEPID");
   if (pidstring != NULL) {
