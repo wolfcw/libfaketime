@@ -21,6 +21,11 @@ run()
 	fi
 	run_testcase expired_monotonic_timer_is_readable
 	run_testcase absolute_monotonic_timer_uses_clock_domain
+	if [ -x ./futex_contract_test ]; then
+		run_testcase futex_deadline_contract
+	else
+		echo "out=skip futex interception is not enabled - ok"
+	fi
 }
 
 absolute_monotonic_timer_uses_clock_domain()
@@ -37,4 +42,14 @@ expired_monotonic_timer_is_readable()
 	result=$(fakecmd "+0" ./timerfd_contract_test)
 	asserteq "$result" "expired monotonic timerfd became readable" \
 		"expired monotonic timerfd should become readable"
+}
+
+futex_deadline_contract()
+{
+	typeset result
+	result=$(timeout 5s env \
+		LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+		FAKETIME="+1d x2" ./futex_contract_test)
+	asserteq "$result" "relative and absolute futex timeout contracts passed" \
+		"relative and absolute futex deadlines should use their clock contracts"
 }

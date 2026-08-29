@@ -34,7 +34,8 @@ run_baseline() {
 
     case "$image" in
         alpine:*)
-            docker run --rm -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
+            docker run --rm -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+                -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 apk add --no-cache build-base bash perl coreutils util-linux file
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime
@@ -50,7 +51,8 @@ run_baseline() {
             '
             ;;
         archlinux:*)
-            docker run --rm -e "DOCKER_ARCH_DISABLE_PACMAN_SANDBOX=${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" \
+            docker run --rm -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+                -e "DOCKER_ARCH_DISABLE_PACMAN_SANDBOX=${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" bash -eu -c '
                 if [ "${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" = 1 ]; then
                     sed -i "s/^#DisableSandboxSyscalls/DisableSandboxSyscalls/" /etc/pacman.conf
@@ -71,7 +73,8 @@ run_baseline() {
             '
             ;;
         debian:*|gcc:*)
-            docker run --rm -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
+            docker run --rm -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
+                -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 apt-get update
                 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                     build-essential bash perl coreutils util-linux file

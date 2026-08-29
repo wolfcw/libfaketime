@@ -47,7 +47,7 @@ jobs:
           sanitizer: false
         - os: ubuntu-latest
           compiler: gcc
-          compile_flags: "-DINTERCEPT_SYSCALL"
+          compile_flags: "-DINTERCEPT_SYSCALL -DINTERCEPT_FUTEX"
           sanitizer: false
         - os: ubuntu-latest
           compiler: gcc
