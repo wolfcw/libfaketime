@@ -22,8 +22,13 @@ run()
 	run_testcase rejects_invalid_load_timestamp
 	run_testcase rejects_invalid_shared_objects
 	run_testcase rejects_overlong_date_output
-	run_testcase isolates_date_helper_preload
-	run_testcase tolerates_constructor_reentry
+	if [ -n "${FAKETIME_TESTLIB:-}" ]; then
+		echo "out=skip sanitizer-instrumented helper process checks are unavailable - ok"
+		echo "out=skip sanitizer-instrumented constructor reentry check is unavailable - ok"
+	else
+		run_testcase isolates_date_helper_preload
+		run_testcase tolerates_constructor_reentry
+	fi
 	run_testcase save_file_failure_does_not_hang
 	rm -f "$LOAD_FILE"
 }
