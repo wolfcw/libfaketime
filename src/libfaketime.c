@@ -169,6 +169,39 @@ static bool scale_finite_double(double *value, double factor)
   return true;
 }
 
+static bool double_to_timespec(double value, struct timespec *result)
+{
+  const time_t max_time = (time_t)(((uintmax_t)1 <<
+                                    (sizeof(time_t) * CHAR_BIT - 1)) - 1);
+  const time_t min_time = (time_t)(-max_time - 1);
+  long double whole;
+  long double fraction;
+  long nsec;
+
+  if (!isfinite(value))
+  {
+    return false;
+  }
+  whole = floorl((long double)value);
+  /* Use strict bounds here: converting a value at a rounded floating-point
+   * representation of a time_t limit must never invoke undefined behavior. */
+  if ((whole >= 0 && whole >= (long double)max_time) ||
+      (whole < 0 && whole <= (long double)min_time))
+  {
+    return false;
+  }
+  result->tv_sec = (time_t)whole;
+  fraction = ((long double)value - whole) * SEC_TO_nSEC;
+  nsec = (long)fraction;
+  if (nsec >= SEC_TO_nSEC)
+  {
+    result->tv_sec++;
+    nsec = 0;
+  }
+  result->tv_nsec = nsec;
+  return true;
+}
+
 #ifndef __APPLE__
 extern char *__progname;
 #ifdef __sun
@@ -3321,8 +3354,11 @@ static void parse_ft_string(const char *user_faked_time)
         exit(EXIT_FAILURE);
       }
 
-      user_offset.tv_sec = floor(frac_offset);
-      user_offset.tv_nsec = (frac_offset - user_offset.tv_sec) * SEC_TO_nSEC;
+      if (!double_to_timespec(frac_offset, &user_offset))
+      {
+        fprintf(stderr, "libfaketime: time offset is out of range: %s\n", user_faked_time);
+        exit(EXIT_FAILURE);
+      }
       timespecadd(&ftpl_starttime.real, &user_offset, &user_faked_time_timespec);
       goto parse_modifiers;
       break;
@@ -3447,8 +3483,11 @@ parse_modifiers:
           exit(EXIT_FAILURE);
         }
         /* increment time with every time() call */
-        user_per_tick_inc.tv_sec = floor(tick_inc);
-        user_per_tick_inc.tv_nsec = (tick_inc - user_per_tick_inc.tv_sec) * SEC_TO_nSEC ;
+        if (!double_to_timespec(tick_inc, &user_per_tick_inc))
+        {
+          fprintf(stderr, "libfaketime: tick increment is out of range: %s\n", user_faked_time);
+          exit(EXIT_FAILURE);
+        }
         user_per_tick_inc_set = true;
       }
       break;

@@ -24,6 +24,7 @@ run()
 	run_testcase rejects_nonfinite_rate
 	run_testcase rejects_malformed_rate
 	run_testcase rejects_malformed_tick_increment
+	run_testcase rejects_overflowed_tick_increment
 	run_testcase rejects_overflowed_date_output
 	run_testcase accepts_partial_date_format
 	run_testcase rejects_overlong_date_format
@@ -118,6 +119,12 @@ rejects_malformed_tick_increment()
 {
 	assert_faked_command_fails "malformed tick increment is rejected" \
 		fakecmd "+0 i2garbage" perl -e 'print time'
+}
+
+rejects_overflowed_tick_increment()
+{
+	assert_faked_command_fails "overflowed tick increment is rejected" \
+		fakecmd "+0 i1e308" perl -e 'print time'
 }
 
 rejects_overflowed_date_output()
