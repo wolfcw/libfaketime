@@ -63,7 +63,7 @@ static const char *date_cmd = "date";
 #define PATH_BUFSIZE 4096
 
 /* semaphore and shared memory names */
-char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
+static char sem_name[PATH_BUFSIZE] = {0}, shm_name[PATH_BUFSIZE] = {0};
 static ft_sem_t wrapper_sem;
 
 static void set_env_or_exit(const char *name, const char *value)
