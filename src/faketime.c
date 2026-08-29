@@ -265,7 +265,7 @@ int main (int argc, char **argv)
       if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
       {
         perror("faketime: Running (g)date failed");
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
       }
     }
     else if (child_pid > 0)
