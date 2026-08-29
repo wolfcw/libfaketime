@@ -4230,6 +4230,10 @@ static int read_config_file(void)
       perror("libfaketime: reading timestamp configuration file failed");
       return -1;
     }
+    if (memchr(user_faked_time, '\0', (size_t)length) != NULL) {
+      fprintf(stderr, "libfaketime: timestamp configuration file contains a NUL byte\n");
+      return -1;
+    }
     user_faked_time[length] = 0;
 
     prepare_config_contents(user_faked_time);

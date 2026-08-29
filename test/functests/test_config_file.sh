@@ -18,6 +18,7 @@ run()
 	run_testcase accepts_crlf_and_full_line_comments
 	run_testcase tolerates_missing_config_environment
 	run_testcase rejects_oversized_configuration
+	run_testcase rejects_embedded_nul_configuration
 }
 
 config_file_cmd()
@@ -46,6 +47,23 @@ rejects_oversized_configuration()
 			;;
 	esac
 	echo "out=0 oversized configuration was accepted - bad"
+	return 1
+}
+
+rejects_embedded_nul_configuration()
+{
+	typeset config_file=".config_nul_test.$$"
+	typeset output
+	perl -e 'print "2020-06-15 12:00:00\0ignored"' > "$config_file"
+	output=$(config_file_cmd "$config_file" perl -e 'print time' 2>&1 >/dev/null)
+	rm -f "$config_file"
+	case "$output" in
+		*"configuration file contains a NUL byte"*)
+			echo "out=1 embedded NUL configuration is rejected - ok"
+			return 0
+			;;
+	esac
+	echo "out=0 embedded NUL configuration was accepted - bad"
 	return 1
 }
 
