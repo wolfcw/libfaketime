@@ -10,6 +10,10 @@ GLIBC_2.3.3 {
   timer_gettime; timer_settime;
 } GLIBC_2.2;
 
+GLIBC_2.17 {
+  timerfd_create;
+};
+
 GLIBC_2.2.5 {
   global:  pthread_cond_timedwait;
   local: pthread_cond_timedwait_*; pthread_cond_init_*; pthread_cond_destroy*;
@@ -18,4 +22,3 @@ GLIBC_2.2.5 {
 GLIBC_2.3.2 {
   pthread_cond_timedwait; pthread_cond_init; pthread_cond_destroy;
 } GLIBC_2.2.5;
-

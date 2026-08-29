@@ -7,7 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
-int main(void)
+int main(int argc, char **argv)
 {
   struct itimerspec timer = {0};
   struct pollfd descriptor;
@@ -15,13 +15,18 @@ int main(void)
   uint64_t expirations;
   int fd;
 
+  (void)argv;
+
   fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
   if (fd == -1 || clock_gettime(CLOCK_MONOTONIC, &now) == -1)
   {
     perror("timerfd setup");
     return EXIT_FAILURE;
   }
-  now.tv_sec--;
+  if (argc > 1)
+    now.tv_sec++;
+  else
+    now.tv_sec--;
   timer.it_value = now;
 
   if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timer, NULL) == -1)
@@ -43,6 +48,9 @@ int main(void)
   }
 
   close(fd);
-  puts("expired monotonic timerfd became readable");
+  if (argc > 1)
+    puts("absolute monotonic timerfd deadline honored");
+  else
+    puts("expired monotonic timerfd became readable");
   return EXIT_SUCCESS;
 }

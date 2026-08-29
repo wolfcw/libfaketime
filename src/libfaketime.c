@@ -315,6 +315,7 @@ static int          (*real_timerfd_settime)    (int fd, int flags,
                                                 struct itimerspec *old_value);
 static int          (*real_timerfd_gettime)    (int fd,
                                                 struct itimerspec *curr_value);
+static int          (*real_timerfd_create)     (int clockid, int flags);
 #endif
 #endif
 #ifdef FAKE_SLEEP
@@ -2483,6 +2484,52 @@ typedef enum {
   FT_FD,
 } ft_lib_compat_timer;
 
+struct timerfd_clock_entry {
+  int fd;
+  clockid_t clock_id;
+};
+
+#define FT_TIMERFD_CLOCK_ENTRIES 64
+static struct timerfd_clock_entry timerfd_clocks[FT_TIMERFD_CLOCK_ENTRIES];
+static pthread_mutex_t timerfd_clocks_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void remember_timerfd_clock(int fd, clockid_t clock_id)
+{
+  size_t i;
+
+  if (pthread_mutex_lock(&timerfd_clocks_lock) != 0)
+    return;
+  for (i = 0; i < FT_TIMERFD_CLOCK_ENTRIES; i++)
+  {
+    if (timerfd_clocks[i].fd == fd || timerfd_clocks[i].fd == 0)
+    {
+      timerfd_clocks[i].fd = fd;
+      timerfd_clocks[i].clock_id = clock_id;
+      break;
+    }
+  }
+  (void)pthread_mutex_unlock(&timerfd_clocks_lock);
+}
+
+static clockid_t timerfd_clock(int fd)
+{
+  size_t i;
+  clockid_t clock_id = CLOCK_REALTIME;
+
+  if (pthread_mutex_lock(&timerfd_clocks_lock) != 0)
+    return clock_id;
+  for (i = 0; i < FT_TIMERFD_CLOCK_ENTRIES; i++)
+  {
+    if (timerfd_clocks[i].fd == fd)
+    {
+      clock_id = timerfd_clocks[i].clock_id;
+      break;
+    }
+  }
+  (void)pthread_mutex_unlock(&timerfd_clocks_lock);
+  return clock_id;
+}
+
 
 /*
  * Faked timer_settime()
@@ -2492,7 +2539,7 @@ static int
 timer_settime_common(timer_t_or_int timerid, int flags,
          const struct itimerspec *new_value,
          struct itimerspec *old_value, ft_lib_compat_timer compat,
-         int abstime_flag)
+         int abstime_flag, clockid_t clock_id)
 {
   int result;
   struct itimerspec new_real;
@@ -2516,8 +2563,23 @@ timer_settime_common(timer_t_or_int timerid, int flags,
     {
       if (flags & abstime_flag)
       {
-        struct timespec tdiff, timeadj;
-        timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
+        struct timespec tdiff, timeadj, fake_now;
+        if (clock_id == CLOCK_MONOTONIC && fake_monotonic_clock)
+        {
+          if (fake_clock_gettime(CLOCK_MONOTONIC, &fake_now) == 0)
+            timespecsub(&new_value->it_value, &fake_now, &timeadj);
+          else
+            timeadj = new_value->it_value;
+        }
+        else if (clock_id == CLOCK_MONOTONIC)
+        {
+          new_real.it_value = new_value->it_value;
+          timeadj = new_value->it_value;
+        }
+        else
+        {
+          timespecsub(&new_value->it_value, &user_faked_time_timespec, &timeadj);
+        }
         if (user_rate_set)
         {
           timespecmul(&timeadj, 1.0/user_rate, &tdiff);
@@ -2526,8 +2588,10 @@ timer_settime_common(timer_t_or_int timerid, int flags,
         {
           tdiff = timeadj;
         }
-        /* only CLOCK_REALTIME is handled */
-        timespecadd(&ftpl_starttime.real, &tdiff, &new_real.it_value);
+        if (clock_id == CLOCK_MONOTONIC && fake_monotonic_clock)
+          timespecadd(&ftpl_starttime.mon, &tdiff, &new_real.it_value);
+        else if (clock_id != CLOCK_MONOTONIC)
+          timespecadd(&ftpl_starttime.real, &tdiff, &new_real.it_value);
       }
       else
       {
@@ -2705,7 +2769,8 @@ int timer_settime_22(int timerid, int flags,
     timer_t_or_int temp;
     temp.int_member = timerid;
     return (timer_settime_common(temp, flags, new_value, old_value,
-            FT_COMPAT_GLIBC_2_2, TIMER_ABSTIME));
+                                 FT_COMPAT_GLIBC_2_2, TIMER_ABSTIME,
+                                 CLOCK_REALTIME));
   }
 }
 
@@ -2726,7 +2791,8 @@ int timer_settime_233(timer_t timerid, int flags,
     timer_t_or_int temp;
     temp.timer_t_member = timerid;
     return (timer_settime_common(temp, flags, new_value, old_value,
-            FT_COMPAT_GLIBC_2_3_3, TIMER_ABSTIME));
+                                 FT_COMPAT_GLIBC_2_3_3, TIMER_ABSTIME,
+                                 CLOCK_REALTIME));
   }
 }
 
@@ -2775,6 +2841,22 @@ __asm__(".symver timer_settime_233, timer_settime@@GLIBC_2.3.3");
 #endif /* __ANDROID__ */
 
 #ifdef __linux__
+int timerfd_create(int clockid, int flags)
+{
+  int fd;
+
+  ftpl_init();
+  if (real_timerfd_create == NULL)
+  {
+    errno = ENOSYS;
+    return -1;
+  }
+  DONT_FAKE_TIME(fd = (*real_timerfd_create)(clockid, flags));
+  if (fd != -1)
+    remember_timerfd_clock(fd, (clockid_t)clockid);
+  return fd;
+}
+
 /*
  * Faked timerfd_settime
  */
@@ -2792,7 +2874,7 @@ int timerfd_settime(int fd, int flags,
     timer_t_or_int temp;
     temp.int_member = fd;
     return (timer_settime_common(temp, flags, new_value, old_value, FT_FD,
-                                 TFD_TIMER_ABSTIME));
+                                 TFD_TIMER_ABSTIME, timerfd_clock(fd)));
   }
 }
 
@@ -3488,6 +3570,7 @@ static void ftpl_really_init(void)
 #endif
 #endif
 #ifdef __linux__
+  real_timerfd_create = dlsym(RTLD_NEXT, "timerfd_create");
   real_timerfd_gettime =  dlsym(RTLD_NEXT, "timerfd_gettime");
   real_timerfd_settime =  dlsym(RTLD_NEXT, "timerfd_settime");
 #endif

@@ -20,6 +20,15 @@ run()
 		return 0
 	fi
 	run_testcase expired_monotonic_timer_is_readable
+	run_testcase absolute_monotonic_timer_uses_clock_domain
+}
+
+absolute_monotonic_timer_uses_clock_domain()
+{
+	typeset result
+	result=$(fakecmd "+1d" ./timerfd_contract_test absolute)
+	asserteq "$result" "absolute monotonic timerfd deadline honored" \
+		"absolute monotonic timerfd deadline should use its clock domain"
 }
 
 expired_monotonic_timer_is_readable()
