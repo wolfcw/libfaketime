@@ -12,7 +12,8 @@ EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 ALL_TESTS = timetest test shm_layout_test set_mtime time_ops_test clock_error_test wait_contract_test timerfd_contract_test
 
 ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
-ALL_TESTS += confirm_variadic_promotion
+ALL_TESTS += confirm_variadic_promotion syscall_contract_test
+SYSCALL_TEST_DEP = syscall_contract_test
 else
 TEST_SNIPPETS := $(filter-out syscall%,${TEST_SNIPPETS})
 EXPECTATIONS := $(filter-out syscall%,${EXPECTATIONS})
@@ -71,7 +72,10 @@ random_test: random_test.c
 file_timestamp_test: file_timestamp_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest time_ops_test set_mtime clock_error_test wait_contract_test timerfd_contract_test ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} functest
+syscall_contract_test: syscall_contract_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
+test: timetest time_ops_test set_mtime clock_error_test wait_contract_test timerfd_contract_test ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} functest
 	@echo
 	@./time_ops_test
 	@./test.sh
@@ -119,7 +123,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest shm_layout_test set_mtime time_ops_test clock_error_test wait_contract_test timerfd_contract_test fake_pid_test fake_pid_contract_test random_test file_timestamp_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test set_mtime time_ops_test clock_error_test wait_contract_test timerfd_contract_test fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo
