@@ -3932,12 +3932,23 @@ static int read_config_file(void)
   {
     ssize_t bytes;
     ssize_t length = 0;
-    while ((bytes = read(faketimerc, user_faked_time + length, sizeof(user_faked_time) - 1 - length)) > 0) {
+    while (length < (ssize_t)(sizeof(user_faked_time) - 1) &&
+           (bytes = read(faketimerc, user_faked_time + length,
+                         sizeof(user_faked_time) - 1 - (size_t)length)) > 0) {
       length += bytes;
     }
+    if (length == (ssize_t)(sizeof(user_faked_time) - 1) && bytes == 0) {
+      char extra;
+      bytes = read(faketimerc, &extra, sizeof(extra));
+    }
     close(faketimerc);
+    if (bytes > 0) {
+      fprintf(stderr, "libfaketime: timestamp configuration file is too long\n");
+      return -1;
+    }
     if (bytes < 0) {
-      length = 0;
+      perror("libfaketime: reading timestamp configuration file failed");
+      return -1;
     }
     user_faked_time[length] = 0;
 

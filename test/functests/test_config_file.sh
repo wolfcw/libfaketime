@@ -17,6 +17,7 @@ run()
 	init
 	run_testcase accepts_crlf_and_full_line_comments
 	run_testcase tolerates_missing_config_environment
+	run_testcase rejects_oversized_configuration
 }
 
 config_file_cmd()
@@ -29,6 +30,23 @@ config_file_cmd()
 		FAKETIME_TIMESTAMP_FILE="$1" FAKETIME_NO_CACHE=1 \
 			LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" "$2" "${@:3}"
 	fi
+}
+
+rejects_oversized_configuration()
+{
+	typeset config_file=".config_oversized_test.$$"
+	typeset output
+	perl -e 'print "+0" x 10000' > "$config_file"
+	output=$(config_file_cmd "$config_file" perl -e 'print time' 2>&1 >/dev/null)
+	rm -f "$config_file"
+	case "$output" in
+		*"configuration file is too long"*)
+			echo "out=1 oversized configuration is rejected - ok"
+			return 0
+			;;
+	esac
+	echo "out=0 oversized configuration was accepted - bad"
+	return 1
 }
 
 tolerates_missing_config_environment()
