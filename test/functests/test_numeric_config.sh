@@ -21,6 +21,7 @@ run()
 	run_testcase rejects_nonfinite_rate
 	run_testcase rejects_overflowed_date_output
 	run_testcase accepts_partial_date_format
+	run_testcase rejects_overlong_date_format
 }
 
 assert_faked_command_fails()
@@ -96,5 +97,17 @@ accepts_partial_date_format()
 		return 1
 	fi
 	echo "out=1 partial date format is handled safely - ok"
+	return 0
+}
+
+rejects_overlong_date_format()
+{
+	typeset format
+	format=$(perl -e 'print "x" x 8192')
+	if FAKETIME_FMT="$format" probe_command >/dev/null 2>&1; then
+		echo "out=0 overlong date format is accepted - bad"
+		return 1
+	fi
+	echo "out=1 overlong date format is rejected - ok"
 	return 0
 }

@@ -3716,8 +3716,13 @@ static void ftpl_really_init(void)
   }
   else
   {
-    strncpy(user_faked_time_fmt, tmp_env, BUFSIZ - 1);
-    user_faked_time_fmt[BUFSIZ - 1] = 0;
+    size_t format_length = strlen(tmp_env);
+    if (format_length >= sizeof(user_faked_time_fmt))
+    {
+      fprintf(stderr, "libfaketime: FAKETIME_FMT is too long\n");
+      exit(EXIT_FAILURE);
+    }
+    memcpy(user_faked_time_fmt, tmp_env, format_length + 1);
   }
 
   if (shared_sem_initialized)
