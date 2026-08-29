@@ -1164,7 +1164,7 @@ static void next_time(struct timespec *tp, struct timespec *ticklen)
   }
 }
 
-static void reset_time()
+static void reset_time(void)
 {
   system_time_from_system(&ftpl_starttime);
   if (shared_sem_initialized)
@@ -1335,7 +1335,7 @@ static int fake_utime_disabled = 1;
 static int fake_stat_disabled = 0;
 static bool user_per_tick_inc_set_backup = false;
 
-void lock_for_stat()
+static void lock_for_stat(void)
 {
   if (shared_sem_initialized)
   {
@@ -1358,7 +1358,7 @@ void lock_for_stat()
   return;
 }
 
-void unlock_for_stat()
+static void unlock_for_stat(void)
 {
   user_per_tick_inc_set = user_per_tick_inc_set_backup;
 
