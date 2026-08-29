@@ -3939,15 +3939,15 @@ static int read_config_file(void)
   faketimerc = -1;
   if (custom_filename[0] != '\0')
   {
-    faketimerc = open(custom_filename, O_RDONLY);
+    faketimerc = open(custom_filename, O_RDONLY | O_CLOEXEC);
   }
   if (faketimerc == -1 && filename[0] != '\0')
   {
-    faketimerc = open(filename, O_RDONLY);
+    faketimerc = open(filename, O_RDONLY | O_CLOEXEC);
   }
   if (faketimerc == -1)
   {
-    faketimerc = open("/etc/faketimerc", O_RDONLY);
+    faketimerc = open("/etc/faketimerc", O_RDONLY | O_CLOEXEC);
   }
   if (faketimerc != -1)
   {
