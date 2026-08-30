@@ -28,10 +28,6 @@ jobs:
           compiler: clang
           compile_flags: ""
           sanitizer: false
-        - os: macos-13
-          compiler: clang
-          compile_flags: ""
-          sanitizer: false
         - os: macos-14
           compiler: clang
           compile_flags: "-DFAKE_FILE_TIMESTAMPS"
