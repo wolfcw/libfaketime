@@ -6,6 +6,7 @@
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -26,6 +27,60 @@ static void report_case(const char *name)
   if (getenv("FAKETIME_SEM_TEST_VERBOSE") != NULL)
     fprintf(stderr, "semaphore-case=%s\\n", name);
 }
+
+static int check_future_realtime_wait(sem_t *semaphore)
+{
+  pid_t child;
+  struct timespec deadline;
+  int result;
+  int status;
+
+  if (clock_gettime(CLOCK_REALTIME, &deadline) == -1)
+    return EXIT_FAILURE;
+  deadline.tv_sec += 2;
+  child = fork();
+  if (child == -1)
+    return EXIT_FAILURE;
+  if (child == 0)
+  {
+    (void)usleep(100000);
+    (void)sem_post(semaphore);
+    _exit(EXIT_SUCCESS);
+  }
+  result = sem_timedwait(semaphore, &deadline);
+  if (waitpid(child, &status, 0) != child ||
+      !WIFEXITED(status) || WEXITSTATUS(status) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+  return result == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+#ifdef HAVE_SEM_CLOCKWAIT
+static int check_future_monotonic_wait(sem_t *semaphore)
+{
+  pid_t child;
+  struct timespec deadline;
+  int result;
+  int status;
+
+  if (clock_gettime(CLOCK_MONOTONIC, &deadline) == -1)
+    return EXIT_FAILURE;
+  deadline.tv_sec += 2;
+  child = fork();
+  if (child == -1)
+    return EXIT_FAILURE;
+  if (child == 0)
+  {
+    (void)usleep(100000);
+    (void)sem_post(semaphore);
+    _exit(EXIT_SUCCESS);
+  }
+  result = sem_clockwait(semaphore, CLOCK_MONOTONIC, &deadline);
+  if (waitpid(child, &status, 0) != child ||
+      !WIFEXITED(status) || WEXITSTATUS(status) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+  return result == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+#endif
 
 int main(void)
 {
@@ -72,6 +127,15 @@ int main(void)
     return EXIT_FAILURE;
   }
 
+  report_case("realtime-future");
+  if (check_future_realtime_wait(semaphore) != EXIT_SUCCESS)
+  {
+    fprintf(stderr, "future realtime semaphore wait failed\n");
+    sem_close(semaphore);
+    sem_unlink(name);
+    return EXIT_FAILURE;
+  }
+
 #ifdef HAVE_SEM_CLOCKWAIT
   struct timespec monotonic_deadline;
   if (clock_gettime(CLOCK_MONOTONIC, &monotonic_deadline) == -1)
@@ -88,6 +152,15 @@ int main(void)
       errno != ETIMEDOUT)
   {
     fprintf(stderr, "past monotonic semaphore deadline returned errno %d\n", errno);
+    sem_close(semaphore);
+    sem_unlink(name);
+    return EXIT_FAILURE;
+  }
+
+  report_case("monotonic-future");
+  if (check_future_monotonic_wait(semaphore) != EXIT_SUCCESS)
+  {
+    fprintf(stderr, "future monotonic semaphore wait failed\n");
     sem_close(semaphore);
     sem_unlink(name);
     return EXIT_FAILURE;

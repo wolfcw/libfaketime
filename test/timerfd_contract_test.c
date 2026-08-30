@@ -13,6 +13,7 @@ int main(int argc, char **argv)
   struct pollfd descriptor;
   struct timespec now;
   uint64_t expirations;
+  int flags = TFD_TIMER_ABSTIME;
   int fd;
 
   (void)argv;
@@ -24,12 +25,25 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   if (argc > 1)
-    now.tv_sec++;
+  {
+    if (argv[1][0] == 'r')
+    {
+      flags = 0;
+      timer.it_value.tv_nsec = 100000000;
+    }
+    else
+    {
+      now.tv_sec++;
+      timer.it_value = now;
+    }
+  }
   else
+  {
     now.tv_sec--;
-  timer.it_value = now;
+    timer.it_value = now;
+  }
 
-  if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timer, NULL) == -1)
+  if (timerfd_settime(fd, flags, &timer, NULL) == -1)
   {
     perror("timerfd_settime");
     close(fd);
@@ -48,8 +62,10 @@ int main(int argc, char **argv)
   }
 
   close(fd);
-  if (argc > 1)
+  if (argc > 1 && argv[1][0] != 'r')
     puts("absolute monotonic timerfd deadline honored");
+  else if (argc > 1)
+    puts("relative monotonic timerfd deadline honored");
   else
     puts("expired monotonic timerfd became readable");
   return EXIT_SUCCESS;
