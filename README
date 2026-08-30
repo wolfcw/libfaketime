@@ -91,6 +91,17 @@ documentation whether it can be achieved by using libfaketime directly.
   e.g., by checking whether certain environment variables are set or whether
   libfaketime-specific files are present.
 
+* Runtime compatibility: when a language runtime or framework reports real time,
+  first check which clock it uses and whether it dynamically loads its own system
+  libraries. A minimal C reproducer using the same clock API is required before
+  treating an application-specific report as a libfaketime bug. In particular,
+  Go, Python, .NET, Boost.Asio, jemalloc users, Proton/Wine, and JVMs may cache
+  clocks, use vDSO/direct system calls, load libraries after startup, or combine
+  real and faked clock domains. These cases can hang or ignore the preload even
+  when the basic libfaketime test suite passes. Keep preload ordering explicit and
+  use FAKETIME_DONT_FAKE_MONOTONIC when the runtime requires a real monotonic
+  clock. Such limitations are compatibility constraints, not a security boundary.
+
 * CLOCK_MONOTONIC test: Running "make test" performs a series of tests after
   successful compilation of the libfaketime library. On some platforms, the
   "CLOCK_MONOTONIC test" will apparently hang forever. If and only if this
