@@ -1,6 +1,7 @@
 name: Run make test
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -111,6 +112,48 @@ jobs:
       with:
         name: debian-baseline-log
         path: debian-baseline.log
+
+  fedora:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Fedora baseline image
+      run: docker pull fedora:latest
+    - name: make test on Fedora
+      env:
+        DOCKER_PLATFORM: linux/amd64
+        FAKETIME_TEST_PHASE_TIMEOUT: 120
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh fedora:latest 2>&1 | tee fedora-baseline.log
+    - name: Upload Fedora baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: fedora-baseline-log
+        path: fedora-baseline.log
+
+  rocky:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Rocky Linux baseline image
+      run: docker pull rockylinux:9
+    - name: make test on Rocky Linux
+      env:
+        DOCKER_PLATFORM: linux/amd64
+        FAKETIME_TEST_PHASE_TIMEOUT: 120
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh rockylinux:9 2>&1 | tee rocky-baseline.log
+    - name: Upload Rocky Linux baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: rocky-baseline-log
+        path: rocky-baseline.log
 
   archlinux:
     runs-on: ubuntu-latest
