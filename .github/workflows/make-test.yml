@@ -78,7 +78,7 @@ jobs:
         CFLAGS: -fsanitize=address,undefined -fno-omit-frame-pointer
         LDFLAGS: -fsanitize=address,undefined
       run: |
-        ASAN_LIB=$(gcc -print-file-name=libasan.so)
+        ASAN_LIB=$(gcc -print-file-name=libasan.so.8)
         FAKETIME_SANITIZER_LIB="$ASAN_LIB:../src/libfaketime.so.1" make test
 
   musl:

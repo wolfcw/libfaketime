@@ -51,7 +51,11 @@ echo "==> Running sanitizer baseline in $IMAGE${DOCKER_PLATFORM:+ ($DOCKER_PLATF
 docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$IMAGE" sh -eu -c '
     case "$IMAGE" in
         fedora:*|rockylinux:*)
-            dnf -y -q --setopt=install_weak_deps=False install gcc make glibc-devel bash perl coreutils util-linux file >/dev/null
+            # The Fedora `perl` meta-package pulls in hundreds of optional
+            # modules and documentation packages.  The test suite only needs
+            # the interpreter and its runtime modules, so use the minimal
+            # package to keep Docker setup reliable on current Fedora.
+            dnf -y -q --setopt=install_weak_deps=False install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file >/dev/null
             ;;
         *)
             apt-get update -qq
@@ -66,7 +70,9 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
     find src test -type f \( -name "*.o" -o -name "*.so*" -o \
         -name "timetest" -o -name "faketime" -o -name "set_mtime" -o \
         -name "*_test" \) -delete
-    ASAN_LIB=$(gcc -print-file-name=libasan.so)
+    # On Fedora, libasan.so is a linker script rather than a preloadable ELF
+    # object.  Use the versioned runtime library for LD_PRELOAD.
+    ASAN_LIB=$(gcc -print-file-name=libasan.so.8)
     test -f "$ASAN_LIB"
     ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:allocator_may_return_null=0:verify_asan_link_order=0 \
     UBSAN_OPTIONS=halt_on_error=1 \
