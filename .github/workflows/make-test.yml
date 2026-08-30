@@ -142,6 +142,7 @@ jobs:
     - name: make test on legacy Debian
       env:
         FAKETIME_COMPILE_CFLAGS: "-DFORCE_MONOTONIC_FIX"
+        CFLAGS: "-DFORCE_MONOTONIC_FIX"
       run: |
         set -o pipefail
         test/docker_baseline.sh debian:11 2>&1 | tee debian-legacy-baseline.log

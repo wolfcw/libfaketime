@@ -14,8 +14,12 @@ GLIBC_2.17 {
   timerfd_create;
 };
 
+GLIBC_2.30 {
+  global: sem_clockwait;
+};
+
 GLIBC_2.34 {
-  global: __clock_gettime64; __time64; sem_clockwait;
+  global: __clock_gettime64; __time64;
 };
 
 GLIBC_2.2.5 {

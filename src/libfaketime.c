@@ -739,6 +739,22 @@ static bool valid_shared_header(const struct ft_shared_s *shared)
 }
 
 #if defined(__GLIBC__) && !defined(__ANDROID__)
+static int ft_real_stat(const char *path, struct stat *buf)
+{
+  if (real_stat != NULL)
+    return real_stat(path, buf);
+
+#ifdef _STAT_VER
+  if (real_xstat != NULL)
+    return real_xstat(_STAT_VER, path, buf);
+#else
+  if (real_xstat != NULL)
+    return real_xstat(1, path, buf);
+#endif
+  errno = ENOSYS;
+  return -1;
+}
+
 static int ft_real_fstat(int fd, struct stat *buf)
 {
   if (real_fstat != NULL)
@@ -757,6 +773,16 @@ static int ft_real_fstat(int fd, struct stat *buf)
   return -1;
 }
 #else
+static int ft_real_stat(const char *path, struct stat *buf)
+{
+  if (real_stat == NULL)
+  {
+    errno = ENOSYS;
+    return -1;
+  }
+  return real_stat(path, buf);
+}
+
 static int ft_real_fstat(int fd, struct stat *buf)
 {
   if (real_fstat == NULL)
@@ -2614,12 +2640,13 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
     }
     else
     {
-      /* glibc's sem_clockwait monotonic implementation may use an
-       * interposed clock while evaluating the absolute futex deadline.
-       * Convert the fake monotonic duration to a realtime deadline and
-       * use sem_timedwait, whose realtime clock domain is unambiguous. */
-      timespecadd(&ftpl_starttime.real, &timeadj, &real_abstime);
-      DONT_FAKE_TIME(result = (*real_sem_timedwait)(sem, &real_abstime));
+      /* Keep the converted deadline in the monotonic clock domain.  Using
+       * a realtime deadline here is incorrect when the two clocks have
+       * different epochs, and old glibc versions can otherwise wait far
+       * past an already-expired monotonic deadline. */
+      timespecadd(&ftpl_starttime.mon, &timeadj, &real_abstime);
+      DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, CLOCK_MONOTONIC,
+                                                    &real_abstime));
     }
     return result;
   }
@@ -3530,7 +3557,7 @@ static void parse_ft_string(const char *user_faked_time)
       }
       else
       {
-        DONT_FAKE_TIME(ret = stat(getenv("FAKETIME_FOLLOW_FILE"), &master_file_stats));
+        DONT_FAKE_TIME(ret = ft_real_stat(getenv("FAKETIME_FOLLOW_FILE"), &master_file_stats));
         if (ret == -1)
         {
           fprintf(stderr, "libfaketime: Cannot get timestamp of file %s as requested by %% operator.\n", getenv("FAKETIME_FOLLOW_FILE"));
@@ -4045,7 +4072,7 @@ static void ftpl_really_init(void)
       exit(EXIT_FAILURE);
     }
 
-    if (real_fstat == NULL || real_fstat(infile, &sb) == -1)
+    if (ft_real_fstat(infile, &sb) == -1)
     {
       perror("libfaketime: In ftpl_init(), inspecting timestamp file failed");
       close(infile);
