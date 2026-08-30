@@ -2549,6 +2549,9 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
 
     if (clockid == CLOCK_MONOTONIC)
     {
+      DONT_FAKE_TIME(result = (*real_clock_gettime)(CLOCK_MONOTONIC, &fake_now));
+      if (result == -1)
+        return -1;
       if (fake_clock_gettime(CLOCK_MONOTONIC, &fake_now) == -1)
         return -1;
       timespecsub(abstime, &fake_now, &tdiff);
@@ -2569,12 +2572,18 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
     if (clockid == CLOCK_REALTIME)
     {
       timespecadd(&ftpl_starttime.real, &timeadj, &real_abstime);
+      DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, clockid, &real_abstime));
     }
-    if (clockid == CLOCK_MONOTONIC)
+    else
     {
-      timespecadd(&ftpl_starttime.mon, &timeadj, &real_abstime);
+      /* glibc's sem_clockwait monotonic implementation may use an
+       * interposed clock while evaluating the absolute futex deadline.
+       * Convert the fake monotonic duration to a realtime deadline and
+       * use sem_timedwait, whose realtime clock domain is unambiguous. */
+      timespecadd(&ftpl_starttime.real, &timeadj, &real_abstime);
+      DONT_FAKE_TIME(result = (*real_sem_timedwait)(sem, &real_abstime));
     }
-    real_abstime_pt = &real_abstime;
+    return result;
   }
   else
   {
