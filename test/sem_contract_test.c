@@ -21,6 +21,12 @@ int main(void)
   return EXIT_SUCCESS;
 }
 #else
+static void report_case(const char *name)
+{
+  if (getenv("FAKETIME_SEM_TEST_VERBOSE") != NULL)
+    fprintf(stderr, "semaphore-case=%s\\n", name);
+}
+
 int main(void)
 {
   char name[64];
@@ -46,6 +52,7 @@ int main(void)
   }
   deadline.tv_sec--;
 
+  report_case("realtime-past");
   errno = 0;
   if (sem_timedwait(semaphore, &deadline) != -1 || errno != ETIMEDOUT)
   {
@@ -55,6 +62,7 @@ int main(void)
     return EXIT_FAILURE;
   }
 
+  report_case("null-deadline");
   errno = 0;
   if (sem_timedwait_fn(semaphore, NULL) != -1 || errno != EINVAL)
   {
@@ -74,6 +82,7 @@ int main(void)
     return EXIT_FAILURE;
   }
   monotonic_deadline.tv_sec--;
+  report_case("monotonic-past");
   errno = 0;
   if (sem_clockwait(semaphore, CLOCK_MONOTONIC, &monotonic_deadline) != -1 ||
       errno != ETIMEDOUT)
