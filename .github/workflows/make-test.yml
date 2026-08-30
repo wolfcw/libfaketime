@@ -53,6 +53,7 @@ jobs:
           compile_flags: ""
           sanitizer: true
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     env:
       CC: ${{ matrix.compiler }}
       FAKETIME_COMPILE_CFLAGS: ${{ matrix.compile_flags }}
@@ -79,6 +80,7 @@ jobs:
 
   musl:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
     - uses: actions/checkout@v4
     - name: Pull Alpine baseline image
@@ -96,6 +98,7 @@ jobs:
 
   snippets:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
     - name: Build project
@@ -111,6 +114,7 @@ jobs:
 
   debian:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
     - uses: actions/checkout@v4
     - name: Pull Debian 13 baseline image
@@ -170,6 +174,7 @@ jobs:
 
   archlinux:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
     - uses: actions/checkout@v4
     - name: Pull Arch Linux baseline image
