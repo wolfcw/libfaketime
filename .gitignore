@@ -9,9 +9,13 @@ test/repeat_random
 test/getentropy_test
 test/syscall_test
 test/variadic_promotion
+test/set_mtime
 
 src/libfaketime.dylib.1
 src/libfaketime.1.dylib
 src/core
 src/faketime
 *.html
+ci-logs
+ci-logs/*
+test/.*
