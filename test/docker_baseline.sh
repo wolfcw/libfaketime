@@ -121,7 +121,13 @@ run_baseline() {
         fedora:*|rockylinux:*)
             docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
-                dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils util-linux file
+                run_phase() {
+                    phase=$1
+                    shift
+                    printf "phase=%s\\n" "$phase"
+                    timeout "${FAKETIME_TEST_PHASE_TIMEOUT:-120}s" "$@"
+                }
+                run_phase package dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils util-linux file
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime
                 cp -a /src/. /tmp/libfaketime/
@@ -137,7 +143,14 @@ run_baseline() {
                 fi
                 printf "kernel="
                 uname -a
-                timeout 180s make test
+                printf "libc="
+                getconf GNU_LIBC_VERSION 2>/dev/null || true
+                printf "compiler="
+                cc --version | head -n 1
+                run_phase build sh -c "make -C src all && make -C test sem_contract_test"
+                run_phase semaphore env FAKETIME_SEM_TEST_VERBOSE=1 FAKETIME=+0 \
+                    LD_PRELOAD="$PWD/src/libfaketime.so.1" ./test/sem_contract_test
+                run_phase full-suite make test
             '
             ;;
         *)
