@@ -12,6 +12,12 @@ EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test timezone_contract_test
 
 TIME64_CFLAGS = -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64
+IS_GLIBC := $(shell $(CC) -dM -E - < /dev/null 2>/dev/null | grep -c '__GLIBC__')
+ifeq ($(IS_GLIBC),1)
+TIME64_LIB_DEP = ../src/libfaketime-time64.so.1
+else
+TIME64_LIB_DEP =
+endif
 ALL_TESTS += time64_contract_test
 
 ifneq ($(filter -DINTERCEPT_SYSCALL,${CFLAGS}),)
@@ -56,7 +62,7 @@ shm_layout_test: shm_layout_test.c ../src/faketime_common.h
 abi_info_test: abi_info_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-time64_contract_test: time64_contract_test.c ../src/libfaketime-time64.so.1
+time64_contract_test: time64_contract_test.c ${TIME64_LIB_DEP}
 	${CC} -o $@ ${CFLAGS} ${TIME64_CFLAGS} $<
 
 set_mtime: set_mtime.c

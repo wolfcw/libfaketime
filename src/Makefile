@@ -180,6 +180,13 @@ LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
 TIME64_CFLAGS = $(CFLAGS) -UFAKE_STAT -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 -DFAKETIME_TIME64_BUILD
 
+IS_GLIBC := $(shell $(CC) -dM -E - < /dev/null 2>/dev/null | grep -c '__GLIBC__')
+ifeq ($(IS_GLIBC),1)
+TIME64_LIB = libfaketime-time64.so.1
+else
+TIME64_LIB =
+endif
+
 libfaketime-time64.so.1: libfaketime_time64.o ft_sem_time64.o
 	${CC} -o $@ ${LDFLAGS} ${LIB_LDFLAGS} $^ ${LDADD}
 
@@ -189,7 +196,7 @@ libfaketime_time64.o: libfaketime.c
 ft_sem_time64.o: ft_sem.c
 	${CC} -o $@ -c ${TIME64_CFLAGS} $<
 
-all: ${LIBS} ${BINS} libfaketime-time64.so.1
+all: ${LIBS} ${BINS} ${TIME64_LIB}
 
 libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD_SINGLETHREADED_TIME
 

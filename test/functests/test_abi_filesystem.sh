@@ -27,6 +27,11 @@ run()
     rm -f .abi_info_test.$$
     return 1
   fi
+  time64_lib="../src/libfaketime.so.1"
+  if grep -q '^libc=glibc$' .abi_info_test.$$ && \
+     grep -q '^time_t_bits=32$' .abi_info_test.$$; then
+    time64_lib="../src/libfaketime-time64.so.1"
+  fi
   rm -f .abi_info_test.$$
 
   if ./shm_layout_test >/dev/null; then
@@ -44,7 +49,7 @@ run()
       return 1
     fi
     if FAKETIME='@2040-01-01 00:00:00' FAKETIME_EXPECT_POST2033=1 \
-      LD_PRELOAD="../src/libfaketime-time64.so.1" \
+      LD_PRELOAD="$time64_lib" \
       ./time64_contract_test >/dev/null; then
       echo "out=1 post-2033 time64 contract completed - ok"
     else
