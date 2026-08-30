@@ -11,6 +11,9 @@ test:
 	$(MAKE) $(SELECTOR) -C src all
 	$(MAKE) $(SELECTOR) -C test all
 
+check: test
+	./test/ci_validate.sh
+
 install:
 	$(MAKE) $(SELECTOR) -C src install
 	$(MAKE) $(SELECTOR) -C man install
@@ -33,4 +36,4 @@ distclean:
 	$(MAKE) $(SELECTOR) -C src distclean
 	$(MAKE) $(SELECTOR) -C test distclean
 
-.PHONY: all test install uninstall clean distclean
+.PHONY: all test check install uninstall clean distclean
