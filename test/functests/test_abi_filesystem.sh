@@ -43,6 +43,14 @@ run()
       echo "out=0 Linux time64 contract completed - bad"
       return 1
     fi
+    if FAKETIME='@2040-01-01 00:00:00' FAKETIME_EXPECT_POST2033=1 \
+      LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+      ./time64_contract_test >/dev/null; then
+      echo "out=1 post-2033 time64 contract completed - ok"
+    else
+      echo "out=0 post-2033 time64 contract completed - bad"
+      return 1
+    fi
   else
     echo "out=skip Linux time64 ABI execution is unavailable on macOS - ok"
   fi
