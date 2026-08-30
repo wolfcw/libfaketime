@@ -48,10 +48,17 @@ if [ -n "$DOCKER_PLATFORM" ]; then
 fi
 
 echo "==> Running sanitizer baseline in $IMAGE${DOCKER_PLATFORM:+ ($DOCKER_PLATFORM)}"
-docker run --rm $docker_platform_arg -v "$REPO_DIR:/src:ro" "$IMAGE" sh -eu -c '
-    apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-        build-essential bash perl coreutils util-linux file >/dev/null
+docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$IMAGE" sh -eu -c '
+    case "$IMAGE" in
+        fedora:*|rockylinux:*)
+            dnf -y -q install gcc make glibc-devel bash perl coreutils util-linux file >/dev/null
+            ;;
+        *)
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+                build-essential bash perl coreutils util-linux file >/dev/null
+            ;;
+    esac
     rm -rf /tmp/libfaketime
     mkdir /tmp/libfaketime
     cp -a /src/. /tmp/libfaketime/

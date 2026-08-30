@@ -200,3 +200,23 @@ jobs:
       with:
         name: debian-${{ matrix.name }}-baseline-log
         path: debian-${{ matrix.name }}-baseline.log
+
+  fedora-sanitizers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Fedora sanitizer image
+      run: docker pull fedora:latest
+    - name: Run Fedora sanitizers
+      env:
+        DOCKER_PLATFORM: linux/amd64
+      run: |
+        set -o pipefail
+        test/docker_sanitizers.sh fedora:latest 2>&1 | tee fedora-sanitizers.log
+    - name: Upload Fedora sanitizer log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: fedora-sanitizers-log
+        path: fedora-sanitizers.log
