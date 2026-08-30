@@ -52,6 +52,12 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
+  if (argc > 1 && argv[1][0] == 'p')
+  {
+    struct timespec delay = {0, 250000000};
+    nanosleep(&delay, NULL);
+  }
+
   descriptor.fd = fd;
   descriptor.events = POLLIN;
   if (poll(&descriptor, 1, 1000) != 1 || !(descriptor.revents & POLLIN) ||
