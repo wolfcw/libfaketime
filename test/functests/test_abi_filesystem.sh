@@ -29,6 +29,13 @@ run()
   fi
   rm -f .abi_info_test.$$
 
+  if ./shm_layout_test >/dev/null; then
+    echo "out=1 shared-memory ABI layout is valid - ok"
+  else
+    echo "out=0 shared-memory ABI layout is valid - bad"
+    return 1
+  fi
+
   if [ "$PLATFORM" = "linuxlike" ]; then
     if ./time64_contract_test; then
       echo "out=1 Linux time64 contract completed - ok"
