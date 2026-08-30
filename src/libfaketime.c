@@ -1137,11 +1137,19 @@ retry_shared_objects:
     }
 
     struct stat shm_stat;
-    if (fstat(ticks_shm_fd, &shm_stat) == -1 ||
-        shm_stat.st_size < 0 ||
-        (uintmax_t)shm_stat.st_size != sizeof(struct ft_shared_s))
+    if (real_fstat == NULL || real_fstat(ticks_shm_fd, &shm_stat) == -1)
     {
-      perror("libfaketime: In ft_shm_init(), inspecting shared memory failed");
+      perror("libfaketime: In ft_shm_init(), fstat on shared memory failed");
+      ft_shm_cleanup_attached(ticks_shm_fd);
+      exit(1);
+    }
+    /* macOS reports POSIX shared-memory sizes rounded to its page size. */
+    if (shm_stat.st_size < 0 ||
+        (uintmax_t)shm_stat.st_size < sizeof(struct ft_shared_s))
+    {
+      fprintf(stderr,
+              "libfaketime: In ft_shm_init(), shared memory is too small (%lld bytes, expected at least %zu)\n",
+              (long long)shm_stat.st_size, sizeof(struct ft_shared_s));
       ft_shm_cleanup_attached(ticks_shm_fd);
       exit(1);
     }
@@ -4007,7 +4015,7 @@ static void ftpl_really_init(void)
       exit(EXIT_FAILURE);
     }
 
-    if (fstat(infile, &sb) == -1)
+    if (real_fstat == NULL || real_fstat(infile, &sb) == -1)
     {
       perror("libfaketime: In ftpl_init(), inspecting timestamp file failed");
       close(infile);
