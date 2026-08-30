@@ -19,11 +19,16 @@ run()
     return 0
   fi
 
-  if FAKETIME=+0 LD_PRELOAD=../src/libfaketime.so.1 ./fd_leak_test; then
-    echo "out=1 repeated shared-memory clock calls do not leak descriptors - ok"
-  else
-    status=$?
-    echo "out=$status repeated shared-memory clock calls do not leak descriptors - bad"
-    return 1
-  fi
+  typeset iteration
+  for iteration in 1 2 3; do
+    if FAKETIME=+0 LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+      ./fd_leak_test; then
+      :
+    else
+      status=$?
+      echo "out=$status repeated shared-memory clock calls do not leak descriptors (run $iteration) - bad"
+      return 1
+    fi
+  done
+  echo "out=1 repeated shared-memory clock calls do not leak descriptors - ok"
 }
