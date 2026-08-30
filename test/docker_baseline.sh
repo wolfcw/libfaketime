@@ -121,7 +121,7 @@ run_baseline() {
         fedora:*|rockylinux:*)
             docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
-                dnf -y install gcc make glibc-devel bash perl coreutils util-linux file
+                dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils util-linux file
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime
                 cp -a /src/. /tmp/libfaketime/
