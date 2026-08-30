@@ -1,0 +1,11 @@
+ARG BASE_IMAGE=fedora:latest
+FROM ${BASE_IMAGE}
+
+# Install the same base toolchain as the passing Fedora baseline.  Keep the
+# sanitizer runtimes in a separate layer because dnf5 may report status 125
+# after completing a transaction that replaces the base elfutils packages.
+RUN set -eu; \
+    dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils util-linux file \
+    || { test -x /usr/bin/gcc && test -x /usr/bin/perl && test -x /usr/bin/timeout; }; \
+    dnf -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs install libasan libubsan \
+    || { test -f "$(gcc -print-file-name=libasan.so.8)" && test -f "$(gcc -print-file-name=libubsan.so)"; }
