@@ -18,9 +18,9 @@ int main(void)
   }
 
   result = clock_get_time(clock_service, NULL);
-  mach_port_deallocate(mach_task_self(), clock_service);
   if (result != KERN_INVALID_ARGUMENT)
   {
+    mach_port_deallocate(mach_task_self(), clock_service);
     fprintf(stderr, "clock_get_time(NULL) returned: %d\n", result);
     return 1;
   }
@@ -30,10 +30,13 @@ int main(void)
     result = clock_get_time(clock_service, &current_time);
     if (result != KERN_SUCCESS)
     {
+      mach_port_deallocate(mach_task_self(), clock_service);
       fprintf(stderr, "clock_get_time failed on iteration %d: %d\n", i, result);
       return 1;
     }
   }
+
+  mach_port_deallocate(mach_task_self(), clock_service);
 
   puts("clock_get_time null handling and repeated calls passed");
   return 0;
