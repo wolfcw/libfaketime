@@ -130,6 +130,24 @@ jobs:
         name: debian-baseline-log
         path: debian-baseline.log
 
+  debian-legacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Debian 11 baseline image
+      run: docker pull debian:11
+    - name: make test on legacy Debian
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh debian:11 2>&1 | tee debian-legacy-baseline.log
+    - name: Upload legacy Debian baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: debian-legacy-baseline-log
+        path: debian-legacy-baseline.log
+
   fedora:
     runs-on: ubuntu-latest
     timeout-minutes: 20
