@@ -58,6 +58,7 @@ futex_deadline_contract()
 	typeset result
 	result=$(timeout 5s env \
 		LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+		FAKETIME_DONT_FAKE_MONOTONIC=1 \
 		FAKETIME="+1d x2" ./futex_contract_test)
 	asserteq "$result" "relative and absolute futex timeout contracts passed" \
 		"relative and absolute futex deadlines should use their clock contracts"

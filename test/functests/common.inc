@@ -20,8 +20,8 @@ mac_fakecmd()
 {
 	typeset timestring="$1"; shift
 	typeset fakelib=../src/libfaketime.1.dylib
-	export DYLD_INSERT_LIBRARIES=$fakelib
-	export DYLD_FORCE_FLAT_NAMESPACE=1
+	DYLD_INSERT_LIBRARIES="$fakelib" \
+	DYLD_FORCE_FLAT_NAMESPACE=1 \
 	FAKETIME="$timestring" \
 	"$@"
 }
@@ -30,8 +30,8 @@ sunos_fakecmd()
 {
         typeset timestring="$1"; shift
         typeset fakelib=../src/libfaketime.so.1
-        export LD_PRELOAD=$fakelib
-        FAKETIME="$timestring" \
+	LD_PRELOAD="$fakelib" \
+	FAKETIME="$timestring" \
         "$@"
 }
 
@@ -41,7 +41,7 @@ linuxlike_fakecmd()
 	typeset timestring="$1"; shift
 	FTPL="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}"
 	typeset fakelib="$FTPL"
-	export LD_PRELOAD=$fakelib
+	LD_PRELOAD="$fakelib" \
 	FAKETIME="$timestring" \
 	"$@"
 }

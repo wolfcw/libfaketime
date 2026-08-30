@@ -23,7 +23,7 @@ run()
 	run_testcase rejects_invalid_shared_objects
 	run_testcase rejects_overlong_date_output
 	run_testcase rejects_malformed_date_output
-	if [ -n "${FAKETIME_TESTLIB:-}" ]; then
+	if [ -n "${FAKETIME_SANITIZER_LIB:-}" ]; then
 		echo "out=skip sanitizer-instrumented helper process checks are unavailable - ok"
 		echo "out=skip sanitizer-instrumented constructor reentry check is unavailable - ok"
 	else

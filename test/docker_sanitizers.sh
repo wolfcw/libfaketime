@@ -51,7 +51,7 @@ echo "==> Running sanitizer baseline in $IMAGE${DOCKER_PLATFORM:+ ($DOCKER_PLATF
 docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$IMAGE" sh -eu -c '
     case "$IMAGE" in
         fedora:*|rockylinux:*)
-            dnf -y -q install gcc make glibc-devel bash perl coreutils util-linux file >/dev/null
+            dnf -y -q --setopt=install_weak_deps=False install gcc make glibc-devel bash perl coreutils util-linux file >/dev/null
             ;;
         *)
             apt-get update -qq
@@ -68,9 +68,9 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
         -name "*_test" \) -delete
     ASAN_LIB=$(gcc -print-file-name=libasan.so)
     test -f "$ASAN_LIB"
-    ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:allocator_may_return_null=0 \
+    ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:allocator_may_return_null=0:verify_asan_link_order=0 \
     UBSAN_OPTIONS=halt_on_error=1 \
-    FAKETIME_TESTLIB="$ASAN_LIB:../src/libfaketime.so.1" \
+    FAKETIME_SANITIZER_LIB="$ASAN_LIB:../src/libfaketime.so.1" \
     CFLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
     LDFLAGS="-fsanitize=address,undefined" \
     timeout 240s make test

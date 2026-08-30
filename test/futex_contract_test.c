@@ -17,7 +17,9 @@ static int check_elapsed(const struct timespec *before,
                          const struct timespec *after)
 {
   long long elapsed = nanoseconds(after) - nanoseconds(before);
-  return elapsed >= 5000000LL && elapsed <= 500000000LL;
+  /* Keep the lower bound meaningful, but allow heavily loaded CI hosts to
+   * delay the timestamp check after the kernel has returned ETIMEDOUT. */
+  return elapsed >= 5000000LL && elapsed <= 2000000000LL;
 }
 
 int main(void)

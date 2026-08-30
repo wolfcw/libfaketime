@@ -15,12 +15,12 @@ init()
 run()
 {
 	init
-	if [ "$PLATFORM" != "linuxlike" ] || [ -z "${FAKETIME_TESTLIB:-}" ]; then
+	if [ "$PLATFORM" != "linuxlike" ] || [ -z "${FAKETIME_SANITIZER_LIB:-}" ]; then
 		echo "out=skip sanitizer preload configuration is unavailable - ok"
 		return 0
 	fi
 
-	typeset sanitizer_lib="${FAKETIME_TESTLIB%%:*}"
+	typeset sanitizer_lib="${FAKETIME_SANITIZER_LIB%%:*}"
 	if [ ! -f "$sanitizer_lib" ]; then
 		echo "out=skip sanitizer runtime is unavailable - ok"
 		return 0
@@ -32,9 +32,10 @@ sanitizer_preload_preserves_timestamp_parsing()
 {
 	typeset output status
 	output=$(timeout 5s env \
-		LD_PRELOAD="$FAKETIME_TESTLIB" \
+		ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0:halt_on_error=1}" \
+		LD_PRELOAD="$FAKETIME_SANITIZER_LIB" \
 		FAKETIME="2021-08-19 12:00:00" \
-		date +"%Y-%m-%d %H:%M:%S" 2>&1)
+		./asan_preload_test 2>&1)
 	status=$?
 	if [ "$status" -eq 0 ] && [ "$output" = "2021-08-19 12:00:00" ]; then
 		echo "out=$output sanitizer-first preload preserves timestamp parsing - ok"
