@@ -16,6 +16,7 @@ run()
 {
 	init
 	run_testcase accepts_crlf_and_full_line_comments
+	run_testcase accepts_blank_and_comment_only_files
 	run_testcase tolerates_missing_config_environment
 	run_testcase rejects_oversized_configuration
 	run_testcase rejects_embedded_nul_configuration
@@ -96,4 +97,23 @@ accepts_crlf_and_full_line_comments()
 	rm -f "$config_file"
 	asserteq "$actual" "2020-06-15 12:00:00" \
 		"CRLF config files and indented full-line comments should be accepted"
+}
+
+accepts_blank_and_comment_only_files()
+{
+	typeset config_file=".config_blank_test.$$"
+	typeset output
+	printf '\n  # no timestamp override\n\t; another comment\n' > "$config_file"
+	output=$(config_file_cmd "$config_file" perl -e 'print time' 2>/dev/null)
+	rm -f "$config_file"
+	case "$output" in
+		''|*[!0-9]*)
+			echo "out=0 blank and comment-only configuration is safe - bad"
+			return 1
+			;;
+		*)
+			echo "out=1 blank and comment-only configuration is safe - ok"
+			return 0
+			;;
+	esac
 }
