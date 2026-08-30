@@ -22,6 +22,7 @@ run()
 	run_testcase expired_monotonic_timer_is_readable
 	run_testcase absolute_monotonic_timer_uses_clock_domain
 	run_testcase relative_monotonic_timer_uses_duration
+	run_testcase periodic_monotonic_timer_counts_expirations
 	if [ -x ./futex_contract_test ]; then
 		run_testcase futex_deadline_contract
 	else
@@ -51,6 +52,14 @@ relative_monotonic_timer_uses_duration()
 	result=$(fakecmd "+0 x2" ./timerfd_contract_test relative)
 	asserteq "$result" "relative monotonic timerfd deadline honored" \
 		"relative monotonic timerfd deadline should use its duration"
+}
+
+periodic_monotonic_timer_counts_expirations()
+{
+	typeset result
+	result=$(fakecmd "+0" ./timerfd_contract_test periodic)
+	asserteq "$result" "periodic monotonic timerfd expiration count honored" \
+		"periodic monotonic timerfd should report accumulated expirations"
 }
 
 futex_deadline_contract()

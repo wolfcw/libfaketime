@@ -26,10 +26,12 @@ int main(int argc, char **argv)
   }
   if (argc > 1)
   {
-    if (argv[1][0] == 'r')
+    if (argv[1][0] == 'r' || argv[1][0] == 'p')
     {
       flags = 0;
       timer.it_value.tv_nsec = 100000000;
+      if (argv[1][0] == 'p')
+        timer.it_interval.tv_nsec = 100000000;
     }
     else
     {
@@ -54,7 +56,8 @@ int main(int argc, char **argv)
   descriptor.events = POLLIN;
   if (poll(&descriptor, 1, 1000) != 1 || !(descriptor.revents & POLLIN) ||
       read(fd, &expirations, sizeof(expirations)) != sizeof(expirations) ||
-      expirations == 0)
+      expirations == 0 ||
+      (argc > 1 && argv[1][0] == 'p' && expirations < 2))
   {
     fprintf(stderr, "expired timerfd was not readable\n");
     close(fd);
@@ -64,6 +67,8 @@ int main(int argc, char **argv)
   close(fd);
   if (argc > 1 && argv[1][0] != 'r')
     puts("absolute monotonic timerfd deadline honored");
+  else if (argc > 1 && argv[1][0] == 'p')
+    puts("periodic monotonic timerfd expiration count honored");
   else if (argc > 1)
     puts("relative monotonic timerfd deadline honored");
   else
