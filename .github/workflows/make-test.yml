@@ -94,6 +94,15 @@ jobs:
         name: alpine-baseline-log
         path: alpine-baseline.log
 
+  snippets:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build project
+      run: make
+    - name: Compile and run documented snippet checks
+      run: make -C test snippets
+
   debian:
     runs-on: ubuntu-latest
     steps:
