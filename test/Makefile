@@ -9,7 +9,7 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
-ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test
+ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test
 
 TIME64_CFLAGS = -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64
 ALL_TESTS += time64_contract_test
@@ -64,6 +64,9 @@ set_mtime: set_mtime.c
 
 asan_preload_test: asan_preload_test.c
 	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
+
+fd_leak_test: fd_leak_test.c
+	${CC} -o $@ ${CFLAGS} $<
 
 time_ops_test: time_ops_test.c ../src/time_ops.h
 	${CC} -o $@ ${CFLAGS} $<
@@ -160,7 +163,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest shm_layout_test abi_info_test time64_contract_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test futex_contract_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test abi_info_test time64_contract_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test futex_contract_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo

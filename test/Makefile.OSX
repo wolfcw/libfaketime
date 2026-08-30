@@ -13,7 +13,7 @@ ifneq ($(filter -DFAKE_PID,${CFLAGS}),)
 FAKE_PID_TEST_DEP = fake_pid_contract_test
 endif
 
-all: timetest abi_info_test set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} test
+all: timetest abi_info_test set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test fd_leak_test init_reentry.dylib ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} test
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
@@ -48,6 +48,9 @@ sem_contract_test: sem_contract_test.c
 wait_timeout_contract_test: wait_timeout_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
+fd_leak_test: fd_leak_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
 init_reentry.dylib: init_reentry.c
 	${CC} -dynamiclib -fPIC -o $@ ${CFLAGS} $<
 
@@ -71,7 +74,7 @@ functest:
 	./testframe.sh functests
 
 clean:
-	@rm -f ${OBJ} timetest abi_info_test set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib file_timestamp_test fake_pid_contract_test
+	@rm -f ${OBJ} timetest abi_info_test set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test fd_leak_test init_reentry.dylib file_timestamp_test fake_pid_contract_test
 
 distclean: clean
 	@echo
