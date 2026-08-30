@@ -148,6 +148,8 @@ run_baseline() {
                 printf "compiler="
                 cc --version | head -n 1
                 run_phase build sh -c "make -C src all && make -C test sem_contract_test"
+                printf "sem_clockwait-symbols\\n"
+                readelf -Ws src/libfaketime.so.1 | grep sem_clockwait
                 run_phase semaphore env FAKETIME_SEM_TEST_VERBOSE=1 FAKETIME=+0 \
                     LD_PRELOAD="$PWD/src/libfaketime.so.1" ./test/sem_contract_test
                 run_phase full-suite make test
