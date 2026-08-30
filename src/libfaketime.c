@@ -2629,6 +2629,45 @@ static clockid_t timerfd_clock(int fd)
     }
   }
   (void)pthread_mutex_unlock(&timerfd_clocks_lock);
+
+#ifdef __linux__
+  if (clock_id == CLOCK_REALTIME)
+  {
+    char path[64];
+    char buffer[256];
+    char *value;
+    char *end;
+    long parsed_clock_id;
+    int descriptor;
+    ssize_t length;
+
+    if (snprintf(path, sizeof(path), "/proc/self/fdinfo/%d", fd) <
+        (int)sizeof(path))
+    {
+      descriptor = open(path, O_RDONLY | O_CLOEXEC);
+      if (descriptor != -1)
+      {
+        length = read(descriptor, buffer, sizeof(buffer) - 1);
+        (void)close(descriptor);
+        if (length > 0)
+        {
+          buffer[length] = '\0';
+          value = strstr(buffer, "\nclockid:");
+          if (value == NULL && strncmp(buffer, "clockid:", 8) == 0)
+            value = buffer;
+          if (value != NULL)
+          {
+            value += (value == buffer) ? 8 : 9;
+            parsed_clock_id = strtol(value, &end, 10);
+            if (end != value && parsed_clock_id >= 0 &&
+                parsed_clock_id <= INT_MAX)
+              clock_id = (clockid_t)parsed_clock_id;
+          }
+        }
+      }
+    }
+  }
+#endif
   return clock_id;
 }
 
@@ -4889,7 +4928,12 @@ bool needs_forced_monotonic_fix(char *function_name)
     }
     else
 #endif
+#ifdef __linux__
+      /* Non-glibc Linux libcs can also disagree with the faked clock. */
+      result = true;
+#else
       result = false; // avoid forced monotonic fixes unless really necessary
+#endif
   }
 
   if (getenv("FAKETIME_DEBUG") != NULL)
