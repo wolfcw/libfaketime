@@ -143,7 +143,8 @@ isolates_date_helper_preload()
 	printf '#!/bin/sh\nprintf "%%s\\n%%s\\n" "${LD_PRELOAD:-}" "${DYLD_INSERT_LIBRARIES:-}" > "$DATE_HELPER_ENV_FILE"\nprintf "0\\n"\n' > "$date_helper"
 	chmod 755 "$date_helper"
 	if [ "$PLATFORM" = "mac" ]; then
-		env DATE_HELPER_ENV_FILE="$environment_file" \
+		env -u DYLD_INSERT_LIBRARIES -u DYLD_FORCE_FLAT_NAMESPACE \
+			DATE_HELPER_ENV_FILE="$environment_file" \
 			../src/faketime --date-prog "./$date_helper" ignored \
 				./date-helper-target-does-not-exist >/dev/null 2>&1
 	else

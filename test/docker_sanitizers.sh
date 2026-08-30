@@ -55,7 +55,8 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
             # modules and documentation packages.  The test suite only needs
             # the interpreter and its runtime modules, so use the minimal
             # package to keep Docker setup reliable on current Fedora.
-            dnf -y -q --setopt=install_weak_deps=False install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file >/dev/null
+            dnf -y -q --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
+                install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file >/dev/null
             ;;
         *)
             apt-get update -qq
