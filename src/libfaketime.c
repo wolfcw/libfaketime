@@ -466,6 +466,26 @@ static pthread_once_t initialized_once_control = PTHREAD_ONCE_INIT;
 /* prototypes */
 static int    fake_gettimeofday(struct timeval *tv);
 static int    fake_clock_gettime(clockid_t clk_id, struct timespec *tp);
+
+static void normalize_timespec_value(struct timespec *tp)
+{
+  long long nanoseconds;
+  long long seconds;
+
+  if (tp == NULL || (tp->tv_nsec >= 0 && tp->tv_nsec < SEC_TO_nSEC))
+    return;
+
+  nanoseconds = (long long)tp->tv_nsec;
+  seconds = nanoseconds / SEC_TO_nSEC;
+  nanoseconds %= SEC_TO_nSEC;
+  if (nanoseconds < 0)
+  {
+    seconds--;
+    nanoseconds += SEC_TO_nSEC;
+  }
+  tp->tv_sec += (time_t)seconds;
+  tp->tv_nsec = (long)nanoseconds;
+}
 #ifdef FAKE_FILE_TIMESTAMPS
 static int    fake_current_realtime(struct timespec *tp);
 static int    fake_current_timeval(struct timeval *tv);
@@ -2631,38 +2651,35 @@ static clockid_t timerfd_clock(int fd)
   (void)pthread_mutex_unlock(&timerfd_clocks_lock);
 
 #ifdef __linux__
-  if (clock_id == CLOCK_REALTIME)
-  {
-    char path[64];
-    char buffer[256];
-    char *value;
-    char *end;
-    long parsed_clock_id;
-    int descriptor;
-    ssize_t length;
+  char path[64];
+  char buffer[256];
+  char *value;
+  char *end;
+  long parsed_clock_id;
+  int descriptor;
+  ssize_t length;
 
-    if (snprintf(path, sizeof(path), "/proc/self/fdinfo/%d", fd) <
-        (int)sizeof(path))
+  if (snprintf(path, sizeof(path), "/proc/self/fdinfo/%d", fd) <
+      (int)sizeof(path))
+  {
+    descriptor = open(path, O_RDONLY | O_CLOEXEC);
+    if (descriptor != -1)
     {
-      descriptor = open(path, O_RDONLY | O_CLOEXEC);
-      if (descriptor != -1)
+      length = read(descriptor, buffer, sizeof(buffer) - 1);
+      (void)close(descriptor);
+      if (length > 0)
       {
-        length = read(descriptor, buffer, sizeof(buffer) - 1);
-        (void)close(descriptor);
-        if (length > 0)
+        buffer[length] = '\0';
+        value = strstr(buffer, "\nclockid:");
+        if (value == NULL && strncmp(buffer, "clockid:", 8) == 0)
+          value = buffer;
+        if (value != NULL)
         {
-          buffer[length] = '\0';
-          value = strstr(buffer, "\nclockid:");
-          if (value == NULL && strncmp(buffer, "clockid:", 8) == 0)
-            value = buffer;
-          if (value != NULL)
-          {
-            value += (value == buffer) ? 8 : 9;
-            parsed_clock_id = strtol(value, &end, 10);
-            if (end != value && parsed_clock_id >= 0 &&
-                parsed_clock_id <= INT_MAX)
-              clock_id = (clockid_t)parsed_clock_id;
-          }
+          value += (value == buffer) ? 8 : 9;
+          parsed_clock_id = strtol(value, &end, 10);
+          if (end != value && parsed_clock_id >= 0 &&
+              parsed_clock_id <= INT_MAX)
+            clock_id = (clockid_t)parsed_clock_id;
         }
       }
     }
@@ -2704,13 +2721,15 @@ timer_settime_common(timer_t_or_int timerid, int flags,
     {
       if (flags & abstime_flag)
       {
-        struct timespec tdiff, timeadj, fake_now;
+        struct timespec tdiff, timeadj;
         if (clock_id == CLOCK_MONOTONIC && fake_monotonic_clock)
         {
-          if (fake_clock_gettime(CLOCK_MONOTONIC, &fake_now) == 0)
-            timespecsub(&new_value->it_value, &fake_now, &timeadj);
-          else
-            timeadj = new_value->it_value;
+          /* Convert from the stable fake-time base.  Re-reading the fake
+           * clock here can advance or refresh it between the caller's
+           * clock_gettime() and this timerfd_settime() call. */
+          timeadj = new_value->it_value;
+          normalize_timespec_value(&user_faked_time_timespec);
+          timespecsub(&timeadj, &user_faked_time_timespec, &timeadj);
         }
         else if (clock_id == CLOCK_MONOTONIC)
         {
@@ -4555,6 +4574,7 @@ abort:
 #endif
   // came here via goto abort?
   if (ret != INT_MAX) return ret;
+  normalize_timespec_value(tp);
   save_time(tp);
 
   /* Cache this most recent real and faked time we encountered */
