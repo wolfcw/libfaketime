@@ -62,7 +62,7 @@ run_baseline() {
         alpine:*)
             docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
-                apk add --no-cache build-base bash perl coreutils util-linux file
+                apk add --no-cache build-base bash perl coreutils util-linux file tzdata
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime
                 cp -a /src/. /tmp/libfaketime/
