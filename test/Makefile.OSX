@@ -13,13 +13,16 @@ ifneq ($(filter -DFAKE_PID,${CFLAGS}),)
 FAKE_PID_TEST_DEP = fake_pid_contract_test
 endif
 
-all: timetest set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} test
+all: timetest abi_info_test set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} test
 
 .c.o:
 	${CC} -c ${CFLAGS} $<
 
 timetest: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
+
+abi_info_test: abi_info_test.c
+	${CC} -o $@ ${CFLAGS} $<
 
 set_mtime: set_mtime.c
 	${CC} -o $@ ${CFLAGS} $<
@@ -57,8 +60,9 @@ fake_pid_contract_test: fake_pid_contract_test.c
 macos_clock_test: macos_clock_test.c
 	${CC} -o $@ ${CFLAGS} $< ../src/libfaketime.1.dylib
 
-test: timetest time_ops_test clock_consistency_test set_mtime macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} functest
+test: timetest abi_info_test time_ops_test clock_consistency_test set_mtime macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} functest
 	@echo
+	@./abi_info_test
 	@./time_ops_test
 	@./test_OSX.sh
 
@@ -67,7 +71,7 @@ functest:
 	./testframe.sh functests
 
 clean:
-	@rm -f ${OBJ} timetest set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib file_timestamp_test fake_pid_contract_test
+	@rm -f ${OBJ} timetest abi_info_test set_mtime time_ops_test clock_consistency_test macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib file_timestamp_test fake_pid_contract_test
 
 distclean: clean
 	@echo

@@ -26,7 +26,7 @@ fi
 DOCKER_PLATFORM=${DOCKER_PLATFORM:-}
 if [ -n "$DOCKER_PLATFORM" ]; then
     case "$DOCKER_PLATFORM" in
-        linux/amd64|linux/arm64|linux/arm/v7|linux/ppc64le|linux/s390x) ;;
+            linux/386|linux/amd64|linux/arm64|linux/arm/v7|linux/ppc64le|linux/s390x) ;;
         *)
             echo "error: unsupported Docker platform: $DOCKER_PLATFORM" >&2
             exit 2
@@ -49,7 +49,7 @@ run_baseline() {
     if [ -n "$DOCKER_PLATFORM" ]; then
         image_arch=$(docker image inspect --format '{{.Architecture}}' "$image")
         case "$DOCKER_PLATFORM:$image_arch" in
-            linux/amd64:amd64|linux/arm64:arm64|linux/arm/v7:arm|linux/ppc64le:ppc64le|linux/s390x:s390x) ;;
+            linux/386:386|linux/amd64:amd64|linux/arm64:arm64|linux/arm/v7:arm|linux/ppc64le:ppc64le|linux/s390x:s390x) ;;
             *)
                 echo "error: $image is $image_arch, incompatible with $DOCKER_PLATFORM" >&2
                 echo "       pull an image matching the requested platform and retry" >&2
@@ -118,7 +118,7 @@ run_baseline() {
                 timeout 180s make test
             '
             ;;
-        fedora:*)
+        fedora:*|rockylinux:*)
             docker run --rm $docker_platform_arg -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 dnf -y install gcc make glibc-devel bash perl coreutils util-linux file
@@ -129,7 +129,12 @@ run_baseline() {
                 find src test -type f \( -name "*.o" -o -name "*.so*" -o \
                     -name "timetest" -o -name "faketime" -o -name "set_mtime" -o \
                     -name "*_test" \) -delete
-                printf "container=%s\\n" "$(cat /etc/fedora-release)"
+                if [ -r /etc/fedora-release ]; then
+                    printf "container=%s\\n" "$(cat /etc/fedora-release)"
+                else
+                    . /etc/os-release
+                    printf "container=%s %s\\n" "$NAME" "$VERSION_ID"
+                fi
                 printf "kernel="
                 uname -a
                 timeout 180s make test
@@ -137,7 +142,7 @@ run_baseline() {
             ;;
         *)
             echo "error: unsupported baseline image: $image" >&2
-            echo "       pass gcc:13-bookworm, ubuntu:<tag>, fedora:<tag>, alpine:3.20, debian:13, or archlinux:base-devel" >&2
+            echo "       pass gcc:13-bookworm, ubuntu:<tag>, fedora:<tag>, rockylinux:<tag>, alpine:3.20, debian:13, or archlinux:base-devel" >&2
             return 2
             ;;
     esac
