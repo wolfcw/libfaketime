@@ -71,10 +71,10 @@ int main(int argc, char **argv)
   }
 
   close(fd);
-  if (argc > 1 && argv[1][0] != 'r')
-    puts("absolute monotonic timerfd deadline honored");
-  else if (argc > 1 && argv[1][0] == 'p')
+  if (argc > 1 && argv[1][0] == 'p')
     puts("periodic monotonic timerfd expiration count honored");
+  else if (argc > 1 && argv[1][0] != 'r')
+    puts("absolute monotonic timerfd deadline honored");
   else if (argc > 1)
     puts("relative monotonic timerfd deadline honored");
   else
