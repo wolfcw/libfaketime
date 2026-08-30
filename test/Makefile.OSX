@@ -66,7 +66,7 @@ fake_pid_contract_test: fake_pid_contract_test.c
 macos_clock_test: macos_clock_test.c
 	${CC} -o $@ ${CFLAGS} $< ../src/libfaketime.1.dylib
 
-test: timetest abi_info_test time_ops_test clock_consistency_test set_mtime macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test init_reentry.dylib ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} functest
+test: timetest abi_info_test time_ops_test clock_consistency_test set_mtime macos_clock_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test fd_leak_test timezone_contract_test init_reentry.dylib ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} functest
 	@echo
 	@./abi_info_test
 	@./time_ops_test

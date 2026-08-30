@@ -116,7 +116,7 @@ syscall_contract_test: syscall_contract_test.c
 futex_contract_test: futex_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest abi_info_test time64_contract_test time_ops_test clock_consistency_test set_mtime clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} ${FUTEX_TEST_DEP} functest
+test: timetest abi_info_test time64_contract_test time_ops_test clock_consistency_test set_mtime clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test timezone_contract_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} ${FUTEX_TEST_DEP} functest
 	@echo
 	@./abi_info_test
 	@./time64_contract_test
