@@ -67,8 +67,12 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
             install_fedora_packages() {
                 attempt=1
                 while :; do
-                    if dnf -y -q --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
-                        install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file; then
+                    set +e
+                    dnf -y -q --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
+                        install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file
+                    dnf_status=$?
+                    set -e
+                    if [ "$dnf_status" -eq 0 ]; then
                         return 0
                     fi
                     # Some Fedora base-image/package-manager combinations can
