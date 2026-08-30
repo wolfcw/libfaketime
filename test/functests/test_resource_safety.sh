@@ -19,7 +19,7 @@ run()
     return 0
   fi
 
-  if FAKETIME=+0 LD_PRELOAD=../src/libfaketime.so.1 ../fd_leak_test; then
+  if FAKETIME=+0 LD_PRELOAD=../src/libfaketime.so.1 ./fd_leak_test; then
     echo "out=1 repeated shared-memory clock calls do not leak descriptors - ok"
   else
     status=$?

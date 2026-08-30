@@ -21,11 +21,11 @@ run()
     if [ "$PLATFORM" = "mac" ]; then
       value=$(DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
         DYLD_FORCE_FLAT_NAMESPACE=1 FAKETIME_NO_CACHE=1 FAKETIME="@2020-06-15 12:00:00" \
-        ./timetest 2>/dev/null | sed -n '1p')
+        ./timetest 2>/dev/null)
     else
       value=$(LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
         FAKETIME_NO_CACHE=1 FAKETIME="@2020-06-15 12:00:00" \
-        ./timetest 2>/dev/null | sed -n '1p')
+        ./timetest 2>/dev/null)
     fi
     case "$value" in
       *"Mon Jun 15"*|*"2020"*) ;;
