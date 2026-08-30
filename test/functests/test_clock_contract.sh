@@ -23,6 +23,8 @@ run()
 	run_testcase null_clock_output_fails
 	run_testcase past_wait_deadlines_timeout
 	run_testcase semaphore_deadlines
+	run_testcase semaphore_deadlines_absolute
+	run_testcase semaphore_deadlines_rate
 	run_testcase positive_poll_timeout
 	run_testcase select_timeout_contract
 }
@@ -50,12 +52,27 @@ select_timeout_contract()
 
 semaphore_deadlines()
 {
+	semaphore_deadlines_with_config "+0"
+}
+
+semaphore_deadlines_absolute()
+{
+	semaphore_deadlines_with_config "2030-01-01 00:00:00"
+}
+
+semaphore_deadlines_rate()
+{
+	semaphore_deadlines_with_config "+0 x2"
+}
+
+semaphore_deadlines_with_config()
+{
 	typeset result
 	if [ "$PLATFORM" = "mac" ]; then
 		echo "out=skip sem_timedwait is unavailable on macOS - ok"
 		return 0
 	fi
-	result=$(fakecmd "+0" ./sem_contract_test)
+	result=$(fakecmd "$1" ./sem_contract_test)
 	asserteq "$result" "semaphore realtime, monotonic, and null handling passed" \
 		"semaphore timed-wait contract should be preserved"
 }
