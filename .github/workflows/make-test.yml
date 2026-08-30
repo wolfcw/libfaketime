@@ -56,14 +56,14 @@ jobs:
           compile_flags: ""
           sanitizer: true
     runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.compiler }}
+      FAKETIME_COMPILE_CFLAGS: ${{ matrix.compile_flags }}
 
     steps:
     - uses: actions/checkout@v4
     - name: make
       if: ${{ !matrix.sanitizer }}
-      env:
-        CC: ${{ matrix.compiler }}
-        FAKETIME_COMPILE_CFLAGS: ${{ matrix.compile_flags }}
       run: make
     - name: make test
       if: ${{ !matrix.sanitizer }}
@@ -186,6 +186,10 @@ jobs:
           platform: linux/arm64
     steps:
     - uses: actions/checkout@v4
+    - name: Set up QEMU for non-native containers
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: all
     - name: Pull Debian baseline image
       run: docker pull --platform "${{ matrix.platform }}" debian:13
     - name: make test on ${{ matrix.name }} Debian
