@@ -55,8 +55,39 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
             # modules and documentation packages.  The test suite only needs
             # the interpreter and its runtime modules, so use the minimal
             # package to keep Docker setup reliable on current Fedora.
-            dnf -y -q --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
-                install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file >/dev/null
+            fedora_packages_ready() {
+                command -v gcc >/dev/null 2>&1 || return 1
+                command -v make >/dev/null 2>&1 || return 1
+                command -v perl >/dev/null 2>&1 || return 1
+                command -v timeout >/dev/null 2>&1 || return 1
+                test -f "$(gcc -print-file-name=libasan.so.8)" || return 1
+                test -f "$(gcc -print-file-name=libubsan.so)" || return 1
+            }
+
+            install_fedora_packages() {
+                attempt=1
+                while :; do
+                    if dnf -y -q --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
+                        install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file; then
+                        return 0
+                    fi
+                    # Some Fedora base-image/package-manager combinations can
+                    # return a failure status after completing the transaction.
+                    # Verify the actual toolchain before retrying or failing.
+                    if fedora_packages_ready; then
+                        echo "warning: Fedora package transaction reported failure, but the required toolchain is ready" >&2
+                        return 0
+                    fi
+                    if [ "$attempt" -ge 3 ]; then
+                        echo "error: Fedora package installation failed after $attempt attempts" >&2
+                        return 1
+                    fi
+                    echo "warning: Fedora package installation failed; retrying (attempt $((attempt + 1))/3)" >&2
+                    attempt=$((attempt + 1))
+                    sleep 1
+                done
+            }
+            install_fedora_packages
             ;;
         *)
             apt-get update -qq
