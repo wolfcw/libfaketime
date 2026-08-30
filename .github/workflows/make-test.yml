@@ -99,9 +99,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build project
+      env:
+        FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID"
       run: make
     - name: Compile and run documented snippet checks
-      run: make -C test snippets
+      env:
+        FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID"
+      run: |
+        make -C test run_clock_gettime run_clock_gettime_heap run_getpid run_time
+        (cd test && ./test_variable_data.sh clock_gettime clock_gettime_heap getpid time)
 
   debian:
     runs-on: ubuntu-latest
