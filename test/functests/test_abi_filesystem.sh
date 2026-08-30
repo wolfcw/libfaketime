@@ -44,7 +44,7 @@ run()
       return 1
     fi
     if FAKETIME='@2040-01-01 00:00:00' FAKETIME_EXPECT_POST2033=1 \
-      LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+      LD_PRELOAD="../src/libfaketime-time64.so.1" \
       ./time64_contract_test >/dev/null; then
       echo "out=1 post-2033 time64 contract completed - ok"
     else

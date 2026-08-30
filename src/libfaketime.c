@@ -108,6 +108,28 @@ struct timeb {
 #include <dlfcn.h>
 #endif
 
+#ifdef FAKETIME_TIME64_BUILD
+/* glibc redirects these public names to the time64 ABI when _TIME_BITS=64.
+ * The dedicated test library still provides the public wrappers and the
+ * internal versioned entry points itself, so suppress those header aliases
+ * while compiling it. */
+#ifdef clock_gettime
+#undef clock_gettime
+#endif
+#ifdef gettimeofday
+#undef gettimeofday
+#endif
+#ifdef time
+#undef time
+#endif
+#ifdef stat
+#undef stat
+#endif
+#ifdef stat64
+#undef stat64
+#endif
+#endif
+
 #define BUFFERLEN   256
 
 static long stat_mtime_nsec(const struct stat *st);
@@ -3344,6 +3366,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 
 #ifdef __GLIBC__
 /* This is used by glibc 32-bit architectures only. */
+#ifndef FAKETIME_TIME64_BUILD
 int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
 {
   struct timespec tp;
@@ -3397,6 +3420,7 @@ uint64_t __time64(uint64_t *write_out)
 /* glibc's 32-bit time64 ABI references these symbols with GLIBC_2.34. */
 __asm__(".symver __clock_gettime64, __clock_gettime64@GLIBC_2.34");
 __asm__(".symver __time64, __time64@GLIBC_2.34");
+#endif
 #endif
 
 #ifdef TIME_UTC

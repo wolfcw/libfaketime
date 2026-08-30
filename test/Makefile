@@ -56,7 +56,7 @@ shm_layout_test: shm_layout_test.c ../src/faketime_common.h
 abi_info_test: abi_info_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-time64_contract_test: time64_contract_test.c
+time64_contract_test: time64_contract_test.c ../src/libfaketime-time64.so.1
 	${CC} -o $@ ${CFLAGS} ${TIME64_CFLAGS} $<
 
 set_mtime: set_mtime.c

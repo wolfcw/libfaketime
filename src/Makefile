@@ -178,7 +178,18 @@ BINS = faketime
 SONAME = 1
 LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
-all: ${LIBS} ${BINS}
+TIME64_CFLAGS = $(CFLAGS) -UFAKE_STAT -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 -DFAKETIME_TIME64_BUILD
+
+libfaketime-time64.so.1: libfaketime_time64.o ft_sem_time64.o
+	${CC} -o $@ ${LDFLAGS} ${LIB_LDFLAGS} $^ ${LDADD}
+
+libfaketime_time64.o: libfaketime.c
+	${CC} -o $@ -c ${TIME64_CFLAGS} $<
+
+ft_sem_time64.o: ft_sem.c
+	${CC} -o $@ -c ${TIME64_CFLAGS} $<
+
+all: ${LIBS} ${BINS} libfaketime-time64.so.1
 
 libfaketimeMT.o: EXTRA_FLAGS := -DPTHREAD_SINGLETHREADED_TIME
 
@@ -195,7 +206,7 @@ ${BINS}: faketime.c ft_sem.o ft_sem.h
 	${CC} -o $@ ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $< ft_sem.o ${LDFLAGS} ${BIN_LDFLAGS}
 
 clean:
-	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS} ft_sem.o
+	@rm -f ${LIBS_OBJ} ${LIBS} ${BINS} ft_sem.o libfaketime_time64.o ft_sem_time64.o libfaketime-time64.so.1
 
 distclean: clean
 	@echo
