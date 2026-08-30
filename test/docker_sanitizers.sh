@@ -81,13 +81,17 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
     # object.  Use the versioned runtime library for LD_PRELOAD.
     ASAN_LIB=$(gcc -print-file-name=libasan.so.8)
     test -f "$ASAN_LIB"
-    ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:allocator_may_return_null=0:verify_asan_link_order=0 \
-    UBSAN_OPTIONS=halt_on_error=1 \
-    FAKETIME_SANITIZER_LIB="$ASAN_LIB:../src/libfaketime.so.1" \
-    FAKETIME_TESTLIB="$ASAN_LIB:../src/libfaketime.so.1" \
-    CFLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
-    LDFLAGS="-fsanitize=address,undefined" \
-    timeout 240s make test
+    export ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:allocator_may_return_null=0:verify_asan_link_order=0
+    export UBSAN_OPTIONS=halt_on_error=1
+    export FAKETIME_SANITIZER_LIB="$ASAN_LIB:../src/libfaketime.so.1"
+    export FAKETIME_TESTLIB="$ASAN_LIB:../src/libfaketime.so.1"
+    export CFLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+    export LDFLAGS="-fsanitize=address,undefined"
+    set +e
+    timeout --foreground 240s make test
+    test_status=$?
+    set -e
+    exit "$test_status"
 '
 }
 
