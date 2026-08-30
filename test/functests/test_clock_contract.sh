@@ -30,7 +30,7 @@ run()
 positive_poll_timeout()
 {
 	typeset result
-	result=$(fakecmd "+0 x2" ./wait_timeout_contract_test)
+	result=$(FAKETIME_DONT_FAKE_MONOTONIC=1 fakecmd "+0 x2" ./wait_timeout_contract_test)
 	asserteq "$result" "positive poll timeout was preserved" \
 		"positive poll timeout should not be truncated to zero"
 }
@@ -38,7 +38,7 @@ positive_poll_timeout()
 select_timeout_contract()
 {
 	typeset result
-	result=$(fakecmd "+0 x2" ./wait_api_contract_test)
+	result=$(FAKETIME_DONT_FAKE_MONOTONIC=1 fakecmd "+0 x2" ./wait_api_contract_test)
 	if [ "$PLATFORM" = "mac" ]; then
 		asserteq "$result" "select and pselect timeout contracts passed" \
 			"select and pselect timeout contracts should be preserved"
