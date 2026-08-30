@@ -2579,7 +2579,8 @@ int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
 
 #ifndef __ANDROID__
 /* EXPERIMENTAL */
-int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
+static int sem_clockwait_common(sem_t *sem, clockid_t clockid,
+                                const struct timespec *abstime)
 {
   int result;
   struct timespec real_abstime, *real_abstime_pt;
@@ -2659,6 +2660,29 @@ int sem_clockwait(sem_t *sem, clockid_t clockid, const struct timespec *abstime)
   DONT_FAKE_TIME(result = (*real_sem_clockwait)(sem, clockid, real_abstime_pt));
   return result;
 }
+
+#ifdef __GLIBC__
+int sem_clockwait_230(sem_t *sem, clockid_t clockid,
+                      const struct timespec *abstime)
+{
+  return sem_clockwait_common(sem, clockid, abstime);
+}
+
+int sem_clockwait_234(sem_t *sem, clockid_t clockid,
+                      const struct timespec *abstime)
+{
+  return sem_clockwait_common(sem, clockid, abstime);
+}
+
+__asm__(".symver sem_clockwait_230, sem_clockwait@GLIBC_2.30");
+__asm__(".symver sem_clockwait_234, sem_clockwait@@GLIBC_2.34");
+#else
+int sem_clockwait(sem_t *sem, clockid_t clockid,
+                  const struct timespec *abstime)
+{
+  return sem_clockwait_common(sem, clockid, abstime);
+}
+#endif
 #endif /* __ANDROID__ */
 #endif
 

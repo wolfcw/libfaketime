@@ -19,8 +19,8 @@ GLIBC_2.30 {
 };
 
 GLIBC_2.34 {
-  global: __clock_gettime64; __time64;
-};
+  global: __clock_gettime64; __time64; sem_clockwait;
+} GLIBC_2.30;
 
 GLIBC_2.2.5 {
   global:  pthread_cond_timedwait;
