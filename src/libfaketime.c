@@ -738,6 +738,36 @@ static bool valid_shared_header(const struct ft_shared_s *shared)
   return ft_shared_header_valid(shared);
 }
 
+#if defined(__GLIBC__) && !defined(__ANDROID__)
+static int ft_real_fstat(int fd, struct stat *buf)
+{
+  if (real_fstat != NULL)
+    return real_fstat(fd, buf);
+
+  /* glibc 2.31 may not expose the direct fstat symbol through RTLD_NEXT
+     during preload initialization, while the legacy ABI remains available. */
+#ifdef _STAT_VER
+  if (real_fxstat != NULL)
+    return real_fxstat(_STAT_VER, fd, buf);
+#else
+  if (real_fxstat != NULL)
+    return real_fxstat(1, fd, buf);
+#endif
+  errno = ENOSYS;
+  return -1;
+}
+#else
+static int ft_real_fstat(int fd, struct stat *buf)
+{
+  if (real_fstat == NULL)
+  {
+    errno = ENOSYS;
+    return -1;
+  }
+  return real_fstat(fd, buf);
+}
+#endif
+
 static void ft_shm_cleanup_created(ft_sem_t *sem, int *shm_fd,
                                    struct ft_shared_s **mapping,
                                    const char *shm_name, bool locked)
@@ -1137,7 +1167,7 @@ retry_shared_objects:
     }
 
     struct stat shm_stat;
-    if (real_fstat == NULL || real_fstat(ticks_shm_fd, &shm_stat) == -1)
+    if (ft_real_fstat(ticks_shm_fd, &shm_stat) == -1)
     {
       perror("libfaketime: In ft_shm_init(), fstat on shared memory failed");
       ft_shm_cleanup_attached(ticks_shm_fd);

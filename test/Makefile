@@ -81,10 +81,10 @@ clock_error_test: clock_error_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
 wait_contract_test: wait_contract_test.c
-	${CC} -o $@ ${CFLAGS} $<
+	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
 
 wait_api_contract_test: wait_api_contract_test.c
-	${CC} -o $@ ${CFLAGS} $<
+	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
 
 timerfd_contract_test: timerfd_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
