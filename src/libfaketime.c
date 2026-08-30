@@ -279,19 +279,20 @@ struct utimbuf {
 #include <sys/random.h>
 #endif
 
-/* __timespec64 is needed for clock_gettime64 on 32-bit architectures */
+/* These are glibc-internal ABI types used by the 32-bit time64 wrappers. */
+#ifdef __GLIBC__
 struct __timespec64
 {
   uint64_t tv_sec;         /* Seconds */
   uint32_t tv_nsec;        /* this is 32-bit, apparently! */
 };
 
-/* __timespec64 is needed for clock_gettime64 on 32-bit architectures */
 struct __timeval64
 {
   uint64_t tv_sec;         /* Seconds */
   uint64_t tv_usec;        /* this is 64-bit, apparently! */
 };
+#endif
 
 /*
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
@@ -339,7 +340,9 @@ static int          (*real_ftime)           (struct timeb *);
 #endif
 static int          (*real_gettimeofday)    (struct timeval *, void *);
 static int          (*real_clock_gettime)   (clockid_t clk_id, struct timespec *tp);
+#ifdef __GLIBC__
 static int          (*real_clock_gettime64) (clockid_t clk_id, struct __timespec64 *tp);
+#endif
 #ifdef TIME_UTC
 static int          (*real_timespec_get)    (struct timespec *ts, int base);
 #endif
@@ -3183,7 +3186,8 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
   return result;
 }
 
-/* this is used by 32-bit architectures only */
+#ifdef __GLIBC__
+/* This is used by glibc 32-bit architectures only. */
 int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
 {
   struct timespec tp;
@@ -3201,7 +3205,7 @@ int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
   return result;
 }
 
-/* this is used by 32-bit architectures only */
+/* This is used by glibc 32-bit architectures only. */
 int __gettimeofday64(struct __timeval64 *tv64, void *tz)
 {
   struct timeval tv;
@@ -3213,7 +3217,7 @@ int __gettimeofday64(struct __timeval64 *tv64, void *tz)
   return result;
 }
 
-/* this is used by 32-bit architectures only */
+/* This is used by glibc 32-bit architectures only. */
 uint64_t __time64(uint64_t *write_out)
 {
   struct timespec tp;
@@ -3233,6 +3237,7 @@ uint64_t __time64(uint64_t *write_out)
   }
   return output;
 }
+#endif
 
 #ifdef TIME_UTC
 #ifdef MACOS_DYLD_INTERPOSE
@@ -3663,11 +3668,13 @@ static void ftpl_really_init(void)
   {
     real_clock_gettime  =   dlsym(RTLD_NEXT, "clock_gettime");
   }
+#ifdef __GLIBC__
   real_clock_gettime64 =    dlsym(RTLD_NEXT, "clock_gettime64");
   if (NULL == real_clock_gettime64)
   {
     real_clock_gettime64 =  dlsym(RTLD_NEXT, "__clock_gettime64");
   }
+#endif
 #ifdef FAKE_TIMERS
 #if defined(__sun)
     real_timer_gettime_233 =  dlsym(RTLD_NEXT, "timer_gettime");

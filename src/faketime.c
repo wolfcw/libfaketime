@@ -52,6 +52,12 @@
 #include "android_compat.h"
 #include "faketime_common.h"
 
+#if defined(__SIZEOF_INT128__)
+typedef __int128 faketime_wrapper_wide_t;
+#else
+typedef int64_t faketime_wrapper_wide_t;
+#endif
+
 static const char version[] = "0.9.12";
 
 #if (defined __APPLE__) || (defined __sun)
@@ -338,14 +344,16 @@ int main (int argc, char **argv)
         exit(EXIT_FAILURE);
       }
       long date_seconds;
-      __int128 offset_wide;
+      faketime_wrapper_wide_t offset_wide;
       if (!parse_date_seconds(buf, &date_seconds))
       {
         fprintf(stderr, "faketime: date program returned an invalid timestamp\n");
         exit(EXIT_FAILURE);
       }
-      offset_wide = (__int128)date_seconds - (__int128)time(NULL);
-      if (offset_wide < LONG_MIN || offset_wide > LONG_MAX)
+      offset_wide = (faketime_wrapper_wide_t)date_seconds -
+        (faketime_wrapper_wide_t)time(NULL);
+      if (offset_wide < (faketime_wrapper_wide_t)LONG_MIN ||
+          offset_wide > (faketime_wrapper_wide_t)LONG_MAX)
       {
         fprintf(stderr, "faketime: date timestamp is outside the supported range\n");
         exit(EXIT_FAILURE);

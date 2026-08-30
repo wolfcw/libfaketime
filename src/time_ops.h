@@ -28,7 +28,16 @@
 
 #define SEC_TO_uSEC 1000000
 #define SEC_TO_nSEC 1000000000
-#define FT_TIME_MAX(value) ((__typeof__(value))(((__uint128_t)1 << \
+
+#if defined(__SIZEOF_INT128__)
+#define FT_WIDE_INT __int128
+#define FT_WIDE_UINT __uint128_t
+#else
+#define FT_WIDE_INT int64_t
+#define FT_WIDE_UINT uint64_t
+#endif
+
+#define FT_TIME_MAX(value) ((__typeof__(value))(((FT_WIDE_UINT)1 << \
   (sizeof(value) * CHAR_BIT - 1)) - 1))
 #define FT_TIME_MIN(value) (-FT_TIME_MAX(value) - 1)
 
@@ -43,9 +52,9 @@
 #define timeradd2(a, b, result, prefix)                             \
   do                                                                \
   {                                                                 \
-    __int128 _ft_sec = (__int128)(a)->tv_sec + (__int128)(b)->tv_sec; \
-    __int128 _ft_subsec = (__int128)(a)->tv_##prefix##sec +          \
-      (__int128)(b)->tv_##prefix##sec;                               \
+    FT_WIDE_INT _ft_sec = (FT_WIDE_INT)(a)->tv_sec + (FT_WIDE_INT)(b)->tv_sec; \
+    FT_WIDE_INT _ft_subsec = (FT_WIDE_INT)(a)->tv_##prefix##sec +    \
+      (FT_WIDE_INT)(b)->tv_##prefix##sec;                             \
     if (_ft_subsec >= SEC_TO_##prefix##SEC)                          \
     {                                                                 \
       _ft_sec++;                                                       \
@@ -56,13 +65,13 @@
       _ft_sec--;                                                       \
       _ft_subsec += SEC_TO_##prefix##SEC;                             \
     }                                                                 \
-    if (_ft_sec > (__int128)FT_TIME_MAX((result)->tv_sec))            \
+    if (_ft_sec > (FT_WIDE_INT)FT_TIME_MAX((result)->tv_sec))         \
     {                                                                 \
       errno = EOVERFLOW;                                               \
       (result)->tv_sec = FT_TIME_MAX((result)->tv_sec);                \
       (result)->tv_##prefix##sec = SEC_TO_##prefix##SEC - 1;          \
     }                                                                 \
-    else if (_ft_sec < (__int128)FT_TIME_MIN((result)->tv_sec))       \
+    else if (_ft_sec < (FT_WIDE_INT)FT_TIME_MIN((result)->tv_sec))    \
     {                                                                 \
       errno = EOVERFLOW;                                               \
       (result)->tv_sec = FT_TIME_MIN((result)->tv_sec);                \
@@ -77,9 +86,9 @@
 #define timersub2(a, b, result, prefix)                             \
   do                                                                \
   {                                                                 \
-    __int128 _ft_sec = (__int128)(a)->tv_sec - (__int128)(b)->tv_sec; \
-    __int128 _ft_subsec = (__int128)(a)->tv_##prefix##sec -           \
-      (__int128)(b)->tv_##prefix##sec;                               \
+    FT_WIDE_INT _ft_sec = (FT_WIDE_INT)(a)->tv_sec - (FT_WIDE_INT)(b)->tv_sec; \
+    FT_WIDE_INT _ft_subsec = (FT_WIDE_INT)(a)->tv_##prefix##sec -     \
+      (FT_WIDE_INT)(b)->tv_##prefix##sec;                             \
     if (_ft_subsec < 0)                                               \
     {                                                               \
       _ft_sec--;                                                       \
@@ -90,8 +99,8 @@
       _ft_sec++;                                                       \
       _ft_subsec -= SEC_TO_##prefix##SEC;                             \
     }                                                                 \
-    if (_ft_sec > (__int128)FT_TIME_MAX((result)->tv_sec) ||          \
-        _ft_sec < (__int128)FT_TIME_MIN((result)->tv_sec))            \
+    if (_ft_sec > (FT_WIDE_INT)FT_TIME_MAX((result)->tv_sec) ||       \
+        _ft_sec < (FT_WIDE_INT)FT_TIME_MIN((result)->tv_sec))         \
     {                                                                 \
       errno = EOVERFLOW;                                               \
       (result)->tv_sec = (_ft_sec > 0) ? FT_TIME_MAX((result)->tv_sec) : \
@@ -122,7 +131,7 @@
       errno = EOVERFLOW;                                               \
       _ft_total = (_ft_total < 0) ? _ft_min_total : _ft_max_total;    \
     }                                                                 \
-    __int128 _ft_time = (__int128)_ft_total;                          \
+    FT_WIDE_INT _ft_time = (FT_WIDE_INT)_ft_total;                    \
     (result)->tv_##prefix##sec = _ft_time % SEC_TO_##prefix##SEC;     \
     (result)->tv_sec = (_ft_time - (result)->tv_##prefix##sec) /      \
       SEC_TO_##prefix##SEC;                                           \
