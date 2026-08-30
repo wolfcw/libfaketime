@@ -3237,6 +3237,10 @@ uint64_t __time64(uint64_t *write_out)
   }
   return output;
 }
+
+/* glibc's 32-bit time64 ABI references these symbols with GLIBC_2.34. */
+__asm__(".symver __clock_gettime64, __clock_gettime64@GLIBC_2.34");
+__asm__(".symver __time64, __time64@GLIBC_2.34");
 #endif
 
 #ifdef TIME_UTC
