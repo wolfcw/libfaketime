@@ -51,10 +51,9 @@ echo "==> Running sanitizer baseline in $IMAGE${DOCKER_PLATFORM:+ ($DOCKER_PLATF
 docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$IMAGE" sh -eu -c '
     case "$IMAGE" in
         fedora:*|rockylinux:*)
-            # The Fedora `perl` meta-package pulls in hundreds of optional
-            # modules and documentation packages.  The test suite only needs
-            # the interpreter and its runtime modules, so use the minimal
-            # package to keep Docker setup reliable on current Fedora.
+            # Keep the base toolchain transaction identical to the passing
+            # Fedora baseline.  The sanitizer runtimes are installed below
+            # in a separate transaction.
             fedora_packages_ready() {
                 command -v gcc >/dev/null 2>&1 || return 1
                 command -v make >/dev/null 2>&1 || return 1
@@ -68,12 +67,16 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
                 attempt=1
                 while :; do
                     set +e
-                    dnf -y -q --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
-                        install gcc libasan libubsan make glibc-devel bash perl-interpreter coreutils util-linux file
+                    # Keep this transaction identical to the passing Fedora
+                    # baseline.  In particular, the full `perl` package and
+                    # --allowerasing avoid the dnf5/elfutils status-125 path
+                    # seen with the minimal interpreter package.
+                    dnf -y install --allowerasing \
+                        gcc make glibc-devel bash perl coreutils util-linux file
                     dnf_status=$?
                     set -e
                     if [ "$dnf_status" -eq 0 ]; then
-                        return 0
+                        break
                     fi
                     # Some Fedora base-image/package-manager combinations can
                     # return a failure status after completing the transaction.
@@ -90,6 +93,19 @@ docker run --rm $docker_platform_arg -e "IMAGE=$IMAGE" -v "$REPO_DIR:/src:ro" "$
                     attempt=$((attempt + 1))
                     sleep 1
                 done
+
+                # Keep the sanitizer runtimes out of the compiler transaction.
+                # On current Fedora images, combining them causes dnf5 to exit
+                # with status 125 while replacing the base elfutils packages.
+                set +e
+                dnf -y --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
+                    install libasan libubsan
+                runtime_status=$?
+                set -e
+                if [ "$runtime_status" -ne 0 ] && ! fedora_packages_ready; then
+                    echo "error: Fedora sanitizer runtime installation failed (status $runtime_status)" >&2
+                    return "$runtime_status"
+                fi
             }
             install_fedora_packages
             ;;
