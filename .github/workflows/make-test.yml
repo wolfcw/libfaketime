@@ -2,6 +2,7 @@ name: Run make test
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches:
       - master
@@ -171,3 +172,31 @@ jobs:
       with:
         name: archlinux-baseline-log
         path: archlinux-baseline.log
+
+  linux-architectures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: i386
+          platform: linux/386
+        - name: arm64
+          platform: linux/arm64
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull Debian baseline image
+      run: docker pull --platform "${{ matrix.platform }}" debian:13
+    - name: make test on ${{ matrix.name }} Debian
+      env:
+        DOCKER_PLATFORM: ${{ matrix.platform }}
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh debian:13 2>&1 | tee "debian-${{ matrix.name }}-baseline.log"
+    - name: Upload ${{ matrix.name }} baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: debian-${{ matrix.name }}-baseline-log
+        path: debian-${{ matrix.name }}-baseline.log
