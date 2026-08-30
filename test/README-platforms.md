@@ -32,3 +32,18 @@ one glibc and one musl Linux job. Keep launch timeouts bounded and avoid
 asserting distribution-specific diagnostic text. Runtime integrations that
 need an interpreter, GUI, or proprietary loader remain informational until a
 portable CI fixture is available.
+
+## Optional runtime integrations
+
+For local compatibility investigations, use the same fixed-time probe with
+each runtime rather than comparing human-readable diagnostics:
+
+```sh
+FAKETIME='@2020-06-15 12:00:00' LD_PRELOAD=../src/libfaketime.so.1 \
+  python3 -c 'import time; print(int(time.time()))'
+```
+
+Repeat the probe for Python, Ruby, Perl, Java, and Go where installed. Static
+executables, setuid programs, GUI launchers, Wine/Proton, and seccomp-constrained
+programs remain informational unless a supported loader path and deterministic
+CI fixture are available.
