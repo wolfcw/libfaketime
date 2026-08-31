@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -8,6 +9,8 @@ int main(void)
     printf("time_t_bits=%zu\n", sizeof(time_t) * 8);
     printf("timespec_sec_bits=%zu\n", sizeof(((struct timespec *)0)->tv_sec) * 8);
     printf("off_t_bits=%zu\n", sizeof(off_t) * 8);
+    printf("stat_size=%zu\n", sizeof(struct stat));
+    printf("stat_mtime_bits=%zu\n", sizeof(((struct stat *)0)->st_mtime) * 8);
 
 #ifdef __GLIBC__
     printf("libc=glibc\n");

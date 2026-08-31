@@ -20,7 +20,9 @@ run()
     return 1
   fi
   if grep -q 'pointer_bits=' .abi_info_test.$$ &&
-     grep -q 'time_t_bits=' .abi_info_test.$$; then
+     grep -q 'time_t_bits=' .abi_info_test.$$ &&
+     grep -q 'stat_size=' .abi_info_test.$$ &&
+     grep -q 'stat_mtime_bits=' .abi_info_test.$$; then
     echo "out=1 ABI information probe completed - ok"
   else
     echo "out=0 ABI information probe completed - bad"
