@@ -127,7 +127,7 @@ run_baseline() {
                     printf "phase=%s\\n" "$phase"
                     timeout "${FAKETIME_TEST_PHASE_TIMEOUT:-120}s" "$@"
                 }
-                run_phase package sh -c '\''if command -v dnf >/dev/null 2>&1; then dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils util-linux file; elif command -v zypper >/dev/null 2>&1; then zypper --non-interactive install gcc make glibc-devel bash perl coreutils util-linux file; else yum -y install gcc make glibc-devel bash perl coreutils util-linux file; fi'\''
+                run_phase package sh -c '\''if command -v dnf >/dev/null 2>&1; then dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils findutils util-linux file; elif command -v zypper >/dev/null 2>&1; then zypper --non-interactive install gcc make glibc-devel bash perl coreutils findutils util-linux file; else yum -y install gcc make glibc-devel bash perl coreutils findutils util-linux file; fi'\''
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime
                 cp -a /src/. /tmp/libfaketime/

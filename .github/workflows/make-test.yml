@@ -231,6 +231,27 @@ jobs:
         name: centos-baseline-log
         path: centos-baseline.log
 
+  opensuse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull openSUSE Tumbleweed baseline image
+      run: docker pull opensuse/tumbleweed:latest
+    - name: make test on openSUSE Tumbleweed
+      env:
+        DOCKER_PLATFORM: linux/amd64
+        FAKETIME_TEST_PHASE_TIMEOUT: 120
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh opensuse/tumbleweed:latest 2>&1 | tee opensuse-baseline.log
+    - name: Upload openSUSE baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: opensuse-baseline-log
+        path: opensuse-baseline.log
+
   archlinux:
     runs-on: ubuntu-latest
     timeout-minutes: 20
