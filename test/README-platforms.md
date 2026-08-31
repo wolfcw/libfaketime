@@ -67,6 +67,16 @@ FAKETIME_LOADER_TEST_ITERATIONS=25 FAKETIME_LOADER_TEST_TIMEOUT=10 make TEST_DEM
 The loader suite reports these values together with libc and kernel details so
 old-glibc failures can be compared with current distributions.
 
+The Rust/async compatibility probe is opt-in and bounded. Run it only when a
+Rust toolchain is installed:
+
+```sh
+LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=1 make TEST_DEMO=0 test
+```
+
+The probe distinguishes a runtime clock bypass from a failed or hanging
+libfaketime process; the former is informational.
+
 ## Release checklist
 
 Before treating a change as release-ready, verify:
