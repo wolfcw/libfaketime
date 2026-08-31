@@ -15,6 +15,8 @@ init()
 run()
 {
 	init
+	SHM_STRESS_ITERATIONS=${FAKETIME_SHM_STRESS_ITERATIONS:-25}
+	case "$SHM_STRESS_ITERATIONS" in *[!0-9]*|'') echo "invalid FAKETIME_SHM_STRESS_ITERATIONS"; return 1;; esac
 	run_testcase repeated_shared_state
 	run_testcase fork_exec_inherits_shared_state
 	run_testcase repeated_fork_exec_shared_state
@@ -25,7 +27,7 @@ run()
 repeated_shared_state()
 {
 	typeset iteration actual
-	for iteration in $(range 1 25); do
+	for iteration in $(range 1 "$SHM_STRESS_ITERATIONS"); do
 		actual=$(fakecmd "2020-06-15 12:00:00" perl -MPOSIX -e \
 			'print strftime("%Y-%m-%d", gmtime(time))')
 		if [ "$actual" != "2020-06-15" ]; then
@@ -33,7 +35,7 @@ repeated_shared_state()
 			return 1
 		fi
 	done
-	echo "out=25 repeated shared-state runs completed - ok"
+	echo "out=$SHM_STRESS_ITERATIONS repeated shared-state runs completed - ok"
 	return 0
 }
 
