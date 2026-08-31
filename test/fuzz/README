@@ -1,0 +1,9 @@
+Parser regression seed corpus
+=============================
+
+These inputs are intentionally malformed or boundary-oriented values for
+manual fuzzing of FAKETIME, timestamp-file, and date-output parsers. They are
+kept as plain text so fuzzers and shell-based regression tests can consume the
+same corpus without requiring a particular fuzzing framework.
+
+Use the corpus only with an unprivileged test process and bounded execution.

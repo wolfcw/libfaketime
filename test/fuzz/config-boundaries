@@ -1,0 +1,5 @@
+
+ # indented comment
+%invalid
+FAKETIME=
+FAKETIME=+1d xNaN
