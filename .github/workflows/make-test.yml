@@ -71,7 +71,15 @@ jobs:
       run: make
     - name: make test
       if: ${{ !matrix.sanitizer }}
-      run: make test
+      run: |
+        set -o pipefail
+        make test 2>&1 | tee make-test.log
+    - name: Upload build test log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.compile_flags || 'default' }}-log
+        path: make-test.log
     - name: make test with sanitizers
       if: ${{ matrix.sanitizer }}
       env:
@@ -82,7 +90,14 @@ jobs:
         LDFLAGS: -fsanitize=address,undefined
       run: |
         ASAN_LIB=$(gcc -print-file-name=libasan.so.8)
-        FAKETIME_SANITIZER_LIB="$ASAN_LIB:../src/libfaketime.so.1" make test
+        set -o pipefail
+        FAKETIME_SANITIZER_LIB="$ASAN_LIB:../src/libfaketime.so.1" make test 2>&1 | tee make-test.log
+    - name: Upload sanitizer test log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ matrix.os }}-${{ matrix.compiler }}-sanitizer-log
+        path: make-test.log
 
   musl:
     runs-on: ubuntu-latest
