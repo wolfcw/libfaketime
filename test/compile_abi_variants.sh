@@ -8,6 +8,11 @@ CC=${CC:-cc}
 tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/libfaketime-abi.XXXXXX")
 trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 
+SOURCE_WARNINGS=
+if "$CC" -v 2>&1 | grep -q 'clang version'; then
+    SOURCE_WARNINGS=-Wno-tautological-pointer-compare
+fi
+
 compile_probe()
 {
     name=$1
@@ -24,6 +29,7 @@ if "$CC" -dM -E -include features.h - < /dev/null 2>/dev/null |
         -DFAKE_PTHREAD -DFAKE_STAT -DFAKE_UTIME -DFAKE_SLEEP \
         -DFAKE_TIMERS -DFAKE_INTERNAL_CALLS -D_FILE_OFFSET_BITS=64 \
         -D_TIME_BITS=64 -DFAKETIME_TIME64_BUILD -I../src \
+        $SOURCE_WARNINGS \
         -fsyntax-only ../src/libfaketime.c
 fi
 
