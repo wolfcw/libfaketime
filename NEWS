@@ -1,3 +1,41 @@
+List of changes for v0.9.13 (unreleased)
+=========================================
+
+Since 0.9.12:
+    - Improved macOS arm64/arm64e build and runtime compatibility, including
+      shared-memory lifecycle, clock, wait, configuration, and failure-path
+      regression coverage.
+    - Hardened initialization and cleanup across Linux and macOS, including
+      shared-memory validation, descriptor ownership, loader re-entry, and
+      bounded process/loader tests.
+    - Fixed clock-domain handling for monotonic and realtime waits, timerfd,
+      semaphore, pthread, futex, poll, select, and pselect contracts.
+    - Added glibc 32-bit time64 ABI coverage and improved selection of the
+      appropriate time64 preload library.
+    - Improved configuration and numeric parsing validation, including
+      overflow, embedded NUL, CRLF, comment, and malformed-input cases.
+    - Prevented timestamp-save write failures from wrapping offsets or hanging
+      on short, zero-byte, or interrupted writes.
+    - Fixed deterministic FAKE_RANDOM seed handling for the complete unsigned
+      64-bit seed range and made seeded output independent of loader startup
+      activity.
+    - Expanded filesystem timestamp and ABI probes, including fstatat and
+      symlink metadata behavior, while documenting implementation-dependent
+      contracts.
+    - Added bounded sanitizer, Valgrind, low-resource, loader, concurrency,
+      and optional runtime compatibility checks.
+    - Expanded Linux CI coverage to Debian, Fedora, Rocky Linux, CentOS Stream,
+      openSUSE Tumbleweed, Arch Linux, Alpine/musl, ARM64, and 32-bit/time64
+      variants.
+    - Added CI execution of the documented test snippets and improved failure
+      log collection and release-hygiene checks.
+
+Remaining compatibility investigations for a future release include legacy
+CentOS 7/glibc loader behavior, pthread_cond_clockwait and Tokio hangs,
+Proton/Wine integration, and runtime-specific bypasses involving Go, Python,
+.NET, jemalloc, and Boost.Asio. These are not claimed to be universally
+supported by this release.
+
 List of changes for v0.9.12
 ===========================
 

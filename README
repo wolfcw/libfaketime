@@ -1,10 +1,12 @@
-libfaketime, version 0.9.12 (June 2025)
-=======================================
+libfaketime, version 0.9.13 (unreleased)
+=========================================
 
 ## Continuous integration coverage
 
 The required CI gates cover macOS arm64/arm64e and Linux glibc, musl,
-32-bit/time64, ARM64, Fedora, Debian, Rocky Linux, and Arch Linux.  The
+32-bit/time64, ARM64, Fedora, Debian, Rocky Linux, CentOS Stream, openSUSE,
+and Arch Linux. The documented C snippets are compiled and run in CI,
+including the optional deterministic-random interfaces. The
 sanitizer and container jobs are time-bounded and upload their complete test
 logs when a run fails.  Runtime-specific checks are deliberately optional:
 some language runtimes use vDSO or direct system calls and can bypass
@@ -202,6 +204,10 @@ build artifacts into the checkout. The baseline runner accepts a list of
 locally available images:
 
     test/docker_baseline.sh gcc:13-bookworm debian:13 alpine:3.20
+
+The CI baseline also exercises `quay.io/centos/centos:stream9` and
+`opensuse/tumbleweed:latest` on x86_64 runners. These images may require
+`DOCKER_PLATFORM=linux/amd64` when tested from an ARM64 macOS host.
 
 On an ARM64 macOS host, request the target platform explicitly. The dedicated
 wrapper also checks each image architecture before starting a container:
