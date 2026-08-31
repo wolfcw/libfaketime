@@ -471,6 +471,19 @@ set through any file in the file system by setting the FAKETIME environment vari
 to "%" (a percent sign) and FAKETIME_FOLLOW_FILE to the name of the file whose
 modification timestamp shall be used as source for the "start at" time.
 
+File timestamp hook contract
+----------------------------
+
+`FAKE_FILE_TIMESTAMPS` (also enabled by `FAKE_UTIME`) is an opt-in feature.
+Its tested contract currently covers timestamp-setting calls such as
+`utimensat()` and the timestamp results returned by `stat()` and `lstat()`.
+`fstatat()` remains callable and is tested for successful operation, but its
+result is not promised to carry the same virtual timestamp on every libc:
+Linux libc versions use different `__fxstatat()` and time-width symbol paths,
+while macOS uses a different dyld interposition model. Applications requiring
+this behavior should use `stat()`/`lstat()` until an ABI-specific contract is
+provided.
+
 Usage example:
 
 # create any file with December 24th, 2009, 12:34:56 as timestamp
