@@ -16,6 +16,7 @@ done
 
 sh -n "$SCRIPT_DIR/compile_abi_variants.sh"
 sh -n "$SCRIPT_DIR/clean_build.sh"
+sh -n "$SCRIPT_DIR/release_check.sh"
 
 REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 grep -q 'TEST_DEMO=0 test' "$SCRIPT_DIR/docker_baseline.sh" || {

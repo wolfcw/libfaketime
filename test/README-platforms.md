@@ -98,3 +98,4 @@ Before treating a change as release-ready, verify:
 5. Optional runtime probes are reported separately from mandatory gates.
 6. Parser boundary seeds under `test/fuzz/` have been exercised with bounded
    sanitizer or fuzzing runs, and no generated artifacts are left in the tree.
+7. `test/release_check.sh` passes from a clean checkout.
