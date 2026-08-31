@@ -21,9 +21,10 @@ run()
     if [ "$PLATFORM" = "mac" ]; then
       value=$(DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
         DYLD_FORCE_FLAT_NAMESPACE=1 FAKETIME_NO_CACHE=1 FAKETIME="@2020-06-15 12:00:00" \
-        ./timetest 2>/dev/null)
+        perl -e 'alarm 10; exec @ARGV or exit 127' -- ./timetest 2>/dev/null)
     else
-      value=$(LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+      value=$(timeout 10s env \
+        LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
         FAKETIME_NO_CACHE=1 FAKETIME="@2020-06-15 12:00:00" \
         ./timetest 2>/dev/null)
     fi
