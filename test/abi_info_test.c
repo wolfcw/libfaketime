@@ -3,6 +3,10 @@
 #include <sys/types.h>
 #include <time.h>
 
+#ifndef AT_FDCWD
+#define AT_FDCWD (-100)
+#endif
+
 int main(void)
 {
     printf("pointer_bits=%zu\n", sizeof(void *) * 8);
@@ -11,6 +15,7 @@ int main(void)
     printf("off_t_bits=%zu\n", sizeof(off_t) * 8);
     printf("stat_size=%zu\n", sizeof(struct stat));
     printf("stat_mtime_bits=%zu\n", sizeof(((struct stat *)0)->st_mtime) * 8);
+    printf("fstatat_available=%d\n", AT_FDCWD == -100);
 
 #ifdef __GLIBC__
     printf("libc=glibc\n");
