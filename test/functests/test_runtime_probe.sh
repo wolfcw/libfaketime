@@ -83,5 +83,14 @@ run()
     go[0-9]*) echo "out=$output Go toolchain is available for opt-in runtime investigation - ok" ;;
     *) echo "out=$output Go toolchain probe failed - bad"; return 1 ;;
   esac
+  if command -v java >/dev/null 2>&1; then
+    output=$(java -version 2>&1 | sed -n '1p')
+    case "$output" in
+      *[Jj]ava*) echo "out=$output Java runtime is available for opt-in investigation - ok" ;;
+      *) echo "out=$output Java runtime probe was inconclusive - ok" ;;
+    esac
+  else
+    echo "out=skip Java is unavailable - ok"
+  fi
   return 0
 }
