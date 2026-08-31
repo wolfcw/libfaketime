@@ -14,4 +14,14 @@ for script in "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/functests/*.sh; do
     esac
 done
 
+REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+grep -q 'TEST_DEMO=0 test' "$SCRIPT_DIR/docker_baseline.sh" || {
+    echo "error: Docker baseline must use the bounded functional gate" >&2
+    exit 1
+}
+grep -q '__GLIBC__ ' "$REPO_DIR/src/Makefile" || {
+    echo "error: glibc detection must match the exact macro" >&2
+    exit 1
+}
+
 printf '%s\n' 'CI shell syntax validation passed'
