@@ -56,3 +56,14 @@ demonstrations for local runs via the default `TEST_DEMO=1` setting.
 
 When diagnosing a timeout, record the final `Test Suites summary` first and
 investigate the optional demonstrations separately.
+
+## Release checklist
+
+Before treating a change as release-ready, verify:
+
+1. macOS arm64/arm64e builds and passes the full functional suite.
+2. Current glibc x86_64, Debian i386/time64, ARM64, and Alpine/musl pass the
+   functional suite with bounded completion.
+3. Fedora sanitizer and Valgrind checks complete without resource errors.
+4. ABI probes identify the selected libc and time-width variant.
+5. Optional runtime probes are reported separately from mandatory gates.

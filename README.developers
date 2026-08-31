@@ -71,6 +71,9 @@ DEVELOPMENT, BUILDING, AND TESTING
 - Add tests for new features. Extend test/timetest.c appropriately and
   try to use the functional testing framework wherever possible.
 
+- Keep optional runtime probes informational unless the runtime's loader and
+  clock implementation are known to use the interposed libc functions.
+
 - Compiler and linker warnings are treated as errors and not acceptable.
 
 - If you cannot test the code on both Linux and macOS yourself, please
