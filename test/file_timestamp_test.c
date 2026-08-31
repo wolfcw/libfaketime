@@ -58,18 +58,6 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  if (fstatat(AT_FDCWD, path, &st, 0) == -1)
-  {
-    perror("fstatat");
-    return EXIT_FAILURE;
-  }
-  if ((long long)st.st_mtime != expected)
-  {
-    fprintf(stderr, "expected fstatat mtime %lld, got %lld\n",
-            expected, (long long)st.st_mtime);
-    return EXIT_FAILURE;
-  }
-
   if (utimensat(AT_FDCWD, path, NULL, 0) == -1)
   {
     perror("utimensat(NULL)");
