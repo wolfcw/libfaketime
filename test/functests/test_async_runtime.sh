@@ -20,7 +20,7 @@ run()
     return 0
   fi
 
-  typeset probe="./.libfaketime-rust-probe.$$" output
+  typeset probe="./libfaketime_rust_probe_$$" output
   trap 'rm -f "$probe" "$probe.rs"' 0 1 2 3 15
   cp optional_runtime_probe.rs "$probe.rs"
   if ! rustc "$probe.rs" -o "$probe"; then
