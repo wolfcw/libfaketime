@@ -24,6 +24,8 @@ run()
   typeset timeout_seconds=${FAKETIME_LOADER_TEST_TIMEOUT:-10}
   case "$iterations" in *[!0-9]*|'') echo "invalid FAKETIME_LOADER_TEST_ITERATIONS"; return 1;; esac
   case "$timeout_seconds" in *[!0-9]*|'') echo "invalid FAKETIME_LOADER_TEST_TIMEOUT"; return 1;; esac
+  echo "# LOADER_ITERATIONS=$iterations"
+  echo "# LOADER_TIMEOUT_SECONDS=$timeout_seconds"
 
   i=1
   while [ "$i" -le "$iterations" ]; do
