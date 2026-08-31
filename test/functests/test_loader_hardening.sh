@@ -20,14 +20,21 @@ run()
   init
   typeset i value
 
+  typeset iterations=${FAKETIME_LOADER_TEST_ITERATIONS:-10}
+  typeset timeout_seconds=${FAKETIME_LOADER_TEST_TIMEOUT:-10}
+  case "$iterations" in *[!0-9]*|'') echo "invalid FAKETIME_LOADER_TEST_ITERATIONS"; return 1;; esac
+  case "$timeout_seconds" in *[!0-9]*|'') echo "invalid FAKETIME_LOADER_TEST_TIMEOUT"; return 1;; esac
+
   i=1
-  while [ "$i" -le 10 ]; do
+  while [ "$i" -le "$iterations" ]; do
     if [ "$PLATFORM" = "mac" ]; then
       value=$(DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
         DYLD_FORCE_FLAT_NAMESPACE=1 FAKETIME_NO_CACHE=1 FAKETIME="@2020-06-15 12:00:00" \
-        perl -e 'alarm 10; exec @ARGV or exit 127' -- ./timetest 2>/dev/null)
+        FAKETIME_LOADER_TEST_TIMEOUT="$timeout_seconds" perl \
+          -e 'alarm $ENV{FAKETIME_LOADER_TEST_TIMEOUT}; exec @ARGV or exit 127' \
+          -- ./timetest 2>/dev/null)
     else
-      value=$(timeout 10s env \
+      value=$(timeout "${timeout_seconds}s" env \
         LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
         FAKETIME_NO_CACHE=1 FAKETIME="@2020-06-15 12:00:00" \
         ./timetest 2>/dev/null)
@@ -41,7 +48,7 @@ run()
     esac
     i=$((i + 1))
   done
-  echo "out=10 repeated loader initialization runs completed - ok"
+  echo "out=$iterations repeated loader initialization runs completed - ok"
 
   echo "out=1 fork/exec and constructor re-entry are covered by lifecycle tests - ok"
 }
