@@ -16,7 +16,9 @@ run()
 {
 	init
 	SHM_STRESS_ITERATIONS=${FAKETIME_SHM_STRESS_ITERATIONS:-25}
+	SHM_FORK_ITERATIONS=${FAKETIME_SHM_FORK_ITERATIONS:-5}
 	case "$SHM_STRESS_ITERATIONS" in *[!0-9]*|'') echo "invalid FAKETIME_SHM_STRESS_ITERATIONS"; return 1;; esac
+	case "$SHM_FORK_ITERATIONS" in *[!0-9]*|'') echo "invalid FAKETIME_SHM_FORK_ITERATIONS"; return 1;; esac
 	run_testcase repeated_shared_state
 	run_testcase fork_exec_inherits_shared_state
 	run_testcase repeated_fork_exec_shared_state
@@ -51,7 +53,7 @@ fork_exec_inherits_shared_state()
 repeated_fork_exec_shared_state()
 {
 	typeset iteration actual
-	for iteration in $(range 1 5); do
+	for iteration in $(range 1 "$SHM_FORK_ITERATIONS"); do
 		actual=$(fakecmd "2020-06-15 12:00:00" perl -MPOSIX -e \
 			'my $pid = fork(); die "fork failed\\n" unless defined $pid; if (!$pid) { exec("perl", "-MPOSIX", "-e", q{print strftime("%Y", gmtime(time))}) or die "exec failed\\n"; } waitpid($pid, 0);')
 		if [ "$actual" != "2020" ]; then
@@ -59,7 +61,7 @@ repeated_fork_exec_shared_state()
 			return 1
 		fi
 	done
-	echo "out=5 repeated fork/exec shared-state runs completed - ok"
+	echo "out=$SHM_FORK_ITERATIONS repeated fork/exec shared-state runs completed - ok"
 	return 0
 }
 
