@@ -22,6 +22,26 @@ CentOS 7/RHEL-compatible, language-runtime, GUI, and Proton/Wine checks are
 optional integration investigations. They must be time-bounded and include a
 minimal reproducer before becoming release gates.
 
+## Legacy loader investigation
+
+Issues [#438](https://github.com/wolfcw/libfaketime/issues/438),
+[#520](https://github.com/wolfcw/libfaketime/issues/520), and
+[#521](https://github.com/wolfcw/libfaketime/issues/521) concern older glibc
+loaders and pthread implementations. Reproduce them only in a disposable
+CentOS 7/RHEL-compatible environment and record the loader, glibc, kernel,
+architecture, preload order, and selected monotonic workaround. Use bounded
+settings such as:
+
+```sh
+FAKETIME_LOADER_TEST_ITERATIONS=3 \
+FAKETIME_LOADER_TEST_TIMEOUT=10 \
+make TEST_DEMO=0 test
+```
+
+An observed timeout is a diagnostic result, not a reason to enable a legacy
+workaround globally. Compare shared-memory and `FAKETIME_DISABLE_SHM=1` runs
+before changing the production initialization path.
+
 ## Runtime integration policy
 
 Every supported build must pass the native functional suite with the preload
