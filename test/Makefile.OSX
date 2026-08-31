@@ -1,6 +1,6 @@
 CC ?= clang
 
-CFLAGS += -std=gnu99 -Wall -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
+CFLAGS += -std=gnu99 -Wall -Wextra -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
 TEST_DEMO ?= 1
 
 SRC = timetest.c
