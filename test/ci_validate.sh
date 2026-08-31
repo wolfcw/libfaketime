@@ -34,5 +34,11 @@ grep -q -- '-Werror' "$SCRIPT_DIR/Makefile" || {
     echo "error: Linux test builds must treat warnings as errors" >&2
     exit 1
 }
+for seed in "$SCRIPT_DIR"/fuzz/*-boundaries; do
+    [ -s "$seed" ] || {
+        echo "error: parser seed is empty: $seed" >&2
+        exit 1
+    }
+done
 
 printf '%s\n' 'CI shell syntax validation passed'
