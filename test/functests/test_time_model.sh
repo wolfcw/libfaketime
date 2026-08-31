@@ -18,6 +18,33 @@ run()
     'fixed timestamp preserves configured local conversion'
   check_timezone UTC '2020-06-15 12:00:00 0' \
     'fixed timestamp preserves UTC conversion'
+  check_dst Europe/Berlin '@2020-01-15 12:00:00' 0 \
+    'winter timestamp reports standard time'
+  check_dst Europe/Berlin '@2020-07-15 12:00:00' 1 \
+    'summer timestamp reports daylight time'
+}
+
+check_dst()
+{
+  typeset zone="$1" timestamp="$2" expected="$3" description="$4" output
+  if [ "$PLATFORM" = "mac" ]; then
+    output=$(TZ="$zone" DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
+      DYLD_FORCE_FLAT_NAMESPACE=1 FAKETIME="$timestamp" \
+      ./timezone_contract_test 2>/dev/null)
+  else
+    output=$(TZ="$zone" FAKETIME="$timestamp" \
+      LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+      ./timezone_contract_test 2>/dev/null)
+  fi
+  case "$output" in
+    *" $expected")
+      echo "out=$output $description - ok"
+      ;;
+    *)
+      echo "out=$output $description - bad"
+      return 1
+      ;;
+  esac
 }
 
 check_timezone()
