@@ -113,6 +113,15 @@ Proton/Wine checks are also opt-in and must be run with a disposable prefix,
 an explicit timeout, and a minimal reproducer. They are not release gates
 until a deterministic fixture is available.
 
+## Time-model issue disposition
+
+Timezone and semantic reports such as #385, #444, #461, #410, #393, #414,
+and #470 should not be addressed by changing parsing or clock conversion
+implicitly. Before implementation, specify the expected behavior for UTC
+offsets, DST transitions, combined relative spans, TAI/leap seconds, QEMU
+guests, and shell variables. Add a cross-platform contract test first; retain
+the current behavior for cases without a stable Linux/macOS contract.
+
 ## Release checklist
 
 Before treating a change as release-ready, verify:
