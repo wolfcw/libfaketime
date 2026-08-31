@@ -22,6 +22,8 @@ run()
     'winter timestamp reports standard time'
   check_dst Europe/Berlin '@2020-07-15 12:00:00' 1 \
     'summer timestamp reports daylight time'
+  check_dst UTC '@1970-01-01 00:00:00' 0 \
+    'epoch timestamp remains representable in UTC'
 }
 
 check_dst()
