@@ -57,6 +57,16 @@ demonstrations for local runs via the default `TEST_DEMO=1` setting.
 When diagnosing a timeout, record the final `Test Suites summary` first and
 investigate the optional demonstrations separately.
 
+For legacy loader investigations, increase or reduce the bounded repetition
+without changing the production library:
+
+```sh
+FAKETIME_LOADER_TEST_ITERATIONS=25 FAKETIME_LOADER_TEST_TIMEOUT=10 make TEST_DEMO=0 test
+```
+
+The loader suite reports these values together with libc and kernel details so
+old-glibc failures can be compared with current distributions.
+
 ## Release checklist
 
 Before treating a change as release-ready, verify:
