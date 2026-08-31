@@ -1438,6 +1438,7 @@ static bool write_all(int fd, const void *buffer, size_t count)
 {
   const char *bytes = buffer;
   size_t written_total = 0;
+  unsigned int interrupted = 0;
 
   while (written_total < count)
   {
@@ -1445,9 +1446,17 @@ static bool write_all(int fd, const void *buffer, size_t count)
     if (written < 0)
     {
       if (errno == EINTR)
+      {
+        if (++interrupted >= 1000)
+        {
+          errno = EINTR;
+          return false;
+        }
         continue;
+      }
       return false;
     }
+    interrupted = 0;
     if (written == 0)
     {
       errno = EIO;
