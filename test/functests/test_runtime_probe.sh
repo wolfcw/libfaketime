@@ -36,6 +36,25 @@ run()
     return 1
   fi
 
+  if command -v perl >/dev/null 2>&1; then
+    if [ "$PLATFORM" = "mac" ]; then
+      output=$(TZ=UTC DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
+        DYLD_FORCE_FLAT_NAMESPACE=1 FAKETIME='@2020-06-15 12:00:00' \
+        perl -MPOSIX -e 'print strftime("%Y", gmtime(time))' 2>/dev/null)
+    else
+      output=$(TZ=UTC FAKETIME='@2020-06-15 12:00:00' \
+        LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+        perl -MPOSIX -e 'print strftime("%Y", gmtime(time))' 2>/dev/null)
+    fi
+    if [ "$output" != 2020 ]; then
+      echo "out=$output Perl runtime did not observe the faked clock - bad"
+      return 1
+    fi
+    echo "out=2020 Perl runtime observes the faked clock - ok"
+  else
+    echo "out=skip Perl is unavailable - ok"
+  fi
+
   if ! command -v ruby >/dev/null 2>&1; then
     echo "out=skip Ruby is unavailable - ok"
     return 0
