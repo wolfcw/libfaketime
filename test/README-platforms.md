@@ -47,3 +47,12 @@ Repeat the probe for Python, Ruby, Perl, Java, and Go where installed. Static
 executables, setuid programs, GUI launchers, Wine/Proton, and seccomp-constrained
 programs remain informational unless a supported loader path and deterministic
 CI fixture are available.
+
+## CI timing demonstrations
+
+The Docker baseline invokes the functional suite with `TEST_DEMO=0`. This keeps
+the release gate bounded while retaining the longer `test.sh` and `test_OSX.sh`
+demonstrations for local runs via the default `TEST_DEMO=1` setting.
+
+When diagnosing a timeout, record the final `Test Suites summary` first and
+investigate the optional demonstrations separately.

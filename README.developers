@@ -77,6 +77,10 @@ DEVELOPMENT, BUILDING, AND TESTING
   let us know and consider wrapping your code in #ifdef / #ifndef __APPLE__
   statements.
 
+- Keep platform probes and ABI-specific code paths explicit. In particular,
+  test glibc time32/time64, musl, and macOS independently; do not infer libc
+  support from an empty preprocessor translation unit.
+
 
 DOCUMENTATION
 =============
