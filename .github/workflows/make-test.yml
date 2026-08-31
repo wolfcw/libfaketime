@@ -211,6 +211,27 @@ jobs:
         name: rocky-baseline-log
         path: rocky-baseline.log
 
+  centos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - name: Pull CentOS Stream baseline image
+      run: docker pull centos:stream9
+    - name: make test on CentOS Stream
+      env:
+        DOCKER_PLATFORM: linux/amd64
+        FAKETIME_TEST_PHASE_TIMEOUT: 120
+      run: |
+        set -o pipefail
+        test/docker_baseline.sh centos:stream9 2>&1 | tee centos-baseline.log
+    - name: Upload CentOS baseline log
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: centos-baseline-log
+        path: centos-baseline.log
+
   archlinux:
     runs-on: ubuntu-latest
     timeout-minutes: 20
