@@ -1,11 +1,29 @@
+#define _XOPEN_SOURCE 700
+
 #include <errno.h>
 #include <fcntl.h>
+#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+#include <string.h>
 #include <unistd.h>
+
+static const char *walk_target;
+static int walk_seen;
+
+static int walk_callback(const char *path, const struct stat *st,
+                         int type, struct FTW *state)
+{
+  (void)st;
+  (void)type;
+  (void)state;
+  if (strcmp(path, walk_target) == 0)
+    walk_seen = 1;
+  return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -81,6 +99,14 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
   unlink(link_path);
+
+  walk_target = ".";
+  walk_seen = 0;
+  if (nftw(".", walk_callback, 16, FTW_PHYS) == -1 || !walk_seen)
+  {
+    perror("nftw");
+    return EXIT_FAILURE;
+  }
 
   if (utimensat(AT_FDCWD, path, NULL, 0) == -1)
   {
