@@ -66,14 +66,11 @@ jobs:
       if: ${{ !matrix.sanitizer }}
       working-directory: test
       run: ./compile_abi_variants.sh
-    - name: make
-      if: ${{ !matrix.sanitizer }}
-      run: make
-    - name: make test
+    - name: clean build and bounded test
       if: ${{ !matrix.sanitizer }}
       run: |
         set -o pipefail
-        make test 2>&1 | tee make-test.log
+        ./test/clean_build.sh 2>&1 | tee make-test.log
     - name: Upload build test log
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
