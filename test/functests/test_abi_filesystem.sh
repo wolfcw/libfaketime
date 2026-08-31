@@ -32,6 +32,13 @@ run()
      grep -q '^time_t_bits=32$' .abi_info_test.$$; then
     time64_lib="../src/libfaketime-time64.so.1"
   fi
+  echo "out=$time64_lib selected time64 preload for ABI"
+  if [ "$time64_lib" != "../src/libfaketime.so.1" ] &&
+     [ ! -f "$time64_lib" ]; then
+    echo "out=0 selected time64 preload is missing - bad"
+    rm -f .abi_info_test.$$
+    return 1
+  fi
   rm -f .abi_info_test.$$
 
   if ./shm_layout_test >/dev/null; then
