@@ -13,6 +13,11 @@ clock, configuration, process, and lifecycle contracts.
 | Fedora x86_64 | sanitizer image | ASan/UBSan, sanitizer-first preload ordering |
 | Linux x86_64 | Valgrind runner | resource ownership and leak checks |
 
+Filesystem ABI probes must be interpreted together with the reported
+`time_t_bits`, `timespec_sec_bits`, `stat_size`, and libc values. A successful
+compile alone does not establish that a particular `stat64` or `__fxstatat`
+symbol is available at runtime.
+
 CentOS 7/RHEL-compatible, language-runtime, GUI, and Proton/Wine checks are
 optional integration investigations. They must be time-bounded and include a
 minimal reproducer before becoming release gates.
