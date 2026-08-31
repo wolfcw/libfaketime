@@ -127,8 +127,7 @@ jobs:
       env:
         FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID"
       run: |
-        make -C test run_clock_gettime run_clock_gettime_heap run_getpid run_time
-        (cd test && ./test_variable_data.sh clock_gettime clock_gettime_heap getpid time)
+        make -C test snippets
 
   debian:
     runs-on: ubuntu-latest
