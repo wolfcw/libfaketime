@@ -1,6 +1,7 @@
 CC ?= clang
 
 CFLAGS += -std=gnu99 -Wall -DFAKE_STAT $(FAKETIME_COMPILE_CFLAGS)
+TEST_DEMO ?= 1
 
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
@@ -73,7 +74,7 @@ test: timetest abi_info_test shm_layout_test time_ops_test clock_consistency_tes
 	@echo
 	@./abi_info_test
 	@./time_ops_test
-	@./test_OSX.sh
+	@if [ "$(TEST_DEMO)" != 0 ]; then ./test_OSX.sh; fi
 
 # run functional tests
 functest:

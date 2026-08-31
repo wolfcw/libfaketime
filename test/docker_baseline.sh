@@ -73,7 +73,7 @@ run_baseline() {
                 printf "container=%s\\n" "$(cat /etc/alpine-release)"
                 printf "kernel="
                 uname -a
-                timeout 180s make test
+                timeout 180s make TEST_DEMO=0 test
             '
             ;;
         archlinux:*)
@@ -95,7 +95,7 @@ run_baseline() {
                 printf "container=%s %s\\n" "$NAME" "$VERSION_ID"
                 printf "kernel="
                 uname -a
-                timeout 180s make test
+                timeout 180s make TEST_DEMO=0 test
             '
             ;;
         debian:*|ubuntu:*|gcc:*)
@@ -115,7 +115,7 @@ run_baseline() {
                 printf "container=%s %s\\n" "$NAME" "$VERSION_ID"
                 printf "kernel="
                 uname -a
-                timeout 180s make test
+                timeout 180s make TEST_DEMO=0 test
             '
             ;;
         fedora:*|rockylinux:*|centos:*|opensuse/tumbleweed:*)
@@ -154,7 +154,7 @@ run_baseline() {
                 readelf -Ws src/libfaketime.so.1 | grep sem_clockwait
                 run_phase semaphore env FAKETIME_SEM_TEST_VERBOSE=1 FAKETIME=+0 \
                     LD_PRELOAD="$PWD/src/libfaketime.so.1" ./test/sem_contract_test
-                run_phase full-suite make test
+                run_phase full-suite make TEST_DEMO=0 test
             '
             ;;
         *)

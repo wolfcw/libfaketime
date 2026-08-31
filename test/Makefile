@@ -2,6 +2,7 @@ CC = gcc
 
 CFLAGS += -std=gnu99 -Wall -DFAKE_STAT -Werror -Wextra $(FAKETIME_COMPILE_CFLAGS) -U_FILE_OFFSET_BITS -U_TIME_BITS
 LDFLAGS += -lrt -lpthread
+TEST_DEMO ?= 1
 
 SRC = timetest.c
 OBJ = ${SRC:.c=.o}
@@ -127,7 +128,7 @@ test: timetest abi_info_test shm_layout_test time64_contract_test time_ops_test 
 	@./abi_info_test
 	@./time64_contract_test
 	@./time_ops_test
-	@./test.sh
+	@if [ "$(TEST_DEMO)" != 0 ]; then ./test.sh; fi
 
 # run functional tests
 functest:
