@@ -31,6 +31,7 @@ run()
 		run_testcase tolerates_constructor_reentry
 	fi
 	run_testcase save_file_failure_does_not_hang
+	run_testcase save_file_directory_is_rejected
 	rm -f "$LOAD_FILE"
 }
 
@@ -254,5 +255,24 @@ save_file_failure_does_not_hang()
 		return 1
 	fi
 	echo "out=$status timestamp save failure completed without hanging - ok"
+	return 0
+}
+
+save_file_directory_is_rejected()
+{
+	if [ "$PLATFORM" != "linuxlike" ]; then
+		echo "out=skip directory save-file rejection is Linux-only - ok"
+		return 0
+	fi
+
+	typeset status
+	timeout 2s env FAKETIME="+0" FAKETIME_SAVE_FILE=. \
+		LD_PRELOAD=../src/libfaketime.so.1 date +%s >/dev/null 2>&1
+	status=$?
+	if [ "$status" -eq 124 ] || [ "$status" -eq 0 ]; then
+		echo "out=$status directory save file was not rejected promptly - bad"
+		return 1
+	fi
+	echo "out=$status directory save file was rejected promptly - ok"
 	return 0
 }
