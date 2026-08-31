@@ -54,5 +54,15 @@ run()
     return 0
   fi
   echo "out=$output Ruby runtime bypasses the preload clock path - ok"
+
+  if ! command -v go >/dev/null 2>&1; then
+    echo "out=skip Go is unavailable - ok"
+    return 0
+  fi
+  output=$(go env GOVERSION 2>/dev/null || echo unknown)
+  case "$output" in
+    go[0-9]*) echo "out=$output Go toolchain is available for opt-in runtime investigation - ok" ;;
+    *) echo "out=$output Go toolchain probe failed - bad"; return 1 ;;
+  esac
   return 0
 }
