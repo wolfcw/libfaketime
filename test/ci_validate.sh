@@ -14,6 +14,8 @@ for script in "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/functests/*.sh; do
     esac
 done
 
+sh -n "$SCRIPT_DIR/compile_abi_variants.sh"
+
 REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 grep -q 'TEST_DEMO=0 test' "$SCRIPT_DIR/docker_baseline.sh" || {
     echo "error: Docker baseline must use the bounded functional gate" >&2

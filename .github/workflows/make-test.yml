@@ -62,6 +62,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Validate test harness syntax
       run: ./test/ci_validate.sh
+    - name: Compile ABI variants
+      if: ${{ !matrix.sanitizer }}
+      working-directory: test
+      run: ./compile_abi_variants.sh
     - name: make
       if: ${{ !matrix.sanitizer }}
       run: make
