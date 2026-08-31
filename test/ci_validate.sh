@@ -25,5 +25,13 @@ grep -q '__GLIBC__ ' "$REPO_DIR/src/Makefile" || {
     echo "error: glibc detection must match the exact macro" >&2
     exit 1
 }
+grep -q -- '-Wall' "$SCRIPT_DIR/Makefile" || {
+    echo "error: test builds must enable compiler warnings" >&2
+    exit 1
+}
+grep -q -- '-Werror' "$SCRIPT_DIR/Makefile" || {
+    echo "error: Linux test builds must treat warnings as errors" >&2
+    exit 1
+}
 
 printf '%s\n' 'CI shell syntax validation passed'
