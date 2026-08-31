@@ -1,5 +1,5 @@
-List of changes for v0.9.13 (unreleased)
-=========================================
+List of changes for v0.9.13 (August 2026)
+==========================================
 
 Since 0.9.12:
     - Improved macOS arm64/arm64e build and runtime compatibility, including
