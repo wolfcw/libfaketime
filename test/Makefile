@@ -10,7 +10,7 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
-ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test timezone_contract_test
+ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test emfile_clock_test timezone_contract_test
 
 TIME64_CFLAGS = -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64
 IS_GLIBC := $(shell if $(CC) -dM -E -include features.h - < /dev/null 2>/dev/null | grep -q '^#define __GLIBC__ '; then echo 1; else echo 0; fi)
@@ -78,6 +78,9 @@ fd_leak_test: fd_leak_test.c
 fd_liveness_test: fd_liveness_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
+emfile_clock_test: emfile_clock_test.c
+	${CC} -o $@ ${CFLAGS} $<
+
 timezone_contract_test: timezone_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
@@ -126,7 +129,7 @@ syscall_contract_test: syscall_contract_test.c
 futex_contract_test: futex_contract_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest abi_info_test shm_layout_test time64_contract_test time_ops_test clock_consistency_test set_mtime clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test timezone_contract_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} ${FUTEX_TEST_DEP} functest
+test: timetest abi_info_test shm_layout_test time64_contract_test time_ops_test clock_consistency_test set_mtime clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test emfile_clock_test timezone_contract_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} ${FUTEX_TEST_DEP} functest
 	@echo
 	@./abi_info_test
 	@./time64_contract_test
@@ -176,7 +179,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest shm_layout_test abi_info_test time64_contract_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test timezone_contract_test futex_contract_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test abi_info_test time64_contract_test set_mtime time_ops_test clock_consistency_test clock_error_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test emfile_clock_test timezone_contract_test futex_contract_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo

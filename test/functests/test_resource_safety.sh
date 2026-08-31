@@ -39,4 +39,17 @@ run()
     echo "out=$status sentinel descriptor remains valid during clock calls - bad"
     return 1
   fi
+
+  if FAKETIME=+0 LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+    ./emfile_clock_test; then
+    echo "out=1 clock calls remain safe under EMFILE - ok"
+  else
+    status=$?
+    if [ "$status" -eq 77 ]; then
+      echo "out=skip RLIMIT_NOFILE is unavailable - ok"
+    else
+      echo "out=$status clock calls remain safe under EMFILE - bad"
+      return 1
+    fi
+  fi
 }
