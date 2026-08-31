@@ -1,6 +1,22 @@
 libfaketime, version 0.9.12 (June 2025)
 =======================================
 
+## Continuous integration coverage
+
+The required CI gates cover macOS arm64/arm64e and Linux glibc, musl,
+32-bit/time64, ARM64, Fedora, Debian, Rocky Linux, and Arch Linux.  The
+sanitizer and container jobs are time-bounded and upload their complete test
+logs when a run fails.  Runtime-specific checks are deliberately optional:
+some language runtimes use vDSO or direct system calls and can bypass
+`LD_PRELOAD`/dyld interposition.  Such a bypass is reported as a compatibility
+limitation rather than treated as proof of a core libfaketime failure.
+
+For a local bounded Linux run, use `test/docker_baseline.sh` with a compatible
+image, for example `gcc:13-bookworm`.  Set `DOCKER_PLATFORM=linux/amd64` when
+the image architecture must be selected explicitly.  Set
+`LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=1` only when the optional Rust runtime
+probe and its toolchain are available.
+
 
 Content of this file:
 ---------------------
