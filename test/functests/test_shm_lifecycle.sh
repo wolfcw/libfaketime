@@ -17,6 +17,7 @@ run()
 	init
 	run_testcase repeated_shared_state
 	run_testcase fork_exec_inherits_shared_state
+	run_testcase repeated_fork_exec_shared_state
 	run_testcase recreates_stale_shared_state
 	run_testcase save_and_load_resources
 }
@@ -24,7 +25,7 @@ run()
 repeated_shared_state()
 {
 	typeset iteration actual
-	for iteration in $(range 1 10); do
+	for iteration in $(range 1 25); do
 		actual=$(fakecmd "2020-06-15 12:00:00" perl -MPOSIX -e \
 			'print strftime("%Y-%m-%d", gmtime(time))')
 		if [ "$actual" != "2020-06-15" ]; then
@@ -32,7 +33,7 @@ repeated_shared_state()
 			return 1
 		fi
 	done
-	echo "out=10 repeated shared-state runs completed - ok"
+	echo "out=25 repeated shared-state runs completed - ok"
 	return 0
 }
 
@@ -43,6 +44,21 @@ fork_exec_inherits_shared_state()
 		'my $pid = fork(); die "fork failed\\n" unless defined $pid; if (!$pid) { exec("perl", "-MPOSIX", "-e", q{print strftime("%Y", gmtime(time))}) or die "exec failed\\n"; } waitpid($pid, 0);')
 	asserteq "$actual" "2020" \
 		"forked and execed child should inherit shared state"
+}
+
+repeated_fork_exec_shared_state()
+{
+	typeset iteration actual
+	for iteration in $(range 1 5); do
+		actual=$(fakecmd "2020-06-15 12:00:00" perl -MPOSIX -e \
+			'my $pid = fork(); die "fork failed\\n" unless defined $pid; if (!$pid) { exec("perl", "-MPOSIX", "-e", q{print strftime("%Y", gmtime(time))}) or die "exec failed\\n"; } waitpid($pid, 0);')
+		if [ "$actual" != "2020" ]; then
+			echo "out=$actual repeated fork/exec shared-state run $iteration - bad"
+			return 1
+		fi
+	done
+	echo "out=5 repeated fork/exec shared-state runs completed - ok"
+	return 0
 }
 
 recreates_stale_shared_state()
