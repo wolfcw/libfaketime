@@ -37,7 +37,8 @@ run()
   fi
   case "$output" in
     1592222400) echo "out=2020 Rust runtime observes the faked clock - ok" ;;
-    '') echo "out=1 Rust runtime probe produced no result - bad"; return 1 ;;
+    '') rm -f "$probe" "$probe.rs"; echo "out=1 Rust runtime probe produced no result - bad"; return 1 ;;
     *) echo "out=$output Rust runtime bypasses the preload clock path - ok" ;;
   esac
+  rm -f "$probe" "$probe.rs"
 }
