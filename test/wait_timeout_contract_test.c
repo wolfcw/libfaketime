@@ -35,6 +35,11 @@ int main(void)
     fprintf(stderr, "poll elapsed %lld ns outside expected range\n", elapsed);
     return EXIT_FAILURE;
   }
+  if (poll(NULL, 0, 0) != 0 || errno != 0)
+  {
+    perror("zero poll");
+    return EXIT_FAILURE;
+  }
   puts("positive poll timeout was preserved");
   return EXIT_SUCCESS;
 }
