@@ -12,6 +12,7 @@ int main(int argc, char **argv)
   const char *path;
   struct timespec times[2] = {{1000, 0}, {1000, 0}};
   struct stat st;
+  char link_path[4096];
   char *end;
   long long expected;
   int fd;
@@ -65,6 +66,21 @@ int main(int argc, char **argv)
     perror("fstatat");
     return EXIT_FAILURE;
   }
+
+  if (snprintf(link_path, sizeof(link_path), "%s.link", path) >=
+      (int)sizeof(link_path) || symlink(path, link_path) == -1)
+  {
+    perror("symlink");
+    return EXIT_FAILURE;
+  }
+  if (fstatat(AT_FDCWD, link_path, &st, AT_SYMLINK_NOFOLLOW) == -1 ||
+      !S_ISLNK(st.st_mode))
+  {
+    perror("fstatat(AT_SYMLINK_NOFOLLOW)");
+    unlink(link_path);
+    return EXIT_FAILURE;
+  }
+  unlink(link_path);
 
   if (utimensat(AT_FDCWD, path, NULL, 0) == -1)
   {
