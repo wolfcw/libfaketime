@@ -82,6 +82,10 @@ LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=1 make TEST_DEMO=0 test
 The probe distinguishes a runtime clock bypass from a failed or hanging
 libfaketime process; the former is informational.
 
+Proton/Wine checks are also opt-in and must be run with a disposable prefix,
+an explicit timeout, and a minimal reproducer. They are not release gates
+until a deterministic fixture is available.
+
 ## Release checklist
 
 Before treating a change as release-ready, verify:
