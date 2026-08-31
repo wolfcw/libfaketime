@@ -22,7 +22,7 @@ run()
 
   typeset probe="./.libfaketime-rust-probe.$$" output
   trap 'rm -f "$probe" "$probe.rs"' 0 1 2 3 15
-  cp ../optional_runtime_probe.rs "$probe.rs"
+  cp optional_runtime_probe.rs "$probe.rs"
   if ! rustc "$probe.rs" -o "$probe"; then
     echo "out=1 Rust probe compilation failed - bad"
     return 1
