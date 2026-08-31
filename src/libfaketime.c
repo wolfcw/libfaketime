@@ -5419,11 +5419,10 @@ int adjtime (const struct timeval *delta, struct timeval *olddelta)
 
   adapted to take the seed s as a parameter and return only a byte
 */
-inline static uint32_t fakerandom_msws(uint64_t s) {
-   static uint64_t x = 0, w = 0;
-   x *= x; x += (w += s);
-   x = (x>>32) | (x<<32);
-   return (char) x & 0xFF;
+inline static uint8_t fakerandom_msws(uint64_t *x, uint64_t *w, uint64_t s) {
+   *x *= *x; *x += (*w += s);
+   *x = (*x>>32) | (*x<<32);
+   return (uint8_t) (*x & 0xFF);
 }
 
 /* return 0 if no FAKERANDOM_SEED was seen */
@@ -5438,16 +5437,20 @@ static int bypass_randomness(void* buf, size_t buflen) {
       return 0;
     }
     char *end;
-    long long int seed;
+    unsigned long long int seed;
     errno = 0;
-    seed = strtoll(seedstring, &end, 0);
+    seed = strtoull(seedstring, &end, 0);
     if (seedstring == end || *end != '\0' || errno == ERANGE)
     {
       errno = EINVAL;
       return 0;
     }
+    /* Keep the deterministic stream local to this request.  Process-global
+       state is affected by loader and libc startup calls and is also racy
+       when multiple threads request random data concurrently. */
+    uint64_t x = 0, w = 0;
     for (size_t i = 0; i < buflen; i++) {
-      b[i] = fakerandom_msws(seed);
+      b[i] = fakerandom_msws(&x, &w, (uint64_t) seed);
     }
     return 1;
   }
