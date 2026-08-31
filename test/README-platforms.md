@@ -60,6 +60,13 @@ portable CI fixture is available.
 
 ## Optional runtime integrations
 
+The open reports for Tokio (#545), Proton/Wine (#544), .NET (#492), jemalloc
+(#478), Python (#430), Boost.Asio (#431), and Go (#474, #481) must first be
+reduced to a small dynamically linked process. Capture whether the runtime
+uses vDSO, direct system calls, a dynamically loaded libc, or a different
+clock domain. A runtime that bypasses interposition is a compatibility
+limitation, not evidence that the core clock hooks are incorrect.
+
 For local compatibility investigations, use the same fixed-time probe with
 each runtime rather than comparing human-readable diagnostics:
 
