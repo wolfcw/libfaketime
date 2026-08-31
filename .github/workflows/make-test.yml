@@ -60,6 +60,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Run release hygiene checks
+      run: ./test/release_check.sh
     - name: Validate test harness syntax
       run: ./test/ci_validate.sh
     - name: Compile ABI variants
