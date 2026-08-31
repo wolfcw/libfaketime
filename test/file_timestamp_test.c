@@ -58,6 +58,14 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
+  /* fstatat() must remain usable, but is not part of this opt-in timestamp
+   * contract because its libc symbol path differs between platforms. */
+  if (fstatat(AT_FDCWD, path, &st, 0) == -1)
+  {
+    perror("fstatat");
+    return EXIT_FAILURE;
+  }
+
   if (utimensat(AT_FDCWD, path, NULL, 0) == -1)
   {
     perror("utimensat(NULL)");
