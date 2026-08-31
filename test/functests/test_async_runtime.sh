@@ -21,6 +21,9 @@ run()
   fi
 
   typeset probe="./libfaketime_rust_probe_$$" output
+  typeset timeout_seconds=${FAKETIME_ASYNC_TEST_TIMEOUT:-10}
+  case "$timeout_seconds" in *[!0-9]*|'') echo "invalid FAKETIME_ASYNC_TEST_TIMEOUT"; return 1;; esac
+  echo "# ASYNC_TIMEOUT_SECONDS=$timeout_seconds"
   trap 'rm -f "$probe" "$probe.rs"' 0 1 2 3 15
   cp optional_runtime_probe.rs "$probe.rs"
   if ! rustc "$probe.rs" -o "$probe"; then
@@ -30,9 +33,10 @@ run()
   if [ "$PLATFORM" = mac ]; then
     output=$(DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
       DYLD_FORCE_FLAT_NAMESPACE=1 FAKETIME='@2020-06-15 12:00:00' \
-      perl -e 'alarm 10; exec @ARGV or exit 127' -- "$probe" 2>/dev/null)
+      perl -e 'alarm $ENV{FAKETIME_ASYNC_TEST_TIMEOUT}; exec @ARGV or exit 127' \
+        FAKETIME_ASYNC_TEST_TIMEOUT="$timeout_seconds" -- "$probe" 2>/dev/null)
   else
-    output=$(timeout 10s env FAKETIME='@2020-06-15 12:00:00' \
+    output=$(timeout "${timeout_seconds}s" env FAKETIME='@2020-06-15 12:00:00' \
       LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" "$probe" 2>/dev/null)
   fi
   case "$output" in
