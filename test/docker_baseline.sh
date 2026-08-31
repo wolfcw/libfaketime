@@ -118,7 +118,7 @@ run_baseline() {
                 timeout 180s make TEST_DEMO=0 test
             '
             ;;
-        fedora:*|rockylinux:*|centos:*|opensuse/tumbleweed:*)
+        fedora:*|rockylinux:*|centos:*|quay.io/centos/centos:*|opensuse/tumbleweed:*)
             docker run --rm $docker_platform_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 run_phase() {
@@ -159,7 +159,7 @@ run_baseline() {
             ;;
         *)
             echo "error: unsupported baseline image: $image" >&2
-            echo "       pass gcc:13-bookworm, ubuntu:<tag>, fedora:<tag>, rockylinux:<tag>, centos:<tag>, opensuse/tumbleweed:<tag>, alpine:3.20, debian:13, or archlinux:base-devel" >&2
+            echo "       pass gcc:13-bookworm, ubuntu:<tag>, fedora:<tag>, rockylinux:<tag>, centos:<tag>, quay.io/centos/centos:<tag>, opensuse/tumbleweed:<tag>, alpine:3.20, debian:13, or archlinux:base-devel" >&2
             return 2
             ;;
     esac

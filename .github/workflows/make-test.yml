@@ -121,11 +121,11 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build project
       env:
-        FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID"
+        FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID -DFAKE_RANDOM"
       run: make
     - name: Compile and run documented snippet checks
       env:
-        FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID"
+        FAKETIME_COMPILE_CFLAGS: "-DFAKE_PID -DFAKE_RANDOM"
       run: |
         make -C test snippets
 
@@ -216,14 +216,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Pull CentOS Stream baseline image
-      run: docker pull centos:stream9
+      run: docker pull quay.io/centos/centos:stream9
     - name: make test on CentOS Stream
       env:
         DOCKER_PLATFORM: linux/amd64
         FAKETIME_TEST_PHASE_TIMEOUT: 120
       run: |
         set -o pipefail
-        test/docker_baseline.sh centos:stream9 2>&1 | tee centos-baseline.log
+        test/docker_baseline.sh quay.io/centos/centos:stream9 2>&1 | tee centos-baseline.log
     - name: Upload CentOS baseline log
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
