@@ -9,6 +9,10 @@ init()
     return 1
   fi
   echo "# PLATFORM=$PLATFORM"
+  if [ "$PLATFORM" = "linuxlike" ]; then
+    echo "# LIBC=$(getconf GNU_LIBC_VERSION 2>/dev/null || echo unknown)"
+    echo "# KERNEL=$(uname -sr 2>/dev/null || echo unknown)"
+  fi
 }
 
 run()
