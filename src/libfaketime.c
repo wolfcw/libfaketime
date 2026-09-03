@@ -1802,10 +1802,12 @@ int __lxstat (int ver, const char *path, struct stat *buf)
 #endif
 
 #ifdef __GLIBC__
+#if (_TIME_BITS != 64)
 int stat64 (const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(stat64, buf, path, buf);
 }
+#endif
 #endif
 
 /* Contributed by Philipp Hachtmann in version 0.6 */
@@ -3375,7 +3377,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 
 #ifdef __GLIBC__
 /* This is used by glibc 32-bit architectures only. */
-#ifndef FAKETIME_TIME64_BUILD
+#if (_TIME_BITS != 64)
 int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
 {
   struct timespec tp;
