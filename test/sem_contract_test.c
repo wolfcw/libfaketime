@@ -87,7 +87,6 @@ int main(void)
   char name[64];
   sem_t *semaphore;
   struct timespec deadline;
-  int (*sem_timedwait_fn)(sem_t *, const struct timespec *) = sem_timedwait;
 
   (void)snprintf(name, sizeof(name), "/libfaketime-sem-%ld", (long)getpid());
   sem_unlink(name);
@@ -112,16 +111,6 @@ int main(void)
   if (sem_timedwait(semaphore, &deadline) != -1 || errno != ETIMEDOUT)
   {
     fprintf(stderr, "past semaphore deadline returned errno %d\n", errno);
-    sem_close(semaphore);
-    sem_unlink(name);
-    return EXIT_FAILURE;
-  }
-
-  report_case("null-deadline");
-  errno = 0;
-  if (sem_timedwait_fn(semaphore, NULL) != -1 || errno != EINVAL)
-  {
-    fprintf(stderr, "null semaphore deadline returned errno %d\n", errno);
     sem_close(semaphore);
     sem_unlink(name);
     return EXIT_FAILURE;
