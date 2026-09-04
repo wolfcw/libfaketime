@@ -24,6 +24,11 @@ run()
 		return 0
 	fi
 	run_testcase syscall_contract
+	if [ -x ./futex_requeue_test ]; then
+		run_testcase futex_requeue
+	else
+		echo "out=skip futex interception is not enabled - ok"
+	fi
 }
 
 syscall_contract()
@@ -33,5 +38,15 @@ syscall_contract()
 		return 0
 	fi
 	echo "out=failed intercepted syscall contract failed - bad"
+	return 1
+}
+
+futex_requeue()
+{
+	if linuxlike_fakecmd "+0" ./futex_requeue_test; then
+		echo "out=ok intercepted futex FUTEX_REQUEUE passed - ok"
+		return 0
+	fi
+	echo "out=failed intercepted futex test failed - bad"
 	return 1
 }

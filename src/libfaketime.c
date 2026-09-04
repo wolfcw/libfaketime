@@ -5544,18 +5544,34 @@ pid_t getpid(void) {
 
 #ifdef INTERCEPT_SYSCALL
 #ifdef INTERCEPT_FUTEX
+// from linux kernel source
+static inline bool futex_cmd_has_timeout(long cmd)
+{
+  switch (cmd) {
+    case FUTEX_WAIT:
+    case FUTEX_LOCK_PI:
+    case FUTEX_LOCK_PI2:
+    case FUTEX_WAIT_BITSET:
+    case FUTEX_WAIT_REQUEUE_PI:
+      return true;
+  }
+  return false;
+}
+
 static inline long make_futex_syscall(long number, uint32_t* uaddr, int futex_op, uint32_t val, struct timespec* timeout, uint32_t* uaddr2, uint32_t val3) {
-  if (timeout == NULL) {
-    // not timeout related, just call the real syscall
-    return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
-  }
-  if (timeout->tv_sec < 0) {
-    // fprintf(stderr, "libfaketime: invalid timeout.tv_sec < 0\n");
-    timeout->tv_sec = 0;
-  }
-  if (timeout->tv_nsec < 0) {
-    // fprintf(stderr, "libfaketime: invalid timeout.tv_nsec < 0\n");
-    timeout->tv_nsec = 0;
+  if (futex_cmd_has_timeout(futex_op & FUTEX_CMD_MASK)) {
+    if (timeout == NULL) {
+      // not timeout related, just call the real syscall
+      return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
+    }
+    if (timeout->tv_sec < 0) {
+      // fprintf(stderr, "libfaketime: invalid timeout.tv_sec < 0\n");
+      timeout->tv_sec = 0;
+    }
+    if (timeout->tv_nsec < 0) {
+      // fprintf(stderr, "libfaketime: invalid timeout.tv_nsec < 0\n");
+      timeout->tv_nsec = 0;
+    }
   }
   return real_syscall(number, uaddr, futex_op, val, timeout, uaddr2, val3);
 }
