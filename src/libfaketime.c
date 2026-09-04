@@ -132,6 +132,14 @@ struct timeb {
 
 #define BUFFERLEN   256
 
+#ifdef __has_attribute
+#if __has_attribute (__symver__)
+#define SYMVER(FUNCTION_NAME, EXPORTED_SYMBOL) __attribute__ (( __symver__ (#EXPORTED_SYMBOL)))
+#else
+#define SYMVER(FUNCTION_NAME, EXPORTED_SYMBOL) __asm__(".symver " #FUNCTION_NAME ", " #EXPORTED_SYMBOL);
+#endif
+#endif
+
 static long stat_mtime_nsec(const struct stat *st);
 
 static long parse_long_setting(const char *name, const char *value)
@@ -2695,20 +2703,20 @@ static int sem_clockwait_common(sem_t *sem, clockid_t clockid,
 }
 
 #ifdef __GLIBC__
+SYMVER(sem_clockwait_230, sem_clockwait@GLIBC_2.30)
 int sem_clockwait_230(sem_t *sem, clockid_t clockid,
                       const struct timespec *abstime)
 {
   return sem_clockwait_common(sem, clockid, abstime);
 }
 
+SYMVER(sem_clockwait_234, sem_clockwait@@GLIBC_2.34)
 int sem_clockwait_234(sem_t *sem, clockid_t clockid,
                       const struct timespec *abstime)
 {
   return sem_clockwait_common(sem, clockid, abstime);
 }
 
-__asm__(".symver sem_clockwait_230, sem_clockwait@GLIBC_2.30");
-__asm__(".symver sem_clockwait_234, sem_clockwait@@GLIBC_2.34");
 #else
 int sem_clockwait(sem_t *sem, clockid_t clockid,
                   const struct timespec *abstime)
@@ -3046,6 +3054,7 @@ int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
 /*
  * Faked timer_settime() compatible with implementation in GLIBC 2.2
  */
+SYMVER(timer_settime_22, timer_settime@GLIBC_2.2)
 int timer_settime_22(int timerid, int flags,
          const struct itimerspec *new_value,
          struct itimerspec *old_value)
@@ -3068,6 +3077,7 @@ int timer_settime_22(int timerid, int flags,
 /*
  * Faked timer_settime() compatible with implementation in GLIBC 2.3.3
  */
+SYMVER(timer_settime_233, timer_settime@@GLIBC_2.3.3)
 int timer_settime_233(timer_t timerid, int flags,
       const struct itimerspec *new_value,
       struct itimerspec *old_value)
@@ -3090,6 +3100,7 @@ int timer_settime_233(timer_t timerid, int flags,
 /*
  * Faked timer_gettime() compatible with implementation in GLIBC 2.2
  */
+SYMVER(timer_gettime_22, timer_gettime@GLIBC_2.2)
 int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
 {
   ftpl_init();
@@ -3109,6 +3120,7 @@ int timer_gettime_22(timer_t timerid, struct itimerspec *curr_value)
 /*
  * Faked timer_gettime() compatible with implementation in GLIBC 2.3.3
  */
+SYMVER(timer_gettime_233, timer_gettime@@GLIBC_2.3.3)
 int timer_gettime_233(timer_t timerid, struct itimerspec *curr_value)
 {
   ftpl_init();
@@ -3124,11 +3136,6 @@ int timer_gettime_233(timer_t timerid, struct itimerspec *curr_value)
             FT_COMPAT_GLIBC_2_3_3));
   }
 }
-
-__asm__(".symver timer_gettime_22, timer_gettime@GLIBC_2.2");
-__asm__(".symver timer_gettime_233, timer_gettime@@GLIBC_2.3.3");
-__asm__(".symver timer_settime_22, timer_settime@GLIBC_2.2");
-__asm__(".symver timer_settime_233, timer_settime@@GLIBC_2.3.3");
 #endif /* __ANDROID__ */
 
 #ifdef __linux__
@@ -3378,6 +3385,8 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
 #ifdef __GLIBC__
 /* This is used by glibc 32-bit architectures only. */
 #if (_TIME_BITS != 64)
+/* glibc's 32-bit time64 ABI references these symbols with GLIBC_2.34. */
+SYMVER(__clock_gettime64, __clock_gettime64@GLIBC_2.34)
 int __clock_gettime64(clockid_t clk_id, struct __timespec64 *tp64)
 {
   struct timespec tp;
@@ -3408,6 +3417,8 @@ int __gettimeofday64(struct __timeval64 *tv64, void *tz)
 }
 
 /* This is used by glibc 32-bit architectures only. */
+/* glibc's 32-bit time64 ABI references these symbols with GLIBC_2.34. */
+SYMVER(__time64, __time64@GLIBC_2.34)
 uint64_t __time64(uint64_t *write_out)
 {
   struct timespec tp;
@@ -3427,10 +3438,6 @@ uint64_t __time64(uint64_t *write_out)
   }
   return output;
 }
-
-/* glibc's 32-bit time64 ABI references these symbols with GLIBC_2.34. */
-__asm__(".symver __clock_gettime64, __clock_gettime64@GLIBC_2.34");
-__asm__(".symver __time64, __time64@GLIBC_2.34");
 #endif
 #endif
 
@@ -4969,6 +4976,13 @@ struct pthread_cond_monotonic {
 
 static struct pthread_cond_monotonic *monotonic_conds = NULL;
 
+#ifndef __ANDROID__
+#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
+SYMVER(pthread_cond_init_232, pthread_cond_init@@)
+#else
+SYMVER(pthread_cond_init_232, pthread_cond_init@@GLIBC_2.3.2)
+#endif
+#endif /* __ANDROID__ */
 int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr)
 {
   clockid_t clock_id;
@@ -5014,6 +5028,13 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   return result;
 }
 
+#ifndef __ANDROID__
+#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
+SYMVER(pthread_cond_destroy_232, pthread_cond_destroy@@)
+#else
+SYMVER(pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2)
+#endif
+#endif /* __ANDROID__ */
 int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
@@ -5218,11 +5239,21 @@ int pthread_cond_timedwait_common(pthread_cond_t *cond, pthread_mutex_t *mutex, 
   return result;
 }
 
+#ifndef __ANDROID__
+SYMVER(pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5)
+#endif
 int pthread_cond_timedwait_225(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
 {
   return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_2_5);
 }
 
+#ifndef __ANDROID__
+#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
+SYMVER(pthread_cond_timedwait_232, pthread_cond_timedwait@@)
+#else
+SYMVER(pthread_cond_timedwait_232, pthread_cond_timedwait@@GLIBC_2.3.2)
+#endif
+#endif /* __ANDROID__ */
 int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
 {
   return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2);
@@ -5233,17 +5264,6 @@ int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const s
 {
   return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2);
 }
-#else
-__asm__(".symver pthread_cond_timedwait_225, pthread_cond_timedwait@GLIBC_2.2.5");
-#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
-__asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@");
-__asm__(".symver pthread_cond_init_232, pthread_cond_init@@");
-__asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@");
-#else
-__asm__(".symver pthread_cond_timedwait_232, pthread_cond_timedwait@@GLIBC_2.3.2");
-__asm__(".symver pthread_cond_init_232, pthread_cond_init@@GLIBC_2.3.2");
-__asm__(".symver pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2");
-#endif
 #endif /* __ANDROID__ */
 
 #endif
