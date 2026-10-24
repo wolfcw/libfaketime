@@ -159,7 +159,7 @@ LIB_LDFLAGS += -shared
 LDFLAGS += $(FAKETIME_LINK_FLAGS)
 ifneq ($(PLATFORM),SunOS)
 ifndef IS_ANDROID
-LDFLAGS += -Wl,--version-script=libfaketime.map
+LIB_VERSION_SCRIPT := -Wl,--version-script=libfaketime.map
 endif
 endif
 
@@ -208,6 +208,7 @@ ${LIBS_OBJ}: libfaketime.c ft_sem.h
 
 %.so.${SONAME}: %.o ft_sem.o libfaketime.map
 	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} $< ft_sem.o ${LDADD}
+	${CC} -o $@ -Wl,-soname,$@ ${LDFLAGS} ${LIB_LDFLAGS} ${LIB_VERSION_SCRIPT} $< ft_sem.o ${LDADD}
 
 ${BINS}: faketime.c ft_sem.o ft_sem.h
 	${CC} -o $@ ${CFLAGS} ${CPPFLAGS} ${EXTRA_FLAGS} $< ft_sem.o ${LDFLAGS} ${BIN_LDFLAGS}
