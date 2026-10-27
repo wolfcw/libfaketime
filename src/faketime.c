@@ -121,6 +121,22 @@ static bool parse_date_seconds(const char *value, long *result)
   return *end == '\0';
 }
 
+static bool looks_like_absolute_timestamp(const char *value)
+{
+  static const char shape[] = "NNNN-NN-NN NN:NN:NN";
+  size_t i;
+
+  for (i = 0; shape[i] != '\0'; i++)
+  {
+    if (value[i] == '\0' ||
+        (shape[i] == 'N' ? !isdigit((unsigned char)value[i]) : value[i] != shape[i]))
+    {
+      return false;
+    }
+  }
+  return value[i] == '\0';
+}
+
 static void usage(const char *name)
 {
   printf("\n"
@@ -128,12 +144,15 @@ static void usage(const char *name)
   "\n"
   "This will run the specified 'program' with the given 'arguments'.\n"
   "The program will be tricked into seeing the given 'timestamp' as its starting date and time.\n"
-  "The clock will continue to run from this timestamp. Please see the manpage (man faketime)\n"
-  "for advanced options, such as stopping the wall clock and make it run faster or slower.\n"
+  "The clock will continue to run from this timestamp, unless it is frozen by --freeze or by "
+  "passing an absolute timestamp to -f.\n"
+  "Please see the manpage (man faketime) for advanced options, such as stopping\n"
+  "the wall clock and make it run faster or slower.\n"
   "\n"
   "The optional switches are:\n"
   "  -m                  : Use the multi-threaded version of libfaketime\n"
   "  -f                  : Use the advanced timestamp specification format (see manpage)\n"
+  "  --freeze            : Freeze at the given timestamp; accepts 'date' syntax\n"
   "  --exclude-monotonic : Prevent monotonic clock from drifting (not the raw monotonic one)\n"
 #ifdef FAKE_PID
   "  -p PID              : Pretend that the program's process ID is PID\n"
@@ -146,13 +165,14 @@ static void usage(const char *name)
   "Examples:\n"
   "%s 'last friday 5 pm' date\n"
   "%s '2008-12-24 08:15:42' date\n"
+  "%s --freeze 'last Friday 5 pm' date\n"
   "%s -f '+2,5y x10,0' bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n"
   "%s -f '+2,5y x0,50' bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'\n"
   "%s -f '+2,5y i2,0' bash -c 'date; while true; do date; sleep 1 ; done'\n"
   "In this single case all spawned processes will use the same global clock\n"
   "without restarting it at the start of each process.\n\n"
   "(Please note that it depends on your locale settings whether . or , has to be used for fractions)\n"
-  "\n", name, name, name, name, name, name);
+  "\n", name, name, name, name, name, name, name);
 }
 
 /** Clean up shared objects */
@@ -172,8 +192,7 @@ int main (int argc, char **argv)
 {
   pid_t child_pid;
   int curr_opt = 1;
-  bool use_mt = false, use_direct = false;
-  long offset;
+  bool use_mt = false, use_direct = false, freeze_clock = false;
   bool fake_pid = false;
   const char *pid_val;
 
@@ -209,6 +228,12 @@ int main (int argc, char **argv)
     else if (0 == strcmp(argv[curr_opt], "-f"))
     {
       use_direct = true;
+      curr_opt++;
+      continue;
+    }
+    else if (0 == strcmp(argv[curr_opt], "--freeze"))
+    {
+      freeze_clock = true;
       curr_opt++;
       continue;
     }
@@ -268,20 +293,26 @@ int main (int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
+  if (use_direct && freeze_clock)
+  {
+    fprintf(stderr, "faketime: --freeze cannot be combined with -f; pass an absolute timestamp "
+                    "(\"YYYY-MM-DD hh:mm:ss\") to -f instead, which stops the clock by itself\n");
+    exit(EXIT_FAILURE);
+  }
+
   if (!use_direct)
   {
-    // TODO get seconds
     int pfds[2];
     if (pipe(pfds) == -1)
     {
       perror("faketime: pipe");
       exit(EXIT_FAILURE);
     }
-    int ret = EXIT_SUCCESS;
 
     child_pid = fork();
     if (child_pid == 0)
     {
+      const char *date_format = freeze_clock ? "+%Y-%m-%d %H:%M:%S" : "+%s";
       close(1);       /* close normal stdout */
       if (dup2(pfds[1], STDOUT_FILENO) == -1)
       {
@@ -292,7 +323,8 @@ int main (int argc, char **argv)
       close(pfds[0]); /* we don't need this */
       clear_date_helper_preload();
       // fprintf(stderr, "faketime: using --date-prog: %s\n", date_cmd);
-      if (EXIT_SUCCESS != execlp(date_cmd, date_cmd, "-d", argv[curr_opt], "+%s",(char *) NULL))
+      if (EXIT_SUCCESS !=
+          execlp(date_cmd, date_cmd, "-d", argv[curr_opt], date_format, (char *)NULL))
       {
         perror("faketime: Running (g)date failed");
         _exit(EXIT_FAILURE);
@@ -343,29 +375,51 @@ int main (int argc, char **argv)
                "different timestamp.\n");
         exit(EXIT_FAILURE);
       }
-      long date_seconds;
-      faketime_wrapper_wide_t offset_wide;
-      if (!parse_date_seconds(buf, &date_seconds))
+      if (freeze_clock)
       {
-        fprintf(stderr, "faketime: date program returned an invalid timestamp\n");
-        exit(EXIT_FAILURE);
+        /* An absolute libfaketime timestamp means "stopped clock". */
+        char *end = buf + strlen(buf);
+        while (end > buf && isspace((unsigned char)end[-1]))
+        {
+          *--end = '\0';
+        }
+        if (!looks_like_absolute_timestamp(buf))
+        {
+          fprintf(stderr,
+                  "faketime: date program returned an unexpected "
+                  "timestamp ('%s')\n",
+                  buf);
+          exit(EXIT_FAILURE);
+        }
+        set_env_or_exit("FAKETIME", buf);
       }
-      offset_wide = (faketime_wrapper_wide_t)date_seconds -
-        (faketime_wrapper_wide_t)time(NULL);
-      if (offset_wide < (faketime_wrapper_wide_t)LONG_MIN ||
-          offset_wide > (faketime_wrapper_wide_t)LONG_MAX)
+      else
       {
-        fprintf(stderr, "faketime: date timestamp is outside the supported range\n");
-        exit(EXIT_FAILURE);
+        int ret = EXIT_SUCCESS;
+        long date_seconds;
+        long offset;
+        faketime_wrapper_wide_t offset_wide;
+        if (!parse_date_seconds(buf, &date_seconds))
+        {
+          fprintf(stderr, "faketime: date program returned an invalid timestamp\n");
+          exit(EXIT_FAILURE);
+        }
+        offset_wide = (faketime_wrapper_wide_t)date_seconds - (faketime_wrapper_wide_t)time(NULL);
+        if (offset_wide < (faketime_wrapper_wide_t)LONG_MIN ||
+            offset_wide > (faketime_wrapper_wide_t)LONG_MAX)
+        {
+          fprintf(stderr, "faketime: date timestamp is outside the supported range\n");
+          exit(EXIT_FAILURE);
+        }
+        offset = (long)offset_wide;
+        ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0) ? "+" : "", offset);
+        if (ret < 0 || (size_t)ret >= sizeof(buf))
+        {
+          fprintf(stderr, "faketime: generated FAKETIME value is too long\n");
+          exit(EXIT_FAILURE);
+        }
+        set_env_or_exit("FAKETIME", buf);
       }
-      offset = (long)offset_wide;
-      ret = snprintf(buf, sizeof(buf), "%s%ld", (offset >= 0)?"+":"", offset);
-      if (ret < 0 || (size_t)ret >= sizeof(buf))
-      {
-        fprintf(stderr, "faketime: generated FAKETIME value is too long\n");
-        exit(EXIT_FAILURE);
-      }
-      set_env_or_exit("FAKETIME", buf);
     }
     else
     {

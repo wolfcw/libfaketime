@@ -29,6 +29,11 @@ pretend that the program's process ID is PID. (only available if built with FAKE
 \fB\-f\fR
 use the advanced timestamp specification format.
 .TP
+\fB\--freeze\fR
+resolve the timestamp with the date helper, as in the simple timestamp format, and then report it as an absolute timestamp, which stops the clock at that point in time.
+Unlike an absolute timestamp passed to \fB\-f\fR, this accepts the date syntax, e.g., 'last friday 5 pm'.
+Not compatible with \fB\-f\fR.
+.TP
 \fB\--exclude-monotonic\fR
 Do not fake time when the program makes a call to clock_gettime with a CLOCK_MONOTONIC clock.
 .TP
@@ -42,6 +47,7 @@ Use a specific GNU-date compatible implementation of the helper used to transfor
 .nf
 faketime 'last Friday 5 pm' date
 faketime '2008-12-24 08:15:42' date
+faketime --freeze 'last Friday 5 pm' date
 faketime -f '+2,5y x10,0' bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 faketime -f '+2,5y x0,50' bash -c 'date; while true; do echo $SECONDS ; sleep 1 ; done'
 faketime -f '+2,5y i2,0' bash -c 'while true; do date ; sleep 1 ; done'
@@ -59,6 +65,7 @@ Freeze clock at absolute timestamp: \fB"YYYY-MM-DD hh:mm:ss"\fR
 If you want to specify an absolute point in time, exactly this format must be used.
 Please note that freezing the clock is usually not what you want and may break the application.
 Only use if you know what you're doing!
+The same stopped-clock effect is available without \fB\-f\fR for timestamps in date syntax, see option \fB\--freeze\fR.
 .TP
 Relative time offset: \fB"[+/-]123[m/h/d/y]"\fR, e.g., "+60m", "+2y"
 This is the most often used format and specifies the faked time relatively to the current real time.

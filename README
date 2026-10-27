@@ -673,9 +673,16 @@ can use
 
 faketime 'last Friday 5 pm' /your/command/here
 
+which keeps the clock running from the faked start time. To stop it
+at the given time, use the --freeze option:
+
+faketime --freeze 'last Friday 5 pm' /your/command/here
+
 Of course, also absolute dates can be used, such as in
 
 faketime '2018-12-24 08:15:42' /bin/date
+
+where the clock likewise keeps running; add --freeze to stop it.
 
 Thanks to Daniel Kahn Gillmor for providing these suggestions!
 
