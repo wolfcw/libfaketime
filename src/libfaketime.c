@@ -355,6 +355,10 @@ static int          (*real_lxstat)          (int, const char *, struct stat *);
 #if !defined(__APPLE__) || !__DARWIN_ONLY_64_BIT_INO_T
 #ifndef __ANDROID__
 static int          (*real_stat64)          (const char *, struct stat64 *);
+static int          (*real_lstat64)         (const char *, struct stat64 *);
+static int          (*real_fstat64)         (int, struct stat64 *);
+static int          (*real_fstatat)         (int, const char *, struct stat *, int);
+static int          (*real_fstatat64)       (int, const char *, struct stat64 *, int);
 static int          (*real_xstat64)         (int, const char *, struct stat64 *);
 static int          (*real_fxstat64)        (int, int , struct stat64 *);
 static int          (*real_fxstatat64)      (int, int , const char *, struct stat64 *, int);
@@ -1817,6 +1821,30 @@ int stat64 (const char *path, struct stat64 *buf)
 {
   STAT64_HANDLER(stat64, buf, path, buf);
 }
+
+/* Since glibc 2.33, these are exported as regular functions and called
+ * directly instead of going through the __*xstat*() wrappers below. */
+int lstat64 (const char *path, struct stat64 *buf)
+{
+  STAT64_HANDLER(lstat64, buf, path, buf);
+}
+
+int fstat64 (int fildes, struct stat64 *buf)
+{
+  STAT64_HANDLER(fstat64, buf, fildes, buf);
+}
+
+#ifndef NO_ATFILE
+int fstatat (int dirfd, const char *path, struct stat *buf, int flags)
+{
+  STAT_HANDLER(fstatat, buf, dirfd, path, buf, flags);
+}
+
+int fstatat64 (int dirfd, const char *path, struct stat64 *buf, int flags)
+{
+  STAT64_HANDLER(fstatat64, buf, dirfd, path, buf, flags);
+}
+#endif
 #endif
 #endif
 
@@ -3760,6 +3788,10 @@ static void ftpl_really_init(void)
 #if !defined(__APPLE__) || !__DARWIN_ONLY_64_BIT_INO_T
 #ifndef __ANDROID__
   real_stat64 =             dlsym(RTLD_NEXT, "stat64");
+  real_lstat64 =            dlsym(RTLD_NEXT, "lstat64");
+  real_fstat64 =            dlsym(RTLD_NEXT, "fstat64");
+  real_fstatat =            dlsym(RTLD_NEXT, "fstatat");
+  real_fstatat64 =          dlsym(RTLD_NEXT, "fstatat64");
   real_xstat64 =            dlsym(RTLD_NEXT,"__xstat64");
   real_fxstat64 =           dlsym(RTLD_NEXT, "__fxstat64");
   real_fxstatat64 =         dlsym(RTLD_NEXT, "__fxstatat64");
