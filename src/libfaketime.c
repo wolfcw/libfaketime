@@ -652,6 +652,8 @@ static int fake_monotonic_clock = 1;
 static int cache_enabled = 1;
 static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 static int force_cache_expiration = 0;
+/* FAKETIME_XRESET is set; only then are ftpl_timecache/ftpl_faketimecache kept */
+static bool xreset_enabled = false;
 
 /*
  * Static timespec to store our startup time, followed by a load-time library
@@ -3712,7 +3714,7 @@ parse_modifiers:
           exit(EXIT_FAILURE);
         }
         user_rate_set = true;
-        if (NULL != getenv("FAKETIME_XRESET")) {
+        if (xreset_enabled) {
           if (ftpl_timecache.real.tv_nsec >= 0) {
             user_faked_time_timespec.tv_sec  = ftpl_faketimecache.real.tv_sec;
             user_faked_time_timespec.tv_nsec = ftpl_faketimecache.real.tv_nsec;
@@ -4013,6 +4015,7 @@ static void ftpl_really_init(void)
       cache_enabled = 0;
     }
   }
+  xreset_enabled = (getenv("FAKETIME_XRESET") != NULL);
   get_fake_monotonic_setting(&fake_monotonic_clock);
   /* Check whether we actually should be faking the returned timestamp. */
 
@@ -4508,7 +4511,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   /* variables used for caching, introduced in version 0.6 */
   static time_t last_data_fetch = 0;  /* not fetched previously at first call */
-  static int cache_expired = 1;       /* considered expired at first call */
 
   /* Karl Chan's v0.8 sanity check moved here for 0.9.9 */
   if (tp == NULL) return -1;
@@ -4622,17 +4624,10 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   struct timespec current_ts;
   DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &current_ts));
 
-  if (last_data_fetch > 0)
-  {
-    if ((current_ts.tv_sec - last_data_fetch) > cache_duration)
-    {
-      cache_expired = 1;
-    }
-    else
-    {
-      cache_expired = 0;
-    }
-  }
+  /* A local, not a static: a store to shared state on every call makes
+   * concurrent callers contend for its cache line. */
+  int cache_expired = (last_data_fetch <= 0) ||
+                      ((current_ts.tv_sec - last_data_fetch) > cache_duration);
 
   if (cache_enabled == 0)
   {
@@ -4760,7 +4755,13 @@ abort:
   normalize_timespec_value(tp);
   save_time(tp);
 
-  /* Cache this most recent real and faked time we encountered */
+  /* Cache this most recent real and faked time we encountered.
+   * Only FAKETIME_XRESET reads it, and storing it on every call makes
+   * concurrent callers contend for its cache lines, so skip it otherwise. */
+  if (!xreset_enabled)
+  {
+    return 0;
+  }
   if (clk_id == CLOCK_REALTIME)
   {
     ftpl_timecache.real.tv_sec         = tp_save.tv_sec;
