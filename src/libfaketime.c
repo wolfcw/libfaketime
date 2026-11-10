@@ -1083,25 +1083,32 @@ enum ft_init_state
   FT_INIT_FAILED
 };
 
+/* ftpl_init runs on every intercepted call, and taking the mutex each time
+   serializes all threads, so *state is checked for FT_INIT_READY without the
+   mutex first.  Every access to *state is therefore atomic, and the release
+   store of FT_INIT_READY publishes what the initializer wrote. */
 static bool ft_init_once_generic (enum ft_init_state* state,
                                   pthread_once_t* once_control,
                                   pthread_mutex_t* mutex,
                                   void (*init_mutex_cb)(void),
                                   void (*initializer_cb)(void))
 {
+  if (__atomic_load_n(state, __ATOMIC_ACQUIRE) == FT_INIT_READY)
+    return true;
+
   int ret = pthread_once(once_control, init_mutex_cb);
   if (ret != 0)
   {
-    *state = FT_INIT_FAILED;
+    __atomic_store_n(state, FT_INIT_FAILED, __ATOMIC_RELAXED);
     errno = ret;
     return false;
   }
 
-  if (*state == FT_INIT_FAILED)
+  if (__atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_FAILED)
     return false;
 
   ret = pthread_mutex_lock(mutex);
-  if (ret == EDEADLK && *state == FT_INIT_INITIALIZING)
+  if (ret == EDEADLK && __atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_INITIALIZING)
   {
     /* The initializer called back into an intercepted function.  The
        required real symbols have already been resolved, so let the
@@ -1110,21 +1117,23 @@ static bool ft_init_once_generic (enum ft_init_state* state,
     return true;
   }
   if (ret == 0) {
-    if (*state == FT_INIT_UNINITIALIZED) {
+    bool ready;
+    if (__atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_UNINITIALIZED) {
       /* Mark initialization before calling out so recursive calls are safe. */
-      *state = FT_INIT_INITIALIZING;
+      __atomic_store_n(state, FT_INIT_INITIALIZING, __ATOMIC_RELAXED);
       // If anything that they use calls back to a time function
       // it will get some not- or partially-set-up faketime state.
       //  We are betting that that's good enough.
       // (Empirically, on some platforms the shm functions call `statx`;
       // we think the timestamps in that call probably don't matter.)
       initializer_cb();
-      *state = FT_INIT_READY;
+      __atomic_store_n(state, FT_INIT_READY, __ATOMIC_RELEASE);
     }
+    ready = (__atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_READY);
     pthread_mutex_unlock(mutex);
-    return *state == FT_INIT_READY;
+    return ready;
   }
-  *state = FT_INIT_FAILED;
+  __atomic_store_n(state, FT_INIT_FAILED, __ATOMIC_RELAXED);
   errno = ret;
   return false;
 }
