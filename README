@@ -533,8 +533,9 @@ and then the setting is changed to 'x10', the faked time will look to the
 program as if it has been running for more than 100 instead of just more than
 10 seconds.
 
-By setting the environment variable FAKETIME_XRESET to any value, transitions
-between different 'x' modifier values will be significantly smoothed:
+By setting the environment variable FAKETIME_XRESET to any value before the
+program starts, transitions between different 'x' modifier values will be
+significantly smoothed:
 
 LD_PRELOAD=libfaketime.so.1 FAKETIME_TIMESTAMP_FILE="/tmp/my-faketime.rc" \
   FAKETIME_NO_CACHE=1 FAKETIME_XRESET=1 ./some-program &

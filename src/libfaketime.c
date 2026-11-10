@@ -652,6 +652,8 @@ static int fake_monotonic_clock = 1;
 static int cache_enabled = 1;
 static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 static int force_cache_expiration = 0;
+/* FAKETIME_XRESET is set; only then are ftpl_timecache/ftpl_faketimecache kept */
+static bool xreset_enabled = false;
 
 /*
  * Static timespec to store our startup time, followed by a load-time library
@@ -1083,25 +1085,32 @@ enum ft_init_state
   FT_INIT_FAILED
 };
 
+/* ftpl_init runs on every intercepted call, and taking the mutex each time
+   serializes all threads, so *state is checked for FT_INIT_READY without the
+   mutex first.  Every access to *state is therefore atomic, and the release
+   store of FT_INIT_READY publishes what the initializer wrote. */
 static bool ft_init_once_generic (enum ft_init_state* state,
                                   pthread_once_t* once_control,
                                   pthread_mutex_t* mutex,
                                   void (*init_mutex_cb)(void),
                                   void (*initializer_cb)(void))
 {
+  if (__atomic_load_n(state, __ATOMIC_ACQUIRE) == FT_INIT_READY)
+    return true;
+
   int ret = pthread_once(once_control, init_mutex_cb);
   if (ret != 0)
   {
-    *state = FT_INIT_FAILED;
+    __atomic_store_n(state, FT_INIT_FAILED, __ATOMIC_RELAXED);
     errno = ret;
     return false;
   }
 
-  if (*state == FT_INIT_FAILED)
+  if (__atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_FAILED)
     return false;
 
   ret = pthread_mutex_lock(mutex);
-  if (ret == EDEADLK && *state == FT_INIT_INITIALIZING)
+  if (ret == EDEADLK && __atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_INITIALIZING)
   {
     /* The initializer called back into an intercepted function.  The
        required real symbols have already been resolved, so let the
@@ -1110,21 +1119,23 @@ static bool ft_init_once_generic (enum ft_init_state* state,
     return true;
   }
   if (ret == 0) {
-    if (*state == FT_INIT_UNINITIALIZED) {
+    bool ready;
+    if (__atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_UNINITIALIZED) {
       /* Mark initialization before calling out so recursive calls are safe. */
-      *state = FT_INIT_INITIALIZING;
+      __atomic_store_n(state, FT_INIT_INITIALIZING, __ATOMIC_RELAXED);
       // If anything that they use calls back to a time function
       // it will get some not- or partially-set-up faketime state.
       //  We are betting that that's good enough.
       // (Empirically, on some platforms the shm functions call `statx`;
       // we think the timestamps in that call probably don't matter.)
       initializer_cb();
-      *state = FT_INIT_READY;
+      __atomic_store_n(state, FT_INIT_READY, __ATOMIC_RELEASE);
     }
+    ready = (__atomic_load_n(state, __ATOMIC_RELAXED) == FT_INIT_READY);
     pthread_mutex_unlock(mutex);
-    return *state == FT_INIT_READY;
+    return ready;
   }
-  *state = FT_INIT_FAILED;
+  __atomic_store_n(state, FT_INIT_FAILED, __ATOMIC_RELAXED);
   errno = ret;
   return false;
 }
@@ -3703,7 +3714,7 @@ parse_modifiers:
           exit(EXIT_FAILURE);
         }
         user_rate_set = true;
-        if (NULL != getenv("FAKETIME_XRESET")) {
+        if (xreset_enabled) {
           if (ftpl_timecache.real.tv_nsec >= 0) {
             user_faked_time_timespec.tv_sec  = ftpl_faketimecache.real.tv_sec;
             user_faked_time_timespec.tv_nsec = ftpl_faketimecache.real.tv_nsec;
@@ -4004,6 +4015,7 @@ static void ftpl_really_init(void)
       cache_enabled = 0;
     }
   }
+  xreset_enabled = (getenv("FAKETIME_XRESET") != NULL);
   get_fake_monotonic_setting(&fake_monotonic_clock);
   /* Check whether we actually should be faking the returned timestamp. */
 
@@ -4499,7 +4511,6 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
   /* variables used for caching, introduced in version 0.6 */
   static time_t last_data_fetch = 0;  /* not fetched previously at first call */
-  static int cache_expired = 1;       /* considered expired at first call */
 
   /* Karl Chan's v0.8 sanity check moved here for 0.9.9 */
   if (tp == NULL) return -1;
@@ -4613,17 +4624,10 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   struct timespec current_ts;
   DONT_FAKE_TIME((*real_clock_gettime)(CLOCK_REALTIME, &current_ts));
 
-  if (last_data_fetch > 0)
-  {
-    if ((current_ts.tv_sec - last_data_fetch) > cache_duration)
-    {
-      cache_expired = 1;
-    }
-    else
-    {
-      cache_expired = 0;
-    }
-  }
+  /* A local, not a static: a store to shared state on every call makes
+   * concurrent callers contend for its cache line. */
+  int cache_expired = (last_data_fetch <= 0) ||
+                      ((current_ts.tv_sec - last_data_fetch) > cache_duration);
 
   if (cache_enabled == 0)
   {
@@ -4751,7 +4755,13 @@ abort:
   normalize_timespec_value(tp);
   save_time(tp);
 
-  /* Cache this most recent real and faked time we encountered */
+  /* Cache this most recent real and faked time we encountered.
+   * Only FAKETIME_XRESET reads it, and storing it on every call makes
+   * concurrent callers contend for its cache lines, so skip it otherwise. */
+  if (!xreset_enabled)
+  {
+    return 0;
+  }
   if (clk_id == CLOCK_REALTIME)
   {
     ftpl_timecache.real.tv_sec         = tp_save.tv_sec;

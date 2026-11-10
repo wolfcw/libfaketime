@@ -20,6 +20,7 @@ run()
 	run_testcase tolerates_missing_config_environment
 	run_testcase rejects_oversized_configuration
 	run_testcase rejects_embedded_nul_configuration
+	run_testcase xreset_smooths_first_rate_change
 }
 
 config_file_cmd()
@@ -32,6 +33,41 @@ config_file_cmd()
 		FAKETIME_TIMESTAMP_FILE="$1" FAKETIME_NO_CACHE=1 \
 			LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" "$2" "${@:3}"
 	fi
+}
+
+# Prints how many seconds the clock jumps when the configuration switches
+# from no rate to x10 a second after the program starts. Stat faking is off:
+# it records file timestamps as the last clock read, which FAKETIME_XRESET
+# would then reset to. The new setting is renamed into place so that no clock
+# read sees it half written.
+rate_change_jump()
+{
+	typeset config_file=".config_xreset_test.$$"
+	echo "+0" > "$config_file"
+	NO_FAKE_STAT=1 config_file_cmd "$config_file" perl -e '
+		select(undef, undef, undef, 1);
+		my $before = time;
+		open(my $config, ">", "$ARGV[0].new") or die "$ARGV[0].new: $!";
+		print $config "+0 x10\n";
+		close($config);
+		rename("$ARGV[0].new", $ARGV[0]) or die "$ARGV[0]: $!";
+		print time - $before;' "$config_file"
+	rm -f "$config_file" "$config_file.new"
+}
+
+# Without FAKETIME_XRESET the clock jumps about nine seconds.
+xreset_smooths_first_rate_change()
+{
+	typeset unsmoothed smoothed
+	unsmoothed=$(unset FAKETIME_XRESET; rate_change_jump)
+	smoothed=$(FAKETIME_XRESET=1 rate_change_jump)
+	if [ -n "$unsmoothed" ] && [ "$unsmoothed" -ge 6 ] &&
+		[ -n "$smoothed" ] && [ "$smoothed" -ge 0 ] && [ "$smoothed" -le 3 ]; then
+		echo "out=$smoothed clock jumped $smoothed s with FAKETIME_XRESET, $unsmoothed s without - ok"
+		return 0
+	fi
+	echo "out=$smoothed clock jumped ${smoothed:-?} s with FAKETIME_XRESET, ${unsmoothed:-?} s without - bad"
+	return 1
 }
 
 rejects_oversized_configuration()
