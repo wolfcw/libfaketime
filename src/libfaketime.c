@@ -132,6 +132,10 @@ struct timeb {
 
 #define BUFFERLEN   256
 
+#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
+#define FT_PTHREAD_NONVER
+#endif
+
 #ifdef __has_attribute
 #if __has_attribute (__symver__)
 #define SYMVER(FUNCTION_NAME, EXPORTED_SYMBOL) __attribute__ (( __symver__ (#EXPORTED_SYMBOL)))
@@ -5020,13 +5024,9 @@ struct pthread_cond_monotonic {
 
 static struct pthread_cond_monotonic *monotonic_conds = NULL;
 
-#ifndef __ANDROID__
-#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
-SYMVER(pthread_cond_init_232, pthread_cond_init@@)
-#else
+#if !defined __ANDROID__ && !defined FT_PTHREAD_NONVER
 SYMVER(pthread_cond_init_232, pthread_cond_init@@GLIBC_2.3.2)
 #endif
-#endif /* __ANDROID__ */
 int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr)
 {
   clockid_t clock_id;
@@ -5072,13 +5072,9 @@ int pthread_cond_init_232(pthread_cond_t *restrict cond, const pthread_condattr_
   return result;
 }
 
-#ifndef __ANDROID__
-#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
-SYMVER(pthread_cond_destroy_232, pthread_cond_destroy@@)
-#else
+#if !defined __ANDROID__ && !defined FT_PTHREAD_NONVER
 SYMVER(pthread_cond_destroy_232, pthread_cond_destroy@@GLIBC_2.3.2)
 #endif
-#endif /* __ANDROID__ */
 int pthread_cond_destroy_232(pthread_cond_t *cond)
 {
   struct pthread_cond_monotonic* e;
@@ -5291,17 +5287,26 @@ int pthread_cond_timedwait_225(pthread_cond_t *cond, pthread_mutex_t *mutex, con
   return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_2_5);
 }
 
-#ifndef __ANDROID__
-#if defined __ARM_ARCH || defined FORCE_PTHREAD_NONVER
-SYMVER(pthread_cond_timedwait_232, pthread_cond_timedwait@@)
-#else
+#if !defined __ANDROID__ && !defined FT_PTHREAD_NONVER
 SYMVER(pthread_cond_timedwait_232, pthread_cond_timedwait@@GLIBC_2.3.2)
 #endif
-#endif /* __ANDROID__ */
 int pthread_cond_timedwait_232(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
 {
   return pthread_cond_timedwait_common(cond, mutex, abstime, FT_COMPAT_GLIBC_2_3_2);
 }
+
+#if !defined __ANDROID__ && defined FT_PTHREAD_NONVER
+/* Export the wrappers under their plain, unversioned names so that they
+ * interpose any version of the libc symbols. ".symver foo_232, foo@@" with an
+ * empty version only does this with GNU ld and gold, lld rejects it. The asm
+ * labels keep the exported names stable under glibc's time64 redirects. */
+#define FT_UNVERSIONED_ALIAS(FUNCTION_NAME, EXPORTED_SYMBOL) \
+  extern __typeof__(FUNCTION_NAME) ft_alias_##EXPORTED_SYMBOL \
+    __asm__(#EXPORTED_SYMBOL) __attribute__((alias(#FUNCTION_NAME)));
+FT_UNVERSIONED_ALIAS(pthread_cond_timedwait_232, pthread_cond_timedwait)
+FT_UNVERSIONED_ALIAS(pthread_cond_init_232, pthread_cond_init)
+FT_UNVERSIONED_ALIAS(pthread_cond_destroy_232, pthread_cond_destroy)
+#endif
 
 #ifdef __ANDROID__
 int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)

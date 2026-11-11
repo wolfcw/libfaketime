@@ -22,11 +22,12 @@ GLIBC_2.34 {
   global: __clock_gettime64; __time64; sem_clockwait;
 } GLIBC_2.30;
 
+# The pthread_cond_* symbols get their versions from .symver in libfaketime.c,
+# or stay unversioned on ARM and with FORCE_PTHREAD_NONVER, so these nodes
+# must not name them.
 GLIBC_2.2.5 {
-  global:  pthread_cond_timedwait;
-  local: pthread_cond_timedwait_*; pthread_cond_init_*; pthread_cond_destroy*;
+  local: pthread_cond_timedwait_*; pthread_cond_init_*; pthread_cond_destroy_*;
 };
 
 GLIBC_2.3.2 {
-  pthread_cond_timedwait; pthread_cond_init; pthread_cond_destroy;
 } GLIBC_2.2.5;
