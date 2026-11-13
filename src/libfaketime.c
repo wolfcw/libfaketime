@@ -332,18 +332,22 @@ struct __timeval64
  * Per thread variable, which we turn on inside real_* calls to avoid modifying
  * time multiple times of for the whole process to prevent faking time
  */
-static __thread bool dont_fake = false;
+static __thread bool dont_fake_thread = false;
+/* Command filtering is decided once during process initialization.  Unlike
+ * dont_fake_thread, it must apply to every thread created by that process. */
+static bool command_excluded = false;
+#define dont_fake (dont_fake_thread || command_excluded)
 
 /* Wrapper for function calls, which we want to return system time */
 #define DONT_FAKE_TIME(call)          \
   do {                                \
-    bool dont_fake_orig = dont_fake;  \
-    if (!dont_fake)                   \
+    bool dont_fake_orig = dont_fake_thread; \
+    if (!dont_fake_thread)            \
     {                                 \
-      dont_fake = true;               \
+      dont_fake_thread = true;        \
     }                                 \
     call;                             \
-    dont_fake = dont_fake_orig;       \
+    dont_fake_thread = dont_fake_orig; \
   } while (0)
 
 /* pointers to real (not faked) functions */
@@ -3626,7 +3630,7 @@ static void parse_ft_string(const char *user_faked_time)
 
       /* Contributed by David North, TDI in version 0.7 */
     case '@': /* Specific time, but clock along relative to that starttime */
-      ft_mode = FT_START_AT;
+      if (ft_mode != FT_NOOP) ft_mode = FT_START_AT;
       user_faked_time_tm.tm_isdst = -1;
       nstime_str = strptime(&user_faked_time[1], user_faked_time_fmt, &user_faked_time_tm);
       if (NULL != nstime_str)
@@ -3774,7 +3778,7 @@ static void ftpl_really_init(void)
   bool dont_fake_final;
 
   /* moved up here from below the dlsym calls #130 */
-  dont_fake = true; // Do not fake times during initialization
+  dont_fake_thread = true; // Do not fake times during initialization
   dont_fake_final = false;
 
 #ifdef __APPLE__
@@ -4037,6 +4041,7 @@ static void ftpl_really_init(void)
         if (0 == strcmp(progname, skip_cmd))
         {
           ft_mode = FT_NOOP;
+          command_excluded = true;
           dont_fake_final = true;
           break;
         }
@@ -4081,6 +4086,7 @@ static void ftpl_really_init(void)
       if (!cmd_matched)
       {
         ft_mode = FT_NOOP;
+        command_excluded = true;
         dont_fake_final = true;
       }
       free(tmpvar);
@@ -4287,7 +4293,7 @@ static void ftpl_really_init(void)
     read_config_file();
   }
 
-  dont_fake = dont_fake_final;
+  dont_fake_thread = dont_fake_final;
 }
 
 static void init_initialized_once_mutex (void)
@@ -4743,6 +4749,10 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
         }
         timespecadd(&user_faked_time_timespec, &timeadj, tp);
       }
+      break;
+
+    case FT_NOOP:
+      *tp = tp_save;
       break;
 
     default:
