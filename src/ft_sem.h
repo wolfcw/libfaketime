@@ -18,6 +18,8 @@
 #ifndef FT_SEM_H
 #define FT_SEM_H
 
+#include <sys/types.h>
+
 /* semaphore backend options */
 #define FT_POSIX 1
 #define FT_SYSV  2
@@ -36,6 +38,10 @@
 #error "Unknown FT_SEMAPHORE_BACKEND; select between FT_POSIX, FT_SYSV, and FT_FLOCK"
 #endif
 
+#if FT_SEMAPHORE_BACKEND == FT_FLOCK
+#include <pthread.h>
+#endif
+
 #if FT_SEMAPHORE_BACKEND == FT_POSIX
 #include <semaphore.h>
 #endif
@@ -49,6 +55,9 @@ typedef struct
   int semid;
 #elif FT_SEMAPHORE_BACKEND == FT_FLOCK
   int fd;
+  dev_t lock_dev;
+  ino_t lock_ino;
+  pthread_mutex_t local_lock;
 #endif
 } ft_sem_t;
 

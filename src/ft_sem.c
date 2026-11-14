@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -87,6 +88,29 @@ static int ft_sem_name_to_path(const char *name, char *path, size_t pathlen)
   path[pathlen - 1] = '\0';
   return 0;
 }
+
+static int ft_sem_init_flock(ft_sem_t *ft_sem)
+{
+  int ret = pthread_mutex_init(&ft_sem->local_lock, NULL);
+
+  if (ret != 0)
+  {
+    errno = ret;
+    return -1;
+  }
+  ft_sem->fd = -1;
+  ft_sem->lock_dev = 0;
+  ft_sem->lock_ino = 0;
+  return 0;
+}
+
+static bool ft_sem_fd_matches_lock(const ft_sem_t *ft_sem)
+{
+  struct stat st;
+
+  return ft_sem->fd >= 0 && fstat(ft_sem->fd, &st) == 0 &&
+    st.st_dev == ft_sem->lock_dev && st.st_ino == ft_sem->lock_ino;
+}
 #endif
 
 int ft_sem_create(char *name, ft_sem_t *ft_sem)
@@ -121,13 +145,23 @@ int ft_sem_create(char *name, ft_sem_t *ft_sem)
   }
 #elif FT_SEMAPHORE_BACKEND == FT_FLOCK
   char path[256];
+  int fd;
   if (ft_sem_name_to_path(name, path, sizeof(path)) < 0)
   {
     return -1;
   }
-  ft_sem->fd = open(path, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR);
-  if (ft_sem->fd < 0)
+  fd = open(path, O_CREAT|O_EXCL|O_RDWR, S_IWUSR|S_IRUSR);
+  if (fd < 0)
   {
+    return -1;
+  }
+  if (close(fd) == -1)
+  {
+    return -1;
+  }
+  if (ft_sem_init_flock(ft_sem) == -1)
+  {
+    (void)unlink(path);
     return -1;
   }
 #endif
@@ -151,12 +185,21 @@ int ft_sem_open(char *name, ft_sem_t *ft_sem)
    }
 #elif FT_SEMAPHORE_BACKEND == FT_FLOCK
   char path[256];
+  int fd;
   if (ft_sem_name_to_path(name, path, sizeof(path)) < 0)
   {
     return -1;
   }
-  ft_sem->fd = open(path, O_RDWR);
-  if (ft_sem->fd < 0)
+  fd = open(path, O_RDWR);
+  if (fd < 0)
+  {
+    return -1;
+  }
+  if (close(fd) == -1)
+  {
+    return -1;
+  }
+  if (ft_sem_init_flock(ft_sem) == -1)
   {
     return -1;
   }
@@ -178,7 +221,36 @@ int ft_sem_lock(ft_sem_t *ft_sem)
   };
   return semop(ft_sem->semid, &sb, 1);
 #elif FT_SEMAPHORE_BACKEND == FT_FLOCK
-  return flock(ft_sem->fd, LOCK_EX);
+  char path[256];
+  struct stat st;
+  int fd;
+  int ret;
+
+  ret = pthread_mutex_lock(&ft_sem->local_lock);
+  if (ret != 0)
+  {
+    errno = ret;
+    return -1;
+  }
+  if (ft_sem_name_to_path(ft_sem->name, path, sizeof(path)) < 0)
+  {
+    (void)pthread_mutex_unlock(&ft_sem->local_lock);
+    return -1;
+  }
+  fd = open(path, O_RDWR);
+  if (fd < 0 || flock(fd, LOCK_EX) == -1 || fstat(fd, &st) == -1)
+  {
+    int saved_errno = errno;
+    if (fd >= 0)
+      (void)close(fd);
+    (void)pthread_mutex_unlock(&ft_sem->local_lock);
+    errno = saved_errno;
+    return -1;
+  }
+  ft_sem->fd = fd;
+  ft_sem->lock_dev = st.st_dev;
+  ft_sem->lock_ino = st.st_ino;
+  return 0;
 #endif
 }
 
@@ -194,7 +266,29 @@ int ft_sem_unlock(ft_sem_t *ft_sem)
   };
   return semop(ft_sem->semid, &sb, 1);
 #elif FT_SEMAPHORE_BACKEND == FT_FLOCK
-  return flock(ft_sem->fd, LOCK_UN);
+  int saved_errno = 0;
+  int ret;
+
+  /* Applications may close all inherited descriptors or reuse this descriptor
+   * number.  A closed flock descriptor releases its lock automatically; never
+   * operate on a descriptor unless it is still the lock file we opened. */
+  if (ft_sem_fd_matches_lock(ft_sem))
+  {
+    if (flock(ft_sem->fd, LOCK_UN) == -1)
+      saved_errno = errno;
+    if (close(ft_sem->fd) == -1 && saved_errno == 0)
+      saved_errno = errno;
+  }
+  ft_sem->fd = -1;
+  ret = pthread_mutex_unlock(&ft_sem->local_lock);
+  if (ret != 0 && saved_errno == 0)
+    saved_errno = ret;
+  if (saved_errno != 0)
+  {
+    errno = saved_errno;
+    return -1;
+  }
+  return 0;
 #endif
 }
 
@@ -207,8 +301,13 @@ int ft_sem_close(ft_sem_t *ft_sem)
   (void)ft_sem;
   return 0;
 #elif FT_SEMAPHORE_BACKEND == FT_FLOCK
-  int ret = close(ft_sem->fd);
+  int ret = 0;
+
+  if (ft_sem_fd_matches_lock(ft_sem) && close(ft_sem->fd) == -1)
+    ret = -1;
   ft_sem->fd = -1;
+  if (pthread_mutex_destroy(&ft_sem->local_lock) != 0)
+    ret = -1;
   return ret;
 #endif
 }
