@@ -143,7 +143,10 @@ CFLAGS += -Wno-tautological-pointer-compare
 endif
 
 ifeq ($(COMPILER),gcc)
+GCC_NONNULL_COMPARE_FLAG := $(shell $(CC) -Werror -Wno-nonnull-compare -x c -c -o /dev/null /dev/null 2>/dev/null && echo 1)
+ifeq ($(GCC_NONNULL_COMPARE_FLAG),1)
 CFLAGS += -Wno-nonnull-compare
+endif
 endif
 
 ifeq ($(PLATFORM),SunOS)
@@ -180,7 +183,7 @@ LIBS = libfaketime.so.${SONAME} libfaketimeMT.so.${SONAME}
 
 TIME64_CFLAGS = $(CFLAGS) -UFAKE_STAT -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 -DFAKETIME_TIME64_BUILD
 
-IS_GLIBC := $(shell if $(CC) -dM -E -include features.h - < /dev/null 2>/dev/null | grep -q '^#define __GLIBC__ '; then echo 1; else echo 0; fi)
+IS_GLIBC := $(shell $(CC) -dM -E -include features.h - < /dev/null 2>/dev/null | grep -q __GLIBC__ && echo 1 || echo 0)
 ifeq ($(IS_GLIBC),1)
 TIME64_LIB = libfaketime-time64.so.1
 else

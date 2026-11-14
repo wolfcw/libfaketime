@@ -127,6 +127,31 @@ run_baseline() {
                     printf "phase=%s\\n" "$phase"
                     timeout "${FAKETIME_TEST_PHASE_TIMEOUT:-120}s" "$@"
                 }
+                # CentOS Linux 7 reached end of life.  Its final packages are
+                # kept by the kernel.org archive rather than the retired
+                # mirrorlist endpoint.  The primary vault currently rejects
+                # the obsolete CentOS 7 TLS client for package downloads.
+                if [ -r /etc/centos-release ] && grep -q "release 7" /etc/centos-release; then
+                    cat > /etc/yum.repos.d/CentOS-Base.repo <<"EOF"
+[base]
+name=CentOS-7.9.2009 - Base
+baseurl=https://archive.kernel.org/centos-vault/7.9.2009/os/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+[updates]
+name=CentOS-7.9.2009 - Updates
+baseurl=https://archive.kernel.org/centos-vault/7.9.2009/updates/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+[extras]
+name=CentOS-7.9.2009 - Extras
+baseurl=https://archive.kernel.org/centos-vault/7.9.2009/extras/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+EOF
+                fi
                 run_phase package sh -c '\''if command -v dnf >/dev/null 2>&1; then dnf -y install --allowerasing gcc make glibc-devel bash perl coreutils findutils util-linux file; elif command -v zypper >/dev/null 2>&1; then zypper --non-interactive install gcc make glibc-devel bash perl coreutils findutils util-linux file; else yum -y install gcc make glibc-devel bash perl coreutils findutils util-linux file; fi'\''
                 rm -rf /tmp/libfaketime
                 mkdir /tmp/libfaketime

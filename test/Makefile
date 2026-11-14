@@ -13,7 +13,7 @@ EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test stat_entry_points_test command_filter_thread_test
 
 TIME64_CFLAGS = -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64
-IS_GLIBC := $(shell if $(CC) -dM -E -include features.h - < /dev/null 2>/dev/null | grep -q '^#define __GLIBC__ '; then echo 1; else echo 0; fi)
+IS_GLIBC := $(shell $(CC) -dM -E -include features.h - < /dev/null 2>/dev/null | grep -q __GLIBC__ && echo 1 || echo 0)
 ifeq ($(IS_GLIBC),1)
 TIME64_LIB_DEP = ../src/libfaketime-time64.so.1
 else

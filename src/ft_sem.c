@@ -65,6 +65,8 @@ int ft_sem_name2key(char *name)
 #endif
 
 #if FT_SEMAPHORE_BACKEND == FT_FLOCK
+static ft_sem_fstat_fn ft_sem_real_fstat;
+
 static int ft_sem_name_to_path(const char *name, char *path, size_t pathlen)
 {
   const char *prefix = "/faketime_sem_";
@@ -89,6 +91,18 @@ static int ft_sem_name_to_path(const char *name, char *path, size_t pathlen)
   return 0;
 }
 
+void ft_sem_set_fstat(ft_sem_fstat_fn function)
+{
+  ft_sem_real_fstat = function;
+}
+
+static int ft_sem_fstat(int fd, struct stat *st)
+{
+  if (ft_sem_real_fstat != NULL)
+    return ft_sem_real_fstat(fd, st);
+  return fstat(fd, st);
+}
+
 static int ft_sem_init_flock(ft_sem_t *ft_sem)
 {
   int ret = pthread_mutex_init(&ft_sem->local_lock, NULL);
@@ -108,7 +122,7 @@ static bool ft_sem_fd_matches_lock(const ft_sem_t *ft_sem)
 {
   struct stat st;
 
-  return ft_sem->fd >= 0 && fstat(ft_sem->fd, &st) == 0 &&
+  return ft_sem->fd >= 0 && ft_sem_fstat(ft_sem->fd, &st) == 0 &&
     st.st_dev == ft_sem->lock_dev && st.st_ino == ft_sem->lock_ino;
 }
 #endif
@@ -238,7 +252,7 @@ int ft_sem_lock(ft_sem_t *ft_sem)
     return -1;
   }
   fd = open(path, O_RDWR);
-  if (fd < 0 || flock(fd, LOCK_EX) == -1 || fstat(fd, &st) == -1)
+  if (fd < 0 || flock(fd, LOCK_EX) == -1 || ft_sem_fstat(fd, &st) == -1)
   {
     int saved_errno = errno;
     if (fd >= 0)

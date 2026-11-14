@@ -139,9 +139,10 @@ struct timeb {
 #ifdef __has_attribute
 #if __has_attribute (__symver__)
 #define SYMVER(FUNCTION_NAME, EXPORTED_SYMBOL) __attribute__ (( __symver__ (#EXPORTED_SYMBOL)))
-#else
-#define SYMVER(FUNCTION_NAME, EXPORTED_SYMBOL) __asm__(".symver " #FUNCTION_NAME ", " #EXPORTED_SYMBOL);
 #endif
+#endif
+#ifndef SYMVER
+#define SYMVER(FUNCTION_NAME, EXPORTED_SYMBOL) __asm__(".symver " #FUNCTION_NAME ", " #EXPORTED_SYMBOL);
 #endif
 
 static long stat_mtime_nsec(const struct stat *st);
@@ -3967,6 +3968,12 @@ static void ftpl_really_init(void)
 
 #ifdef MACOS_DYLD_INTERPOSE
   do_macos_dyld_interpose();
+#endif
+
+#if FT_SEMAPHORE_BACKEND == FT_FLOCK
+  /* ft_sem must inspect its flock descriptor without re-entering fstat()
+   * while shared-memory initialization is still in progress. */
+  ft_sem_set_fstat(ft_real_fstat);
 #endif
 
 #undef dlsym

@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv)
 {
-  struct itimerspec timer = {0};
+  struct itimerspec timer = {{0, 0}, {0, 0}};
   struct pollfd descriptor;
   struct timespec now;
   uint64_t expirations;
