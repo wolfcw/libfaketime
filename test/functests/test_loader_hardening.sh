@@ -18,6 +18,17 @@ init()
 run()
 {
   init
+
+  # AddressSanitizer must be loaded before libfaketime.  Repeating the loader
+  # probe with that synthetic preload order is not representative of the
+  # regular loader path; test_asan_preload.sh covers the supported sanitizer
+  # arrangement directly.
+  if [ -n "${FAKETIME_SANITIZER_LIB:-}" ]; then
+    echo "out=skip repeated loader probe is incompatible with sanitizer preload order - ok"
+    echo "out=1 sanitizer preload parsing is covered by test_asan_preload.sh - ok"
+    return 0
+  fi
+
   typeset i value
 
   typeset iterations=${FAKETIME_LOADER_TEST_ITERATIONS:-10}

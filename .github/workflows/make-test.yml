@@ -24,11 +24,11 @@ jobs:
           compiler: clang
           compile_flags: "-DFORCE_MONOTONIC_FIX"
           sanitizer: false
-        - os: macos-14
+        - os: macos-15
           compiler: clang
           compile_flags: ""
           sanitizer: false
-        - os: macos-14
+        - os: macos-15
           compiler: clang
           compile_flags: "-DFAKE_FILE_TIMESTAMPS"
           sanitizer: false

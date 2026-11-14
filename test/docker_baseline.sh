@@ -122,7 +122,22 @@ deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20
 EOF
                 fi
                 rm -rf /var/lib/apt/lists/*
-                apt-get update
+                apt_update_attempt=1
+                while :; do
+                    apt-get update || true
+                    if apt-cache show build-essential >/dev/null 2>&1 && \
+                       apt-cache show perl >/dev/null 2>&1 && \
+                       apt-cache show file >/dev/null 2>&1; then
+                        break
+                    fi
+                    if [ "$apt_update_attempt" -ge 3 ]; then
+                        echo "error: apt package indexes are unavailable after $apt_update_attempt attempts" >&2
+                        exit 1
+                    fi
+                    echo "warning: apt package indexes are incomplete; retrying ($((apt_update_attempt + 1))/3)" >&2
+                    apt_update_attempt=$((apt_update_attempt + 1))
+                    sleep 2
+                done
                 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                     build-essential bash perl coreutils util-linux file
                 rm -rf /tmp/libfaketime
