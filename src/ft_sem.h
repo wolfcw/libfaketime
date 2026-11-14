@@ -56,6 +56,7 @@ typedef struct
   dev_t lock_dev;
   ino_t lock_ino;
   pthread_mutex_t local_lock;
+  unsigned int lock_depth;
 #endif
 } ft_sem_t;
 

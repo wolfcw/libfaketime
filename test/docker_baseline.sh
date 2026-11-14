@@ -47,15 +47,22 @@ run_baseline() {
     fi
 
     if [ -n "$DOCKER_PLATFORM" ]; then
-        image_arch=$(docker image inspect --format '{{.Architecture}}' "$image")
-        case "$DOCKER_PLATFORM:$image_arch" in
-            linux/386:386|linux/amd64:amd64|linux/arm64:arm64|linux/arm/v7:arm|linux/ppc64le:ppc64le|linux/s390x:s390x) ;;
-            *)
-                echo "error: $image is $image_arch, incompatible with $DOCKER_PLATFORM" >&2
-                echo "       pull an image matching the requested platform and retry" >&2
-                return 2
-                ;;
-        esac
+        # A multi-platform image pulled with --platform may remain a manifest
+        # list locally.  Ask Docker for the selected platform explicitly; an
+        # older daemon without that option is allowed to let docker run make
+        # the final compatibility decision.
+        image_arch=$(docker image inspect --platform "$DOCKER_PLATFORM" \
+            --format '{{.Architecture}}' "$image" 2>/dev/null || true)
+        if [ -n "$image_arch" ]; then
+            case "$DOCKER_PLATFORM:$image_arch" in
+                linux/386:386|linux/amd64:amd64|linux/arm64:arm64|linux/arm/v7:arm|linux/ppc64le:ppc64le|linux/s390x:s390x) ;;
+                *)
+                    echo "error: $image is $image_arch, incompatible with $DOCKER_PLATFORM" >&2
+                    echo "       pull an image matching the requested platform and retry" >&2
+                    return 2
+                    ;;
+            esac
+        fi
     fi
 
     case "$image" in
@@ -101,6 +108,20 @@ run_baseline() {
         debian:*|ubuntu:*|gcc:*)
             docker run --rm $docker_platform_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
+                . /etc/os-release
+                # Debian 11 remains useful for its older glibc ABI, but its
+                # LTS security metadata can reference packages no longer
+                # available from the live mirror.  Pin its disposable build
+                # to an intact Debian snapshot instead.
+                if [ "${VERSION_CODENAME:-}" = bullseye ]; then
+                    rm -f /etc/apt/sources.list.d/*.list
+                    cat > /etc/apt/sources.list <<"EOF"
+deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260903T220410Z/ bullseye main
+deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260903T220410Z/ bullseye-updates main
+deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260903T220410Z/ bullseye-security main
+EOF
+                fi
+                rm -rf /var/lib/apt/lists/*
                 apt-get update
                 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                     build-essential bash perl coreutils util-linux file

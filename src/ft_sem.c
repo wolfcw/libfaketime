@@ -105,7 +105,24 @@ static int ft_sem_fstat(int fd, struct stat *st)
 
 static int ft_sem_init_flock(ft_sem_t *ft_sem)
 {
-  int ret = pthread_mutex_init(&ft_sem->local_lock, NULL);
+  pthread_mutexattr_t attr;
+  int ret = pthread_mutexattr_init(&attr);
+
+  if (ret != 0)
+  {
+    errno = ret;
+    return -1;
+  }
+  ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+
+  if (ret != 0)
+  {
+    (void)pthread_mutexattr_destroy(&attr);
+    errno = ret;
+    return -1;
+  }
+  ret = pthread_mutex_init(&ft_sem->local_lock, &attr);
+  (void)pthread_mutexattr_destroy(&attr);
 
   if (ret != 0)
   {
@@ -115,6 +132,7 @@ static int ft_sem_init_flock(ft_sem_t *ft_sem)
   ft_sem->fd = -1;
   ft_sem->lock_dev = 0;
   ft_sem->lock_ino = 0;
+  ft_sem->lock_depth = 0;
   return 0;
 }
 
@@ -251,6 +269,11 @@ int ft_sem_lock(ft_sem_t *ft_sem)
     (void)pthread_mutex_unlock(&ft_sem->local_lock);
     return -1;
   }
+  if (ft_sem->lock_depth > 0 && ft_sem_fd_matches_lock(ft_sem))
+  {
+    ft_sem->lock_depth++;
+    return 0;
+  }
   fd = open(path, O_RDWR);
   if (fd < 0 || flock(fd, LOCK_EX) == -1 || ft_sem_fstat(fd, &st) == -1)
   {
@@ -264,6 +287,7 @@ int ft_sem_lock(ft_sem_t *ft_sem)
   ft_sem->fd = fd;
   ft_sem->lock_dev = st.st_dev;
   ft_sem->lock_ino = st.st_ino;
+  ft_sem->lock_depth++;
   return 0;
 #endif
 }
@@ -283,6 +307,18 @@ int ft_sem_unlock(ft_sem_t *ft_sem)
   int saved_errno = 0;
   int ret;
 
+  if (ft_sem->lock_depth > 1)
+  {
+    ft_sem->lock_depth--;
+    ret = pthread_mutex_unlock(&ft_sem->local_lock);
+    if (ret != 0)
+    {
+      errno = ret;
+      return -1;
+    }
+    return 0;
+  }
+
   /* Applications may close all inherited descriptors or reuse this descriptor
    * number.  A closed flock descriptor releases its lock automatically; never
    * operate on a descriptor unless it is still the lock file we opened. */
@@ -294,6 +330,7 @@ int ft_sem_unlock(ft_sem_t *ft_sem)
       saved_errno = errno;
   }
   ft_sem->fd = -1;
+  ft_sem->lock_depth = 0;
   ret = pthread_mutex_unlock(&ft_sem->local_lock);
   if (ret != 0 && saved_errno == 0)
     saved_errno = ret;
