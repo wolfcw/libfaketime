@@ -8,7 +8,7 @@ on:
       - master
       - develop
   schedule:
-    - cron: '30 9 * * *'
+    - cron: '30 18 * * *'
 
 jobs:
   build:
@@ -279,8 +279,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - name: i386
-          platform: linux/386
+          # often fails on Github due to DNS/index fetching issues, giving up temporarily
+          #- name: i386
+          #platform: linux/386
         - name: arm64
           platform: linux/arm64
     steps:
