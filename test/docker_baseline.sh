@@ -37,6 +37,20 @@ else
     docker_platform_arg=
 fi
 
+# Cross-architecture containers on GitHub's Linux runners occasionally lose
+# DNS connectivity through Docker's bridge while QEMU is active.  Allow the
+# architecture job to opt into the runner's network namespace instead.  Keep
+# the default bridge network for ordinary local and distribution tests.
+DOCKER_NETWORK=${DOCKER_NETWORK:-}
+case "$DOCKER_NETWORK" in
+    "") docker_network_arg= ;;
+    host) docker_network_arg="--network=host" ;;
+    *)
+        echo "error: unsupported Docker network mode: $DOCKER_NETWORK" >&2
+        exit 2
+        ;;
+esac
+
 run_baseline() {
     image=$1
 
@@ -67,7 +81,7 @@ run_baseline() {
 
     case "$image" in
         alpine:*)
-            docker run --rm $docker_platform_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
+            docker run --rm $docker_platform_arg $docker_network_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 apk add --no-cache build-base bash perl coreutils util-linux file tzdata
                 rm -rf /tmp/libfaketime
@@ -84,7 +98,7 @@ run_baseline() {
             '
             ;;
         archlinux:*)
-            docker run --rm $docker_platform_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
+            docker run --rm $docker_platform_arg $docker_network_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
                 -e "DOCKER_ARCH_DISABLE_PACMAN_SANDBOX=${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" bash -eu -c '
                 if [ "${DOCKER_ARCH_DISABLE_PACMAN_SANDBOX:-0}" = 1 ]; then
@@ -106,7 +120,7 @@ run_baseline() {
             '
             ;;
         debian:*|ubuntu:*|gcc:*)
-            docker run --rm $docker_platform_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
+            docker run --rm $docker_platform_arg $docker_network_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 . /etc/os-release
                 # Debian 11 remains useful for its older glibc ABI, but its
@@ -155,7 +169,7 @@ EOF
             '
             ;;
         fedora:*|rockylinux:*|centos:*|quay.io/centos/centos:*|opensuse/tumbleweed:*)
-            docker run --rm $docker_platform_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
+            docker run --rm $docker_platform_arg $docker_network_arg -e "CFLAGS=${CFLAGS:-}" -e "FAKETIME_COMPILE_CFLAGS=${FAKETIME_COMPILE_CFLAGS:-}" -e "LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=${LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS:-0}" \
                 -v "$REPO_DIR:/src:ro" "$image" sh -eu -c '
                 run_phase() {
                     phase=$1

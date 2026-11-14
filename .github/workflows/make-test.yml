@@ -294,6 +294,9 @@ jobs:
     - name: make test on ${{ matrix.name }} Debian
       env:
         DOCKER_PLATFORM: ${{ matrix.platform }}
+        # QEMU's bridge-network DNS can be flaky on hosted runners; the
+        # test container needs outbound package access only.
+        DOCKER_NETWORK: host
       run: |
         set -o pipefail
         test/docker_baseline.sh debian:13 2>&1 | tee "debian-${{ matrix.name }}-baseline.log"
