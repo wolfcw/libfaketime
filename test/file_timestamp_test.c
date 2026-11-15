@@ -12,16 +12,31 @@
 #include <unistd.h>
 
 static const char *walk_target;
+static long long walk_expected_mtime;
 static int walk_seen;
+static int walk_timestamp_mismatch;
+
+static int walk_path_matches(const char *path)
+{
+  return strcmp(path, walk_target) == 0 ||
+    (path[0] == '.' && path[1] == '/' && strcmp(path + 2, walk_target) == 0);
+}
 
 static int walk_callback(const char *path, const struct stat *st,
                          int type, struct FTW *state)
 {
-  (void)st;
   (void)type;
   (void)state;
-  if (strcmp(path, walk_target) == 0)
+  if (walk_path_matches(path))
+  {
     walk_seen = 1;
+    if (st == NULL || (long long)st->st_mtime != walk_expected_mtime)
+    {
+      fprintf(stderr, "nftw expected mtime %lld, got %lld\n",
+              walk_expected_mtime, st == NULL ? -1LL : (long long)st->st_mtime);
+      walk_timestamp_mismatch = 1;
+    }
+  }
   return 0;
 }
 
@@ -100,9 +115,12 @@ int main(int argc, char **argv)
   }
   unlink(link_path);
 
-  walk_target = ".";
+  walk_target = path;
+  walk_expected_mtime = expected;
   walk_seen = 0;
-  if (nftw(".", walk_callback, 16, FTW_PHYS) == -1 || !walk_seen)
+  walk_timestamp_mismatch = 0;
+  if (nftw(".", walk_callback, 16, FTW_PHYS) == -1 || !walk_seen ||
+      walk_timestamp_mismatch)
   {
     perror("nftw");
     return EXIT_FAILURE;

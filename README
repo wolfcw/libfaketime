@@ -482,7 +482,9 @@ File timestamp hook contract
 
 `FAKE_FILE_TIMESTAMPS` (also enabled by `FAKE_UTIME`) is an opt-in feature.
 Its tested contract currently covers timestamp-setting calls such as
-`utimensat()` and the timestamp results returned by `stat()` and `lstat()`.
+`utimensat()` and the timestamp results returned by `stat()`, `lstat()`, and
+`nftw()` callbacks. `nftw()` receives a private faked copy of its metadata so
+that libc-private stat entry points cannot bypass the virtual timestamp.
 `fstatat()` remains callable and is tested for successful operation, but its
 result is not promised to carry the same virtual timestamp on every libc:
 Linux libc versions use different `__fxstatat()` and time-width symbol paths,

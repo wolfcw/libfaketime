@@ -56,6 +56,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <ftw.h>
 #include <netinet/in.h>
 #include <limits.h>
 #ifdef INTERCEPT_SYSCALL
@@ -355,6 +356,11 @@ static bool command_excluded = false;
 static int          (*real_stat)            (const char *, struct stat *);
 static int          (*real_fstat)           (int, struct stat *);
 static int          (*real_lstat)           (const char *, struct stat *);
+#if defined(FAKE_STAT) && !defined(MACOS_DYLD_INTERPOSE)
+static int          (*real_nftw)            (const char *,
+                                              int (*)(const char *, const struct stat *, int, struct FTW *),
+                                              int, int);
+#endif
 #ifndef __ANDROID__
 static int          (*real_xstat)           (int, const char *, struct stat *);
 static int          (*real_fxstat)          (int, int, struct stat *);
@@ -1792,6 +1798,78 @@ int lstat (const char *path, struct stat *buf)
 #endif
 {
   STAT_HANDLER(lstat, buf, path, buf);
+}
+
+/* nftw() may obtain metadata through libc-private entry points, bypassing the
+ * public stat() interposers. Give callbacks a private faked copy instead.
+ * The context is thread-local so a callback can safely start a nested walk. */
+struct nftw_callback_context
+{
+  int (*callback)(const char *, const struct stat *, int, struct FTW *);
+  struct nftw_callback_context *previous;
+};
+
+static __thread struct nftw_callback_context *nftw_callback_context;
+
+static int fake_nftw_callback(const char *path, const struct stat *st,
+                              int type, struct FTW *state)
+{
+  struct nftw_callback_context *context = nftw_callback_context;
+
+  if (context == NULL)
+  {
+    errno = EINVAL;
+    return -1;
+  }
+  if (st != NULL && !fake_stat_disabled && !command_excluded)
+  {
+    struct stat faked_stat = *st;
+    bool dont_fake_orig = dont_fake_thread;
+
+    /* The real walk runs with recursion protection enabled. Its callback is
+     * nevertheless user-visible API output, so fake this copied metadata. */
+    dont_fake_thread = false;
+    fake_statbuf(&faked_stat);
+    dont_fake_thread = dont_fake_orig;
+    return context->callback(path, &faked_stat, type, state);
+  }
+  return context->callback(path, st, type, state);
+}
+
+static int fake_nftw(const char *path,
+                     int (*callback)(const char *, const struct stat *, int, struct FTW *),
+                     int descriptors, int flags)
+{
+  struct nftw_callback_context context;
+  int result;
+
+  ftpl_init();
+#ifndef MACOS_DYLD_INTERPOSE
+  if (!CHECK_MISSING_REAL(nftw)) return -1;
+#endif
+  context.callback = callback;
+  context.previous = nftw_callback_context;
+  nftw_callback_context = &context;
+#ifdef MACOS_DYLD_INTERPOSE
+  DONT_FAKE_TIME(result = nftw(path, fake_nftw_callback, descriptors, flags));
+#else
+  DONT_FAKE_TIME(result = real_nftw(path, fake_nftw_callback, descriptors, flags));
+#endif
+  nftw_callback_context = context.previous;
+  return result;
+}
+
+#ifdef MACOS_DYLD_INTERPOSE
+int macos_nftw(const char *path,
+               int (*callback)(const char *, const struct stat *, int, struct FTW *),
+               int descriptors, int flags)
+#else
+int nftw(const char *path,
+         int (*callback)(const char *, const struct stat *, int, struct FTW *),
+         int descriptors, int flags)
+#endif
+{
+  return fake_nftw(path, callback, descriptors, flags);
 }
 
 #ifndef __APPLE__
@@ -3799,6 +3877,9 @@ static void ftpl_really_init(void)
   real_stat =               dlsym(RTLD_NEXT, "stat");
   real_lstat =              dlsym(RTLD_NEXT, "lstat");
   real_fstat =              dlsym(RTLD_NEXT, "fstat");
+#if defined(FAKE_STAT) && !defined(MACOS_DYLD_INTERPOSE)
+  real_nftw =               dlsym(RTLD_NEXT, "nftw");
+#endif
 #ifndef __ANDROID__
   real_xstat =              dlsym(RTLD_NEXT, "__xstat");
   real_fxstat =             dlsym(RTLD_NEXT, "__fxstat");
@@ -5908,6 +5989,7 @@ void do_macos_dyld_interpose(void) {
   DYLD_INTERPOSE(macos_stat, stat);
 //  DYLD_INTERPOSE(macos_fstat, fstat);
   DYLD_INTERPOSE(macos_lstat, lstat);
+  DYLD_INTERPOSE(macos_nftw, nftw);
 #endif
 #ifdef FAKE_FILE_TIMESTAMPS
   DYLD_INTERPOSE(macos_utime, utime);

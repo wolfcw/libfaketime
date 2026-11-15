@@ -48,7 +48,7 @@ jobs:
           sanitizer: false
         - os: macos-15
           compiler: clang
-          compile_flags: "-DFAKE_FILE_TIMESTAMPS"
+          compile_flags: "-DFAKE_STAT -DFAKE_FILE_TIMESTAMPS -DFAKE_UTIME"
           sanitizer: false
         - os: ubuntu-latest
           compiler: gcc
