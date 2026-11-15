@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,10 +12,34 @@
 #include <unistd.h>
 
 struct test_state {
-  atomic_bool stop;
-  atomic_bool failed;
-  atomic_uint samples;
+  pthread_mutex_t mutex;
+  bool stop;
+  bool failed;
+  unsigned int samples;
 };
+
+static bool state_is_stopped(struct test_state *state)
+{
+  bool stopped;
+  pthread_mutex_lock(&state->mutex);
+  stopped = state->stop;
+  pthread_mutex_unlock(&state->mutex);
+  return stopped;
+}
+
+static void state_fail(struct test_state *state)
+{
+  pthread_mutex_lock(&state->mutex);
+  state->failed = true;
+  pthread_mutex_unlock(&state->mutex);
+}
+
+static void state_add_sample(struct test_state *state)
+{
+  pthread_mutex_lock(&state->mutex);
+  ++state->samples;
+  pthread_mutex_unlock(&state->mutex);
+}
 
 static int compare_timespec(const struct timespec *left, const struct timespec *right)
 {
@@ -33,19 +56,19 @@ static void *reader(void *opaque)
   struct timespec previous = {0, 0};
   bool have_previous = false;
 
-  while (!atomic_load_explicit(&state->stop, memory_order_relaxed))
+  while (!state_is_stopped(state))
   {
     struct timespec now;
     if (clock_gettime(CLOCK_REALTIME, &now) != 0 || now.tv_nsec < 0 ||
         now.tv_nsec >= 1000000000L ||
         (have_previous && compare_timespec(&now, &previous) < 0))
     {
-      atomic_store_explicit(&state->failed, true, memory_order_relaxed);
+      state_fail(state);
       break;
     }
     previous = now;
     have_previous = true;
-    atomic_fetch_add_explicit(&state->samples, 1, memory_order_relaxed);
+    state_add_sample(state);
   }
   return NULL;
 }
@@ -83,7 +106,7 @@ int main(int argc, char **argv)
 {
   static const char *const configurations[] = {"+0 x1\n", "+0 x4\n", "+0 x0.5\n"};
   enum { reader_count = 4, transition_count = 48 };
-  struct test_state state = {0};
+  struct test_state state = { PTHREAD_MUTEX_INITIALIZER, false, false, 0 };
   pthread_t readers[reader_count];
   struct timespec pause = {0, 1000000L};
   unsigned int i;
@@ -97,7 +120,9 @@ int main(int argc, char **argv)
     if (pthread_create(&readers[i], NULL, reader, &state) != 0)
     {
       fprintf(stderr, "pthread_create failed\n");
-      atomic_store(&state.stop, true);
+      pthread_mutex_lock(&state.mutex);
+      state.stop = true;
+      pthread_mutex_unlock(&state.mutex);
       while (i > 0)
         pthread_join(readers[--i], NULL);
       return EXIT_FAILURE;
@@ -108,24 +133,29 @@ int main(int argc, char **argv)
     if (replace_config(argv[1], configurations[i % 3]) != 0)
     {
       perror("replace configuration");
-      atomic_store(&state.failed, true);
+      state_fail(&state);
       break;
     }
     nanosleep(&pause, NULL);
   }
-  atomic_store(&state.stop, true);
+  pthread_mutex_lock(&state.mutex);
+  state.stop = true;
+  pthread_mutex_unlock(&state.mutex);
   for (i = 0; i < reader_count; ++i)
     pthread_join(readers[i], NULL);
 
   /* The interposed nanosleep is deliberately rate-scaled, so the amount of
    * reader work varies by platform and configuration.  Every reader must have
    * run, but no fixed scheduling-dependent total is part of the contract. */
-  if (atomic_load(&state.failed) || atomic_load(&state.samples) < reader_count)
+  pthread_mutex_lock(&state.mutex);
+  if (state.failed || state.samples < reader_count)
   {
     fprintf(stderr, "rate-transition contract failed (%u samples)\n",
-            atomic_load(&state.samples));
+            state.samples);
+    pthread_mutex_unlock(&state.mutex);
     return EXIT_FAILURE;
   }
-  printf("rate-transition contract passed (%u samples)\n", atomic_load(&state.samples));
+  printf("rate-transition contract passed (%u samples)\n", state.samples);
+  pthread_mutex_unlock(&state.mutex);
   return EXIT_SUCCESS;
 }
