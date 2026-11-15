@@ -162,7 +162,7 @@ LIB_LDFLAGS += -shared
 LDFLAGS += $(FAKETIME_LINK_FLAGS)
 ifneq ($(PLATFORM),SunOS)
 ifndef IS_ANDROID
-LDFLAGS += -Wl,--version-script=libfaketime.map
+LIB_LDFLAGS += -Wl,--version-script=libfaketime.map
 endif
 endif
 

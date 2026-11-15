@@ -11,6 +11,19 @@ on:
     - cron: '30 18 * * *'
 
 jobs:
+  lld:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build with clang and lld
+      run: |
+        set -eu
+        command -v clang
+        command -v ld.lld
+        make -C src clean all CC=clang FAKETIME_LINK_FLAGS=-fuse-ld=lld
+        readelf --version-info src/libfaketime.so.1 | grep -q 'GLIBC_2.2.5'
+
   build:
     strategy:
       fail-fast: false

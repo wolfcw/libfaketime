@@ -206,7 +206,7 @@ void* pthread_test(void* args)
   struct timespec time_to_wait, now;
   int rt;
 
-  args = args; // silence compiler warning about unused argument
+  (void)args;
 
   clock_gettime(CLOCK_REALTIME, &now);
   time_to_wait.tv_sec = now.tv_sec+1;
