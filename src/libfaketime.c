@@ -669,6 +669,12 @@ static int cache_duration = 10;     /* cache fake time input for 10 seconds */
 static int force_cache_expiration = 0;
 /* FAKETIME_XRESET is set; only then are ftpl_timecache/ftpl_faketimecache kept */
 static bool xreset_enabled = false;
+#ifndef PTHREAD_SINGLETHREADED_TIME
+/* The regular library normally avoids a process-wide clock lock.  XRESET,
+ * however, updates a shared rate-transition snapshot and must publish it as
+ * one transaction to keep concurrent realtime readers monotonic. */
+static pthread_mutex_t xreset_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 /*
  * Static timespec to store our startup time, followed by a load-time library
@@ -4632,6 +4638,15 @@ int fake_clock_gettime(clockid_t clk_id, struct timespec *tp)
   // {ret = value; goto abort;} to call matching pthread_cleanup_pop and return value
   volatile int ret = INT_MAX;
 
+#ifndef PTHREAD_SINGLETHREADED_TIME
+  bool xreset_locked = false;
+  if (xreset_enabled)
+  {
+    pthread_mutex_lock(&xreset_mutex);
+    xreset_locked = true;
+  }
+#endif
+
 #ifdef PTHREAD_SINGLETHREADED_TIME
   static pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -4853,8 +4868,29 @@ abort:
   pthread_cleanup_pop(1);
 #endif
   // came here via goto abort?
-  if (ret != INT_MAX) return ret;
+  if (ret != INT_MAX)
+  {
+#ifndef PTHREAD_SINGLETHREADED_TIME
+    if (xreset_locked)
+      pthread_mutex_unlock(&xreset_mutex);
+#endif
+    return ret;
+  }
   normalize_timespec_value(tp);
+
+  /* A rate transition is serialized above, but its real-time sample may have
+   * been obtained immediately before another reader published a later value.
+   * XRESET promises a nondecreasing realtime clock, so preserve the last
+   * published value in that case. */
+  if (xreset_enabled && clk_id == CLOCK_REALTIME &&
+      ftpl_faketimecache.real.tv_nsec >= 0 &&
+      (tp->tv_sec < ftpl_faketimecache.real.tv_sec ||
+       (tp->tv_sec == ftpl_faketimecache.real.tv_sec &&
+        tp->tv_nsec < ftpl_faketimecache.real.tv_nsec)))
+  {
+    tp->tv_sec = ftpl_faketimecache.real.tv_sec;
+    tp->tv_nsec = ftpl_faketimecache.real.tv_nsec;
+  }
   save_time(tp);
 
   /* Cache this most recent real and faked time we encountered.
@@ -4862,6 +4898,10 @@ abort:
    * concurrent callers contend for its cache lines, so skip it otherwise. */
   if (!xreset_enabled)
   {
+#ifndef PTHREAD_SINGLETHREADED_TIME
+    if (xreset_locked)
+      pthread_mutex_unlock(&xreset_mutex);
+#endif
     return 0;
   }
   if (clk_id == CLOCK_REALTIME)
@@ -4895,6 +4935,10 @@ abort:
   }
 #endif
 
+#ifndef PTHREAD_SINGLETHREADED_TIME
+  if (xreset_locked)
+    pthread_mutex_unlock(&xreset_mutex);
+#endif
   return 0;
 }
 

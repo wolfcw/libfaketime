@@ -21,6 +21,7 @@ run()
 	run_testcase rejects_oversized_configuration
 	run_testcase rejects_embedded_nul_configuration
 	run_testcase xreset_smooths_first_rate_change
+	run_testcase xreset_serializes_atomic_rate_transitions
 }
 
 config_file_cmd()
@@ -67,6 +68,31 @@ xreset_smooths_first_rate_change()
 		return 0
 	fi
 	echo "out=$smoothed clock jumped ${smoothed:-?} s with FAKETIME_XRESET, ${unsmoothed:-?} s without - bad"
+	return 1
+}
+
+xreset_serializes_atomic_rate_transitions()
+{
+	typeset config_file=".config_rate_transition_test.$$"
+	typeset output
+	echo "+0 x1" > "$config_file"
+	if [ "$PLATFORM" = "mac" ]; then
+		output=$(FAKETIME_XRESET=1 FAKETIME_TIMESTAMP_FILE="$config_file" \
+			FAKETIME_NO_CACHE=1 DYLD_INSERT_LIBRARIES=../src/libfaketime.1.dylib \
+			DYLD_FORCE_FLAT_NAMESPACE=1 ./rate_transition_test "$config_file" 2>&1)
+	else
+		output=$(FAKETIME_XRESET=1 FAKETIME_TIMESTAMP_FILE="$config_file" \
+			FAKETIME_NO_CACHE=1 LD_PRELOAD="${FAKETIME_TESTLIB:-../src/libfaketime.so.1}" \
+			./rate_transition_test "$config_file" 2>&1)
+	fi
+	rm -f "$config_file" "$config_file.new"
+	case "$output" in
+		*"rate-transition contract passed"*)
+			echo "out=1 atomic rate transitions preserve nondecreasing realtime - ok"
+			return 0
+			;;
+	esac
+	echo "out=0 atomic rate transitions failed: $output - bad"
 	return 1
 }
 

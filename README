@@ -535,6 +535,10 @@ and then the setting is changed to 'x10', the faked time will look to the
 program as if it has been running for more than 100 instead of just more than
 10 seconds.
 
+When multiple threads use a timestamp file, replace a complete temporary file
+with `rename(2)` rather than overwriting the live file. This gives readers
+either complete configuration and avoids exposing a partly-written setting.
+
 By setting the environment variable FAKETIME_XRESET to any value before the
 program starts, transitions between different 'x' modifier values will be
 significantly smoothed:

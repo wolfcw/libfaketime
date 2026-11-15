@@ -10,7 +10,7 @@ OBJ = ${SRC:.c=.o}
 TEST_SNIPPETS = $(notdir $(basename $(wildcard snippets/*.c)))
 EXPECTATIONS = $(notdir $(basename $(wildcard snippets/*.variable)))
 
-ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test stat_entry_points_test command_filter_thread_test
+ALL_TESTS = timetest test shm_layout_test abi_info_test set_mtime time_ops_test clock_consistency_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test stat_entry_points_test command_filter_thread_test rate_transition_test
 
 TIME64_CFLAGS = -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64
 IS_GLIBC := $(shell $(CC) -dM -E -include features.h - < /dev/null 2>/dev/null | grep -q __GLIBC__ && echo 1 || echo 0)
@@ -90,6 +90,9 @@ timezone_contract_test: timezone_contract_test.c
 command_filter_thread_test: command_filter_thread_test.c
 	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
 
+rate_transition_test: rate_transition_test.c
+	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
+
 time_ops_test: time_ops_test.c ../src/time_ops.h
 	${CC} -o $@ ${CFLAGS} $<
 
@@ -135,7 +138,7 @@ futex_contract_test: futex_contract_test.c
 futex_requeue_test: futex_requeue_test.c
 	${CC} -o $@ ${CFLAGS} $<
 
-test: timetest abi_info_test shm_layout_test time64_contract_test time_ops_test clock_consistency_test set_mtime wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test stat_entry_points_test command_filter_thread_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} ${FUTEX_TEST_DEP} functest
+test: timetest abi_info_test shm_layout_test time64_contract_test time_ops_test clock_consistency_test set_mtime wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test stat_entry_points_test command_filter_thread_test rate_transition_test init_reentry.so ${RANDOM_TEST_DEP} ${FILE_TIMESTAMP_TEST_DEP} ${FAKE_PID_TEST_DEP} ${SYSCALL_TEST_DEP} ${FUTEX_TEST_DEP} functest
 	@echo
 	@./abi_info_test
 	@./time64_contract_test
@@ -185,7 +188,7 @@ use_lib_%: _use_lib_test.c snippets/%.c lib%.so
 ## cleanup and metainformation
 
 clean:
-	@rm -f ${OBJ} timetest shm_layout_test abi_info_test time64_contract_test set_mtime time_ops_test clock_consistency_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test command_filter_thread_test futex_contract_test futex_requeue_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test stat_entry_points_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
+	@rm -f ${OBJ} timetest shm_layout_test abi_info_test time64_contract_test set_mtime time_ops_test clock_consistency_test wait_contract_test wait_api_contract_test sem_contract_test wait_timeout_contract_test timerfd_contract_test asan_preload_test fd_leak_test fd_liveness_test fd_closure_test emfile_clock_test timezone_contract_test command_filter_thread_test rate_transition_test futex_contract_test futex_requeue_test init_reentry.so fake_pid_test fake_pid_contract_test random_test file_timestamp_test stat_entry_points_test syscall_contract_test getrandom_test syscall_test $(foreach f,${TEST_SNIPPETS},use_lib_${f} lib${f}.so run_${f}) variadic_promotion variadic/*.o repeat_random libmallocintercept.so
 
 distclean: clean
 	@echo
