@@ -22,6 +22,26 @@ CentOS 7/RHEL-compatible, language-runtime, GUI, and Proton/Wine checks are
 optional integration investigations. They must be time-bounded and include a
 minimal reproducer before becoming release gates.
 
+## Debian ARM package investigation
+
+Reports such as [#505](https://github.com/wolfcw/libfaketime/issues/505) must
+first distinguish the distribution package from an in-tree build. On the
+target ARM device, discover the packaged preload library through package
+metadata rather than assuming a multiarch path:
+
+```sh
+package_lib=$(dpkg-query -L libfaketime | grep '/libfaketime\.so\.1$' | head -n 1)
+test -n "$package_lib"
+FAKETIME='@2020-06-15 12:00:00' LD_PRELOAD="$package_lib" date +%Y
+FAKETIME='@2020-06-15 12:00:00' LD_PRELOAD="$PWD/src/libfaketime.so.1" date +%Y
+```
+
+Record the package version, architecture, selected path, dynamic loader
+diagnostics, and both results. A host without binfmt/QEMU support cannot run an
+`arm/v7` container; perform this probe on native ARM or an emulation-enabled
+Docker host instead of interpreting an `exec format error` as a libfaketime
+failure.
+
 ## Legacy loader investigation
 
 Issues [#438](https://github.com/wolfcw/libfaketime/issues/438),
