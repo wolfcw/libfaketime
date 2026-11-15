@@ -1,0 +1,28 @@
+GLIBC_2.2 {
+  global:
+  timer_gettime; timer_settime;
+  local: timer_settime_*; timer_gettime_*;
+};
+
+GLIBC_2.3.3 {
+  timer_gettime; timer_settime;
+} GLIBC_2.2;
+
+GLIBC_2.17 {
+  timerfd_create;
+};
+
+GLIBC_2.30 {
+  global: sem_clockwait;
+};
+
+GLIBC_2.34 {
+  global: sem_clockwait;
+} GLIBC_2.30;
+
+GLIBC_2.2.5 {
+  local: pthread_cond_timedwait_*; pthread_cond_init_*; pthread_cond_destroy_*;
+};
+
+GLIBC_2.3.2 {
+} GLIBC_2.2.5;

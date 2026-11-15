@@ -164,6 +164,15 @@ ifneq ($(PLATFORM),SunOS)
 ifndef IS_ANDROID
 LIB_LDFLAGS += -Wl,--version-script=libfaketime.map
 endif
+
+# The _TIME_BITS=64 helper deliberately omits the 32-bit glibc time64 entry
+# points listed in libfaketime.map. Its dedicated map retains the versions for
+# symbols it does provide; GNU ld accepts the extra entries, but lld rejects
+# them. The normal and MT preload libraries retain the normal version script.
+comma := ,
+TIME64_VERSION_SCRIPT = -Wl$(comma)--version-script=libfaketime.map
+TIME64_LIB_LDFLAGS = $(filter-out $(TIME64_VERSION_SCRIPT),$(LIB_LDFLAGS)) \
+                     -Wl$(comma)--version-script=libfaketime-time64.map
 endif
 
 ifdef IS_ANDROID
@@ -190,8 +199,8 @@ else
 TIME64_LIB =
 endif
 
-libfaketime-time64.so.1: libfaketime_time64.o ft_sem_time64.o
-	${CC} -o $@ ${LDFLAGS} ${LIB_LDFLAGS} $^ ${LDADD}
+libfaketime-time64.so.1: libfaketime_time64.o ft_sem_time64.o libfaketime-time64.map
+	${CC} -o $@ ${LDFLAGS} ${TIME64_LIB_LDFLAGS} libfaketime_time64.o ft_sem_time64.o ${LDADD}
 
 libfaketime_time64.o: libfaketime.c
 	${CC} -o $@ -c ${TIME64_CFLAGS} $<
