@@ -129,6 +129,24 @@ LIBFAKETIME_RUN_OPTIONAL_RUNTIME_TESTS=1 make TEST_DEMO=0 test
 The probe distinguishes a runtime clock bypass from a failed or hanging
 libfaketime process; the former is informational.
 
+### Tokio issue #545 reproducer
+
+`test/docker_tokio_issue_545.sh` is a separate, opt-in Docker environment for
+the multi-thread Tokio report in [#545](https://github.com/wolfcw/libfaketime/issues/545).
+It pins Rust 1.99 and Tokio 1.53.1, builds the reported `Runtime::new()`
+fixture, and compares Tokio sleep with `std::thread::sleep` using fixed,
+relative, normal-library, MT-library, and monotonic-bypass configurations.
+
+```sh
+TOKIO_545_TIMEOUT_SECONDS=8 test/docker_tokio_issue_545.sh
+```
+
+Each case is bounded and reported even if another case times out. The script
+is diagnostic by default; set `TOKIO_545_REQUIRE_PASS=1` to return failure for
+any incomplete case. It is intentionally not a regular CI job because it
+downloads a Rust image and Cargo dependencies while building its disposable
+image.
+
 Proton/Wine checks are also opt-in and must be run with a disposable prefix,
 an explicit timeout, and a minimal reproducer. They are not release gates
 until a deterministic fixture is available.
