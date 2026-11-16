@@ -6,7 +6,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-RELEASE_VERSION=${RELEASE_VERSION:-0.9.13}
+RELEASE_VERSION=${RELEASE_VERSION:-0.9.14}
 
 grep -q "version $RELEASE_VERSION" "$REPO_DIR/README" || {
     echo "error: README version does not match $RELEASE_VERSION" >&2

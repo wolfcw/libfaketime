@@ -1,3 +1,28 @@
+List of changes for v0.9.14 (November 2026)
+============================================
+
+Since 0.9.13:
+    - Added the wrapper's --freeze mode, which resolves user-friendly date
+      syntax once and then uses the resulting absolute timestamp.
+    - Fixed glibc >= 2.33 stat-entry-point coverage so stat64, lstat64,
+      fstat64, and fstatat64 expose one consistent virtual timestamp model.
+      This prevents mixed real and faked metadata from invalidating timestamp
+      based caches such as Python bytecode caches.
+    - Improved glibc time64 helper selection and linker compatibility,
+      including a dedicated helper version map and lld build coverage.
+    - Hardened initialization, descriptor ownership, and flock-based locking
+      for current and legacy glibc loaders, including safer behaviour after
+      descriptor closure and loader re-entry.
+    - Made FAKETIME_XRESET rate transitions safe for concurrent readers and
+      documented the wall-clock transition contract.
+    - Added bounded Tokio diagnostics and documented the required
+      FAKETIME_DONT_FAKE_MONOTONIC workaround for runtimes that issue direct
+      absolute-monotonic futex system calls.
+    - Expanded CI and Docker coverage, including reproducible architecture,
+      sanitizer, clean-build, linker, and Linux distribution checks.
+    - Documented Debian ARM package preload-path diagnosis and clarified
+      compatibility boundaries for language runtimes and filesystem metadata.
+
 List of changes for v0.9.13 (August 2026)
 ==========================================
 

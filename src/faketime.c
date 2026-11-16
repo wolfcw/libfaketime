@@ -1,7 +1,7 @@
 /*
  *  libfaketime wrapper command
  *
- *  This file is part of libfaketime, version 0.9.13
+ *  This file is part of libfaketime, version 0.9.14
  *
  *  libfaketime is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License v2 as published by the
@@ -58,7 +58,7 @@ typedef __int128 faketime_wrapper_wide_t;
 typedef int64_t faketime_wrapper_wide_t;
 #endif
 
-static const char version[] = "0.9.13";
+static const char version[] = "0.9.14";
 
 #if (defined __APPLE__) || (defined __sun)
 static const char *date_cmd = "gdate";
