@@ -93,6 +93,13 @@ documentation whether it can be achieved by using libfaketime directly.
   (FAKETIME_DONT_FAKE_MONOTONIC).  See usage basics below for details.  Without
   this argument the java command usually hangs.
 
+* Rust applications using Tokio's multi-thread runtime also require
+  FAKETIME_DONT_FAKE_MONOTONIC=1 when they use Tokio timers. Tokio can issue
+  direct absolute-monotonic futex system calls, which an LD_PRELOAD library
+  cannot translate. Without this setting, a faked monotonic epoch can make a
+  timer spin or hang. See the bounded diagnostic reproducer for
+  [issue #545](test/README-platforms.md#tokio-issue-545-reproducer).
+
 * libfaketime will eventually be bypassed by applications that dynamically load
   system libraries, such as librt, explicitly themselves instead of relying on
   the linker to do so at application start time. libfaketime will not work with
@@ -113,7 +120,7 @@ documentation whether it can be achieved by using libfaketime directly.
   first check which clock it uses and whether it dynamically loads its own system
   libraries. A minimal C reproducer using the same clock API is required before
   treating an application-specific report as a libfaketime bug. In particular,
-  Go, Python, .NET, Boost.Asio, jemalloc users, Proton/Wine, and JVMs may cache
+  Go, Python, .NET, Boost.Asio, jemalloc users, Tokio, Proton/Wine, and JVMs may cache
   clocks, use vDSO/direct system calls, load libraries after startup, or combine
   real and faked clock domains. These cases can hang or ignore the preload even
   when the basic libfaketime test suite passes. Keep preload ordering explicit and
